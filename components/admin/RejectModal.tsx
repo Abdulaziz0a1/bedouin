@@ -1,0 +1,136 @@
+"use client";
+
+import { useState } from "react";
+
+const QUICK_REASONS = [
+  "Photos do not meet quality standards (min. 4 high-resolution images required).",
+  "Listing does not align with Bedouin's platform focus (farm, desert, nature, or cultural experiences only).",
+  "Description is too brief — please add at least 150 words describing the experience.",
+  "Pricing appears inconsistent with the listing quality or region.",
+  "Location information is incomplete or inaccurate.",
+  "House rules are missing or insufficient.",
+];
+
+interface RejectModalProps {
+  listingTitle: string;
+  onConfirm: (reason: string) => void;
+  onCancel: () => void;
+  isSubmitting: boolean;
+}
+
+export default function RejectModal({
+  listingTitle, onConfirm, onCancel, isSubmitting,
+}: RejectModalProps) {
+  const [reason, setReason] = useState("");
+
+  const handleQuickReason = (r: string) => {
+    setReason((prev) => prev ? `${prev.trimEnd()} ${r}` : r);
+  };
+
+  return (
+    /* Backdrop */
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-[#1a0e02]/40 backdrop-blur-sm"
+        onClick={onCancel}
+      />
+
+      {/* Modal */}
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-[#f0e8de]">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="M18 6L6 18M6 6l12 12" stroke="#dc2626" strokeWidth="2.2" strokeLinecap="round" />
+                </svg>
+              </div>
+              <h2 className="font-display font-semibold text-[#1a0e02]">Reject listing</h2>
+            </div>
+            <p className="text-xs text-[#64707d] line-clamp-1">
+              &ldquo;{listingTitle}&rdquo; — this decision will notify the host.
+            </p>
+          </div>
+          <button
+            onClick={onCancel}
+            className="p-1.5 rounded-lg hover:bg-[#f4f6f8] transition-colors shrink-0 text-[#64707d]"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-5 flex flex-col gap-4">
+
+          {/* Quick reason chips */}
+          <div>
+            <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest mb-2">
+              Quick reasons (click to add)
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {QUICK_REASONS.map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => handleQuickReason(r)}
+                  className="text-left text-xs text-[#64707d] bg-[#faf7f4] border border-[#e8dfd4] px-3 py-2 rounded-xl hover:border-[#8b5e38] hover:text-[#1a0e02] transition-all line-clamp-2"
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Reason textarea */}
+          <div>
+            <label className="block text-[10px] font-bold text-[#64707d] uppercase tracking-widest mb-1.5">
+              Rejection message to host <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Explain clearly why the listing was not approved and what the host can do to resubmit successfully…"
+              rows={4}
+              className="w-full px-4 py-3 border border-[#e8dfd4] rounded-xl text-sm text-[#1a0e02] placeholder:text-[#a09080] focus:outline-none focus:border-[#8b5e38] resize-none transition-colors bg-white"
+            />
+            <p className="text-[10px] text-[#a09080] mt-1">
+              {reason.length} characters — aim for at least 50 for a useful rejection message.
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center gap-3 px-6 pb-5">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 py-2.5 border border-[#e8dfd4] rounded-xl text-sm font-semibold text-[#64707d] hover:border-[#8b5e38] transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => reason.trim() && onConfirm(reason.trim())}
+            disabled={!reason.trim() || isSubmitting}
+            className="flex-[2] py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
+          >
+            {isSubmitting ? (
+              <>
+                <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeDasharray="31.4" strokeDashoffset="15" />
+                </svg>
+                Rejecting…
+              </>
+            ) : (
+              "Reject listing"
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,165 @@
+"use client";
+
+import { useState } from "react";
+import { MOCK_USER } from "@/lib/data/user-dashboard";
+
+function FieldRow({ label, value, editable }: { label: string; value: string; editable?: boolean }) {
+  return (
+    <div className="flex items-center justify-between py-3.5 border-b last:border-0 border-[#f0e8de] gap-4">
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest mb-0.5">{label}</p>
+        <p className="text-sm font-medium text-[#1a0e02] truncate">{value}</p>
+      </div>
+      {editable && (
+        <button className="text-xs font-semibold text-[#8b5e38] hover:underline shrink-0">Edit</button>
+      )}
+    </div>
+  );
+}
+
+export default function UserAccountSection() {
+  const [notifBooking, setNotifBooking]  = useState(true);
+  const [notifPromo,   setNotifPromo]    = useState(false);
+  const [notifRemind,  setNotifRemind]   = useState(true);
+
+  const joinedDate = new Date(MOCK_USER.joinedAt).toLocaleDateString("en-GB", {
+    day: "numeric", month: "long", year: "numeric",
+  });
+
+  function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+    return (
+      <button
+        type="button"
+        onClick={() => onChange(!value)}
+        aria-checked={value}
+        role="switch"
+        className={[
+          "relative w-10 h-6 rounded-full transition-colors shrink-0",
+          value ? "bg-[#8b5e38]" : "bg-[#dddfe3]",
+        ].join(" ")}
+      >
+        <span className={[
+          "absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform",
+          value ? "translate-x-4" : "translate-x-0",
+        ].join(" ")} />
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+
+      {/* Header */}
+      <div>
+        <h2 className="font-display font-semibold text-[#1a0e02] text-lg">Account</h2>
+        <p className="text-xs text-[#64707d] mt-0.5">Manage your profile and preferences</p>
+      </div>
+
+      {/* Profile card */}
+      <div className="bg-white border border-[#e8dfd4] rounded-2xl overflow-hidden">
+
+        {/* Header row */}
+        <div className="flex items-center gap-4 px-6 py-5 border-b border-[#f0e8de]">
+          <div className="relative shrink-0">
+            <img
+              src={MOCK_USER.avatar}
+              alt={`${MOCK_USER.firstName} ${MOCK_USER.lastName}`}
+              className="w-16 h-16 rounded-full object-cover border-2 border-[#e8dfd4]"
+            />
+            <button
+              className="absolute -bottom-1 -right-1 w-6 h-6 bg-[#8b5e38] rounded-full flex items-center justify-center hover:bg-[#7a5030] transition-colors"
+              aria-label="Change photo"
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
+          <div>
+            <h3 className="font-display font-semibold text-[#1a0e02] text-lg">
+              {MOCK_USER.firstName} {MOCK_USER.lastName}
+            </h3>
+            <p className="text-xs text-[#64707d]">Member since {joinedDate}</p>
+          </div>
+          <button className="ml-auto px-4 py-2 border border-[#e8dfd4] rounded-xl text-sm font-semibold text-[#64707d] hover:border-[#8b5e38] hover:text-[#8b5e38] transition-colors shrink-0">
+            Edit profile
+          </button>
+        </div>
+
+        {/* Fields */}
+        <div className="px-6 py-2">
+          <FieldRow label="Full name"    value={`${MOCK_USER.firstName} ${MOCK_USER.lastName}`} editable />
+          <FieldRow label="Email"        value={MOCK_USER.email}        editable />
+          <FieldRow label="Phone"        value={MOCK_USER.phone ?? "—"}  editable />
+          <FieldRow label="Nationality"  value={MOCK_USER.nationality ?? "—"} editable />
+        </div>
+      </div>
+
+      {/* Notifications */}
+      <div className="bg-white border border-[#e8dfd4] rounded-2xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-[#f0e8de]">
+          <h3 className="font-display font-semibold text-[#1a0e02]">Notifications</h3>
+          <p className="text-xs text-[#64707d] mt-0.5">Choose what you hear about</p>
+        </div>
+        <div className="px-6 py-2">
+          {[
+            { label: "Booking confirmations & updates", sub: "Get notified about your reservation status", value: notifBooking, onChange: setNotifBooking },
+            { label: "Trip reminders",                  sub: "Reminders 48h before check-in",             value: notifRemind,  onChange: setNotifRemind  },
+            { label: "Deals & promotions",              sub: "Occasional offers and new experiences",      value: notifPromo,   onChange: setNotifPromo   },
+          ].map(({ label, sub, value, onChange }) => (
+            <div
+              key={label}
+              className="flex items-center justify-between gap-4 py-4 border-b last:border-0 border-[#f0e8de]"
+            >
+              <div>
+                <p className="text-sm font-semibold text-[#1a0e02]">{label}</p>
+                <p className="text-xs text-[#64707d] mt-0.5">{sub}</p>
+              </div>
+              <Toggle value={value} onChange={onChange} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Security */}
+      <div className="bg-white border border-[#e8dfd4] rounded-2xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-[#f0e8de]">
+          <h3 className="font-display font-semibold text-[#1a0e02]">Security</h3>
+        </div>
+        <div className="px-6 py-2">
+          {[
+            { label: "Password",          sub: "Last changed 3 months ago", action: "Change" },
+            { label: "Linked accounts",   sub: "Google account connected",  action: "Manage" },
+          ].map(({ label, sub, action }) => (
+            <div
+              key={label}
+              className="flex items-center justify-between py-3.5 border-b last:border-0 border-[#f0e8de] gap-4"
+            >
+              <div>
+                <p className="text-sm font-semibold text-[#1a0e02]">{label}</p>
+                <p className="text-xs text-[#64707d] mt-0.5">{sub}</p>
+              </div>
+              <button className="text-xs font-semibold text-[#8b5e38] hover:underline shrink-0">
+                {action}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Danger zone */}
+      <div className="bg-red-50 border border-red-100 rounded-2xl px-6 py-5 flex items-center justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold text-red-700">Delete account</p>
+          <p className="text-xs text-red-500 mt-0.5">
+            This will permanently remove your account and all data.
+          </p>
+        </div>
+        <button className="px-4 py-2 border border-red-300 rounded-xl text-sm font-semibold text-red-600 hover:bg-red-100 transition-colors shrink-0">
+          Delete
+        </button>
+      </div>
+    </div>
+  );
+}

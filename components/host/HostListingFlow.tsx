@@ -1,0 +1,198 @@
+"use client";
+
+import { useState, useCallback } from "react";
+import Link from "next/link";
+import { ListingDraft, INITIAL_DRAFT, SubmittedListing } from "@/lib/types/host";
+import HostStepProgress from "./HostStepProgress";
+import HostListingPreview from "./HostListingPreview";
+import HostConfirmation from "./HostConfirmation";
+import Step1Type        from "./steps/Step1Type";
+import Step2About       from "./steps/Step2About";
+import Step3Details     from "./steps/Step3Details";
+import Step4Amenities   from "./steps/Step4Amenities";
+import Step5Pricing     from "./steps/Step5Pricing";
+import Step6Review      from "./steps/Step6Review";
+
+/* ─── Helpers ──────────────────────────────────────────────────────────────── */
+
+function generateRef(): string {
+  const seg = () => Math.random().toString(36).substring(2, 5).toUpperCase();
+  return `BDN-LST-${seg()}${seg()}`;
+}
+
+type HostStep = 1 | 2 | 3 | 4 | 5 | 6 | "confirmed";
+
+/* ─── Component ────────────────────────────────────────────────────────────── */
+
+export default function HostListingFlow() {
+  const [step,    setStep]    = useState<HostStep>(1);
+  const [draft,   setDraft]   = useState<ListingDraft>(INITIAL_DRAFT);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted,  setSubmitted]  = useState<SubmittedListing | null>(null);
+
+  /* Generic field updater — type-safe, works for all ListingDraft keys */
+  const update = useCallback(
+    <K extends keyof ListingDraft>(key: K, value: ListingDraft[K]) => {
+      setDraft((d) => ({ ...d, [key]: value }));
+    },
+    []
+  );
+
+  /* Image management — designed for Firebase Storage integration */
+  const addImages = useCallback((files: FileList | File[]) => {
+    const arr = Array.from(files);
+    const urls = arr.map((f) => URL.createObjectURL(f));
+    setDraft((d) => {
+      const next = {
+        imagePreviewUrls: [...d.imagePreviewUrls, ...urls].slice(0, 10),
+      };
+      return { ...d, ...next };
+    });
+  }, []);
+
+  const removeImage = useCallback((index: number) => {
+    setDraft((d) => {
+      URL.revokeObjectURL(d.imagePreviewUrls[index]);
+      return {
+        ...d,
+        imagePreviewUrls: d.imagePreviewUrls.filter((_, i) => i !== index),
+      };
+    });
+  }, []);
+
+  /* Submit — replace setTimeout with Firestore addDoc + Storage uploads */
+  const handleSubmit = useCallback(() => {
+    setSubmitting(true);
+    setTimeout(() => {
+      const listing: SubmittedListing = {
+        listingRef:  generateRef(),
+        title:       draft.title || "Untitled Listing",
+        category:    draft.category,
+        region:      draft.region,
+        price:       draft.price,
+        imageUrl:    draft.imagePreviewUrls[0] ?? "",
+        submittedAt: new Date().toISOString(),
+      };
+      setSubmitted(listing);
+      setStep("confirmed");
+      setSubmitting(false);
+
+      /* Firebase integration point:
+         const docRef = await addDoc(collection(db, "listings"), {
+           ...draft,
+           status: "pending_review",
+           hostId: auth.currentUser?.uid,
+           submittedAt: serverTimestamp(),
+         });
+         // Upload images to Storage, update Firestore with URLs
+      */
+    }, 2000);
+  }, [draft]);
+
+  /* ─── Confirmation ─────────────────────────────────────────────────── */
+  if (step === "confirmed" && submitted) {
+    return <HostConfirmation listing={submitted} />;
+  }
+
+  const currentStep = step as 1 | 2 | 3 | 4 | 5 | 6;
+
+  /* ─── Main layout ──────────────────────────────────────────────────── */
+  return (
+    <div className="bg-[#f4efe6] min-h-[calc(100vh-72px)]">
+
+      {/* Step progress bar */}
+      <div className="bg-white border-b border-[#e8dfd4] py-5 sticky top-[72px] z-30">
+        <div className="max-w-[1232px] mx-auto px-6 lg:px-0">
+          <HostStepProgress currentStep={currentStep} />
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="max-w-[1232px] mx-auto px-6 lg:px-0 py-8 lg:py-12">
+
+        {/* Back link */}
+        <Link
+          href="/host"
+          className="inline-flex items-center gap-2 text-sm text-[#64707d] hover:text-[#1a0e02] transition-colors mb-8 group"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+            className="group-hover:-translate-x-0.5 transition-transform">
+            <path d="M19 12H5M12 5l-7 7 7 7"
+              stroke="currentColor" strokeWidth="1.8"
+              strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Back to Host Overview
+        </Link>
+
+        <div className="flex flex-col lg:flex-row gap-10 lg:gap-14 items-start">
+
+          {/* ── Left: current step ─────────────────────────────────── */}
+          <div className="flex-1 min-w-0">
+            {currentStep === 1 && (
+              <Step1Type
+                category={draft.category}
+                onChange={(v) => update("category", v)}
+                onNext={() => setStep(2)}
+              />
+            )}
+            {currentStep === 2 && (
+              <Step2About
+                title={draft.title}
+                description={draft.description}
+                highlights={draft.highlights}
+                onChangeTitle={(v)       => update("title",       v)}
+                onChangeDesc={(v)        => update("description",  v)}
+                onChangeHighlights={(v)  => update("highlights",   v)}
+                onNext={() => setStep(3)}
+                onBack={() => setStep(1)}
+              />
+            )}
+            {currentStep === 3 && (
+              <Step3Details
+                draft={draft}
+                onChange={update}
+                onNext={() => setStep(4)}
+                onBack={() => setStep(2)}
+              />
+            )}
+            {currentStep === 4 && (
+              <Step4Amenities
+                selected={draft.amenities}
+                onChange={(v) => update("amenities", v)}
+                onNext={() => setStep(5)}
+                onBack={() => setStep(3)}
+              />
+            )}
+            {currentStep === 5 && (
+              <Step5Pricing
+                price={draft.price}
+                originalPrice={draft.originalPrice}
+                priceUnit={draft.priceUnit}
+                onChangePrice={(v)         => update("price",         v)}
+                onChangeOriginal={(v)      => update("originalPrice", v)}
+                onChangePriceUnit={(v)     => update("priceUnit",     v)}
+                onNext={() => setStep(6)}
+                onBack={() => setStep(4)}
+              />
+            )}
+            {currentStep === 6 && (
+              <Step6Review
+                draft={draft}
+                onChangeImages={{ add: addImages, remove: removeImage }}
+                onChangeRules={(v) => update("houseRules", v)}
+                onSubmit={handleSubmit}
+                onBack={() => setStep(5)}
+                isSubmitting={submitting}
+              />
+            )}
+          </div>
+
+          {/* ── Right: live preview ───────────────────────────────── */}
+          <div className="w-full lg:w-[360px] shrink-0 sticky top-[148px]">
+            <HostListingPreview draft={draft} currentStep={currentStep} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

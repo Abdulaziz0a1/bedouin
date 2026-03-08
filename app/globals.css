@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+/* ==========================================================
+   Bedouin – Design System Tokens
+   ========================================================== */
+:root {
+  /* Core backgrounds */
+  --bg-sand:      #f4efe6;
+  --bg-cream:     #fef9f3;
+  --bg-white:     #ffffff;
+  --bg-dark:      #1a0e02;
+
+  /* Text */
+  --text-heading: #1a0e02;
+  --text-body:    #2b3037;
+  --text-muted:   #64707d;
+  --text-faint:   #8b94a4;
+  --text-on-dark: #faf3ea;
+
+  /* Brand */
+  --brand-dark:   #461e00;
+  --brand-mid:    #8b5e3c;
+  --brand-warm:   #b17a50;
+  --brand-gold:   #c49a4f;
+
+  /* Semantic */
+  --border:       #e8dfd4;
+  --border-dark:  #d4c8b8;
+  --shadow-warm:  rgba(70, 30, 0, 0.08);
+  --shadow-warm-md: rgba(70, 30, 0, 0.14);
+
+  /* Ratings */
+  --rating-bg:       #f1f2f3;
+  --rating-excellent: #0046cc;
+  --rating-very-good: #003499;
+  --rating-good:      #052461;
+
+  /* Status */
+  --deal-green: #049153;
+  --price-gold: #c49a4f;
+}
+
+@theme inline {
+  --color-background: var(--bg-sand);
+  --color-foreground: var(--text-heading);
+  --color-brand:      var(--brand-dark);
+  --color-gold:       var(--brand-gold);
+  --color-border:     var(--border);
+
+  --font-sans:    var(--font-roboto), system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  --font-display: var(--font-poppins), system-ui, sans-serif;
+}
+
+/* ==========================================================
+   Base layer — sits BELOW @layer utilities so Tailwind
+   utility classes (text-white, text-[…], etc.) always win
+   ========================================================== */
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    background: var(--bg-sand);
+    color: var(--text-body);
+    font-family: var(--font-sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    direction: ltr;
+  }
+
+  /* Links inherit surrounding text color by default;
+     Tailwind text-* utilities override this cleanly */
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  input, select, textarea {
+    color: var(--text-heading);
+    caret-color: var(--brand-dark);
+  }
+
+  ::placeholder { color: var(--text-faint); }
+
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--brand-gold);
+    border-radius: 10px;
+  }
+}
+
+/* ==========================================================
+   Custom utility classes
+   ========================================================== */
+.font-display { font-family: var(--font-display); }
+
+.shadow-warm    { box-shadow: 0 2px 16px var(--shadow-warm); }
+.shadow-warm-md { box-shadow: 0 6px 32px var(--shadow-warm-md); }
+
+.scroll-row {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 4px;
+}
+.scroll-row::-webkit-scrollbar { display: none; }
+.scroll-row > * { scroll-snap-align: start; }

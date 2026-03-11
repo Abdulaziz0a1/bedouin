@@ -8,7 +8,11 @@ import HostCard from "@/components/listing/HostCard";
 import AmenitiesGrid from "@/components/listing/AmenitiesGrid";
 import ReviewsSection from "@/components/listing/ReviewsSection";
 import RelatedListings from "@/components/listing/RelatedListings";
-import { getListingDetail, getRelatedListings } from "@/lib/data/listing-details";
+import { getListingDetail } from "@/lib/data/listing-details";
+import { fetchListingDetail } from "@/lib/services/listing-detail";
+import { fetchRelatedListings } from "@/lib/services/listings";
+// TODO (tech debt): unify generateMetadata with fetchListingDetail once a
+// shared cache layer (React cache / unstable_cache) is in place.
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -26,10 +30,10 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function ListingPage({ params }: Props) {
   const { id } = await params;
-  const listing = getListingDetail(id);
+  const listing = await fetchListingDetail(id);
   if (!listing) notFound();
 
-  const related = getRelatedListings(id, 4);
+  const related = await fetchRelatedListings(id, listing.category, listing.region, 4);
 
   return (
     <div className="min-h-screen bg-[#f4efe6]">

@@ -6,7 +6,6 @@ import Link from "next/link";
 import ProductCard from "@/components/ui/ProductCard";
 import RatingBadge from "@/components/ui/RatingBadge";
 import {
-  ALL_LISTINGS,
   CATEGORIES,
   REGIONS,
   PRICE_RANGES,
@@ -237,7 +236,13 @@ function EmptyState({ onClear }: { onClear: () => void }) {
 
 /* ─── Main ExploreClient ─────────────────────────────────────────────────── */
 
-export default function ExploreClient({ initialQuery = "" }: { initialQuery?: string }) {
+export default function ExploreClient({
+  initialQuery = "",
+  initialListings,
+}: {
+  initialQuery?: string;
+  initialListings: Listing[];
+}) {
   const [query,      setQuery]      = useState(initialQuery);
   const [category,   setCategory]   = useState("all");
   const [region,     setRegion]     = useState("All");
@@ -246,8 +251,8 @@ export default function ExploreClient({ initialQuery = "" }: { initialQuery?: st
   const [viewMode,   setViewMode]   = useState<"grid" | "list">("grid");
 
   const results = useMemo(
-    () => filterListings(ALL_LISTINGS, { query, category, region, priceRange, sortBy }),
-    [query, category, region, priceRange, sortBy]
+    () => filterListings(initialListings, { query, category, region, priceRange, sortBy }),
+    [initialListings, query, category, region, priceRange, sortBy]
   );
 
   const clearAll = useCallback(() => {

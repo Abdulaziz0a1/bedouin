@@ -1,5 +1,5 @@
 import Navbar from "@/components/layout/Navbar";
-import Link from "next/link";
+import LoginForm from "@/components/auth/LoginForm";
 
 export const metadata = {
   title: "Log In – Bedouin",
@@ -19,55 +19,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <div className="mb-6">
-            <h1 className="font-display font-extrabold text-[#1a0e02] text-2xl mb-1">
-              Welcome back
-            </h1>
-            <p className="text-[#64707d] text-sm">
-              Log in to your Bedouin account
-            </p>
-          </div>
-
-          <form className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-[#1a0e02] uppercase tracking-wide">
-                Email
-              </label>
-              <input
-                type="email"
-                placeholder="you@example.com"
-                className="w-full border border-[#e8dfd4] rounded-xl px-4 py-3 text-sm text-[#1a0e02] placeholder:text-[#64707d] outline-none focus:border-[#c49a4f] transition-colors"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-[#1a0e02] uppercase tracking-wide">
-                Password
-              </label>
-              <input
-                type="password"
-                placeholder="Enter your password"
-                className="w-full border border-[#e8dfd4] rounded-xl px-4 py-3 text-sm text-[#1a0e02] placeholder:text-[#64707d] outline-none focus:border-[#c49a4f] transition-colors"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="w-full bg-[#461e00] text-white font-bold text-sm py-3 rounded-xl hover:bg-[#5a2900] active:bg-[#3a1800] transition-colors mt-2"
-            >
-              Log In
-            </button>
-          </form>
-
-          <p className="text-sm text-center text-[#64707d] mt-6">
-            Don&apos;t have an account?{" "}
-            <Link
-              href="/signup"
-              className="text-[#c49a4f] font-semibold hover:underline"
-            >
-              Sign up
-            </Link>
-          </p>
+          <LoginForm />
         </div>
       </main>
     </div>

@@ -1,6 +1,7 @@
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import ExploreClient from "@/components/explore/ExploreClient";
+import { fetchListings } from "@/lib/services/listings";
 
 export const metadata = {
   title: "Explore Experiences – Bedouin",
@@ -15,12 +16,13 @@ const HEADER_STATS = [
   { value: "850+", label: "Verified hosts" },
 ];
 
-export default function ExplorePage({
+export default async function ExplorePage({
   searchParams,
 }: {
   searchParams?: { [key: string]: string | undefined };
 }) {
   const initialQuery = searchParams?.location ?? searchParams?.q ?? "";
+  const listings = await fetchListings();
 
   return (
     <div className="min-h-screen bg-[#f4efe6]">
@@ -71,7 +73,7 @@ export default function ExplorePage({
         </div>
       </div>
 
-      <ExploreClient initialQuery={initialQuery} />
+      <ExploreClient initialQuery={initialQuery} initialListings={listings} />
 
       <Footer />
     </div>

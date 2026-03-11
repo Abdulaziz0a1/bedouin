@@ -7,6 +7,7 @@ import {
   GuestDetails, CardDetails, PaymentMethod,
   BookingStep, BookingConfirmation,
 } from "@/lib/types/booking";
+import { createBooking } from "@/lib/actions/booking";
 import StepIndicator from "./StepIndicator";
 import BookingSummaryCard from "./BookingSummaryCard";
 import ReviewStep from "./ReviewStep";
@@ -39,9 +40,12 @@ function fmtDate(d: Date): string {
   return `${SHORT_MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
 }
 
-function generateRef(): string {
-  const seg = () => Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `BDN-${seg()}${seg()}`;
+/** Formats a local Date as YYYY-MM-DD without UTC conversion. */
+function toDateStr(d: Date): string {
+  const y   = d.getFullYear();
+  const m   = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 /* ─── Props ────────────────────────────────────────────────────────────────── */
@@ -92,6 +96,7 @@ export default function BookingFlow({
     cvv: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
 
   /* ── Confirmation ── */
   const [confirmation, setConfirmation] = useState<BookingConfirmation | null>(null);
@@ -113,32 +118,59 @@ export default function BookingFlow({
   };
 
   /* ── Payment submit ── */
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     setIsSubmitting(true);
-    setTimeout(() => {
-      const conf: BookingConfirmation = {
-        reference:     generateRef(),
-        listingId:     listing.id,
-        listingTitle:  listing.title,
-        location:      listing.location,
-        image:         listing.images[0],
-        checkIn:       checkIn  ? fmtDate(checkIn)  : "—",
-        checkOut:      checkOut ? fmtDate(checkOut) : "—",
-        nights,
-        adults,
-        children,
-        subtotal,
-        serviceFee,
-        totalPrice:    total,
-        guestName:     `${guestDetails.firstName} ${guestDetails.lastName}`.trim(),
-        guestEmail:    guestDetails.email,
-        paymentMethod,
-        createdAt:     new Date().toISOString(),
-      };
-      setConfirmation(conf);
-      setStep("confirmed");
+    setBookingError(null);
+
+    const result = await createBooking({
+      listingSlug:      listing.id,
+      listingTitle:     listing.title,
+      location:         listing.location,
+      image:            listing.images[0],
+      checkIn:          checkIn  ? toDateStr(checkIn)  : "",
+      checkOut:         checkOut ? toDateStr(checkOut) : "",
+      nights,
+      adults,
+      children,
+      subtotal,
+      serviceFee,
+      totalPrice:       total,
+      guestName:        `${guestDetails.firstName} ${guestDetails.lastName}`.trim(),
+      guestEmail:       guestDetails.email,
+      guestPhone:       guestDetails.phone,
+      guestNationality: guestDetails.nationality,
+      specialRequests:  guestDetails.requests,
+      paymentMethod,
+    });
+
+    if (!result.success) {
+      setBookingError(result.error);
       setIsSubmitting(false);
-    }, 1800);
+      return;
+    }
+
+    const conf: BookingConfirmation = {
+      reference:    result.reference,
+      listingId:    listing.id,
+      listingTitle: listing.title,
+      location:     listing.location,
+      image:        listing.images[0],
+      checkIn:      checkIn  ? fmtDate(checkIn)  : "—",
+      checkOut:     checkOut ? fmtDate(checkOut) : "—",
+      nights,
+      adults,
+      children,
+      subtotal,
+      serviceFee,
+      totalPrice:   total,
+      guestName:    `${guestDetails.firstName} ${guestDetails.lastName}`.trim(),
+      guestEmail:   guestDetails.email,
+      paymentMethod,
+      createdAt:    new Date().toISOString(),
+    };
+    setConfirmation(conf);
+    setStep("confirmed");
+    setIsSubmitting(false);
   };
 
   /* ─── Confirmation screen (full-page, no step bar) ─── */
@@ -197,6 +229,15 @@ export default function BookingFlow({
                 onNext={() => setStep(3)}
                 onBack={() => setStep(1)}
               />
+            )}
+            {step === 3 && bookingError && (
+              <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-5">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-red-500 shrink-0 mt-0.5">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+                  <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+                <p className="text-sm text-red-600">{bookingError}</p>
+              </div>
             )}
             {step === 3 && (
               <PaymentStep

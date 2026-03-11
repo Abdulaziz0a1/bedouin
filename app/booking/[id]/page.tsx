@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import { getListingDetail } from "@/lib/data/listing-details";
+import { fetchListingDetail } from "@/lib/services/listing-detail";
 import BookingFlow from "@/components/booking/BookingFlow";
+// TODO (tech debt): unify generateMetadata with fetchListingDetail once a
+// shared cache layer (React cache / unstable_cache) is in place.
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -20,7 +23,7 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function BookingPage({ params, searchParams }: Props) {
   const { id } = await params;
-  const listing = getListingDetail(id);
+  const listing = await fetchListingDetail(id);
   if (!listing) notFound();
 
   const checkInStr  = searchParams?.checkIn  ?? "";

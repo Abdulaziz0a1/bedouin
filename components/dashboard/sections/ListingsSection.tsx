@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MOCK_LISTINGS, type DashboardListing } from "@/lib/data/dashboard";
+import type { DashboardListing } from "@/lib/data/dashboard";
 import StatusBadge from "../shared/StatusBadge";
 import DashboardEmptyState from "../shared/DashboardEmptyState";
 
@@ -158,20 +158,20 @@ function ListingCard({ listing }: { listing: DashboardListing }) {
   );
 }
 
-export default function ListingsSection() {
+export default function ListingsSection({ listings }: { listings: DashboardListing[] }) {
   const [filter, setFilter] = useState<Filter>("all");
 
   const filtered =
     filter === "all"
-      ? MOCK_LISTINGS
-      : MOCK_LISTINGS.filter((l) => l.status === filter);
+      ? listings
+      : listings.filter((l) => l.status === filter);
 
   const counts: Record<Filter, number> = {
-    all:            MOCK_LISTINGS.length,
-    approved:       MOCK_LISTINGS.filter((l) => l.status === "approved").length,
-    pending_review: MOCK_LISTINGS.filter((l) => l.status === "pending_review").length,
-    rejected:       MOCK_LISTINGS.filter((l) => l.status === "rejected").length,
-    draft:          MOCK_LISTINGS.filter((l) => l.status === "draft").length,
+    all:            listings.length,
+    approved:       listings.filter((l) => l.status === "approved").length,
+    pending_review: listings.filter((l) => l.status === "pending_review").length,
+    rejected:       listings.filter((l) => l.status === "rejected").length,
+    draft:          listings.filter((l) => l.status === "draft").length,
   };
 
   return (
@@ -181,7 +181,7 @@ export default function ListingsSection() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="font-display font-semibold text-[#1a0e02] text-lg">My Listings</h2>
-          <p className="text-xs text-[#64707d] mt-0.5">{MOCK_LISTINGS.length} properties managed</p>
+          <p className="text-xs text-[#64707d] mt-0.5">{listings.length} properties managed</p>
         </div>
         <a
           href="/host/new"

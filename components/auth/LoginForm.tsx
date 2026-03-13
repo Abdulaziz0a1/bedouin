@@ -31,7 +31,24 @@ export default function LoginForm() {
       return;
     }
 
-    router.push("/dashboard");
+    // Determine where to send the user based on their role.
+    // Falls back to home if profile is missing or role is unrecognised.
+    const { data: { user } } = await supabase.auth.getUser();
+    let destination = "/";
+
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      if (profile?.role === "admin") destination = "/admin";
+      else if (profile?.role === "host") destination = "/dashboard";
+      // role === "user" or anything else → home
+    }
+
+    router.push(destination);
   };
 
   return (

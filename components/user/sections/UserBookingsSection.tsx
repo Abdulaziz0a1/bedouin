@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { MOCK_USER_BOOKINGS } from "@/lib/data/user-dashboard";
 import type { UserBooking } from "@/lib/types/user";
 import BookingStatusBadge from "../shared/BookingStatusBadge";
 import UserEmptyState from "../shared/UserEmptyState";
@@ -212,13 +211,13 @@ function BookingCard({ booking }: { booking: UserBooking }) {
   );
 }
 
-export default function UserBookingsSection() {
+export default function UserBookingsSection({ bookings }: { bookings: UserBooking[] }) {
   const [tab, setTab] = useState<Tab>("upcoming");
 
-  const upcoming = MOCK_USER_BOOKINGS.filter(
+  const upcoming = bookings.filter(
     (b) => b.status === "upcoming" || b.status === "confirmed" || b.status === "active"
   );
-  const past = MOCK_USER_BOOKINGS.filter(
+  const past = bookings.filter(
     (b) => b.status === "completed" || b.status === "cancelled"
   );
 

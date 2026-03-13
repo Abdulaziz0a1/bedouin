@@ -202,17 +202,24 @@ export default function CoHostSection() {
   return (
     <div className="flex flex-col gap-8">
 
-      {/* Header + CTA */}
+      {/* Header + Coming Soon notice */}
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="font-display font-bold text-[#1a0e02] text-xl mb-1">My Co-hosts</h2>
+          <div className="flex items-center gap-2.5 mb-1">
+            <h2 className="font-display font-bold text-[#1a0e02] text-xl">My Co-hosts</h2>
+            <span className="text-[10px] font-bold text-[#8b6a1f] bg-[#fdf8ee] border border-[#ead9a6] px-2 py-0.5 rounded-full uppercase tracking-wide">
+              Coming Soon
+            </span>
+          </div>
           <p className="text-sm text-[#64707d]">
-            Manage co-hosts assigned to your listings and track pending invitations.
+            The co-host marketplace is under development. This section shows a preview of how co-host management will work.
           </p>
         </div>
-        <a
-          href="/cohost"
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#8b5e38] text-white text-sm font-semibold rounded-xl hover:bg-[#7a5030] transition-colors shadow-sm"
+        {/* Disabled until the co-host marketplace is live */}
+        <button
+          disabled
+          title="Co-host marketplace coming soon"
+          className="flex items-center gap-2 px-5 py-2.5 bg-[#e8dfd4] text-[#a09080] text-sm font-semibold rounded-xl cursor-not-allowed"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
             <circle cx="11" cy="7" r="4" stroke="currentColor" strokeWidth="2" />
@@ -220,7 +227,7 @@ export default function CoHostSection() {
             <path d="M19 11v6M16 14h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
           Browse co-hosts
-        </a>
+        </button>
       </div>
 
       {/* Summary strip */}
@@ -247,12 +254,13 @@ export default function CoHostSection() {
             title="No active co-hosts yet"
             sub="Once a co-host accepts your invitation and is assigned to a listing, they'll appear here."
             cta={
-              <a
-                href="/cohost"
-                className="flex items-center gap-2 px-5 py-2.5 bg-[#8b5e38] text-white text-sm font-semibold rounded-xl hover:bg-[#7a5030] transition-colors"
+              <button
+                disabled
+                title="Co-host marketplace coming soon"
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#e8dfd4] text-[#a09080] text-sm font-semibold rounded-xl cursor-not-allowed"
               >
                 Browse co-hosts
-              </a>
+              </button>
             }
           />
         ) : (

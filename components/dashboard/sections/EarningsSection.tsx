@@ -1,11 +1,10 @@
 "use client";
 
 import {
-  MOCK_EARNINGS_HISTORY,
   MOCK_PAYOUTS,
-  getDashboardKPIs,
   type EarningsMonth,
   type PayoutRecord,
+  type DashboardBooking,
 } from "@/lib/data/dashboard";
 
 function BarChart({ data }: { data: EarningsMonth[] }) {
@@ -92,13 +91,18 @@ function PayoutRow({ payout }: { payout: PayoutRecord }) {
   );
 }
 
-export default function EarningsSection() {
-  const kpis = getDashboardKPIs();
-
-  const totalGross  = MOCK_EARNINGS_HISTORY.reduce((s, m) => s + m.gross,  0);
-  const totalPayout = MOCK_EARNINGS_HISTORY.reduce((s, m) => s + m.payout, 0);
-  const totalBookings = MOCK_EARNINGS_HISTORY.reduce((s, m) => s + m.bookings, 0);
-  const beduoinFee  = totalGross - totalPayout;
+export default function EarningsSection({
+  earningsHistory,
+  kpis,
+}: {
+  bookings:       DashboardBooking[];
+  earningsHistory: EarningsMonth[];
+  kpis:           { thisMonth: number; earningsDelta: number };
+}) {
+  const totalGross    = earningsHistory.reduce((s, m) => s + m.gross,    0);
+  const totalPayout   = earningsHistory.reduce((s, m) => s + m.payout,   0);
+  const totalBookings = earningsHistory.reduce((s, m) => s + m.bookings, 0);
+  const beduoinFee    = totalGross - totalPayout;
 
   return (
     <div className="flex flex-col gap-6">
@@ -133,7 +137,7 @@ export default function EarningsSection() {
             This month: <span className="font-bold text-[#8b5e38]">SAR {kpis.thisMonth.toLocaleString()}</span>
           </p>
         </div>
-        <BarChart data={MOCK_EARNINGS_HISTORY} />
+        <BarChart data={earningsHistory} />
       </div>
 
       {/* Fee breakdown explainer */}

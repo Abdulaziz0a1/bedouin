@@ -1,11 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  MOCK_USER,
-  MOCK_USER_BOOKINGS,
-  getUserKPIs,
-} from "@/lib/data/user-dashboard";
+import type { UserBooking } from "@/lib/types/user";
 import BookingStatusBadge from "../shared/BookingStatusBadge";
 
 function KPITile({
@@ -66,9 +62,7 @@ function QuickAction({
   );
 }
 
-function NextTripCard() {
-  const kpis = getUserKPIs();
-  const trip = kpis.nextTrip;
+function NextTripCard({ trip }: { trip: UserBooking | null }) {
 
   if (!trip) {
     return (
@@ -140,13 +134,30 @@ function NextTripCard() {
   );
 }
 
-export default function UserOverviewSection() {
-  const kpis = getUserKPIs();
+type KPIs = {
+  upcomingCount:  number;
+  completedCount: number;
+  savedCount:     number;
+  totalSpent:     number;
+  nextTrip:       UserBooking | null;
+};
+
+export default function UserOverviewSection({
+  bookings,
+  kpis,
+  userName,
+  userAvatar,
+}: {
+  bookings:   UserBooking[];
+  kpis:       KPIs;
+  userName:   string;
+  userAvatar: string;
+}) {
   const fmtDate = new Date().toLocaleDateString("en-GB", {
     weekday: "long", day: "numeric", month: "long",
   });
 
-  const recentBookings = MOCK_USER_BOOKINGS.slice(0, 2);
+  const recentBookings = bookings.slice(0, 2);
 
   return (
     <div className="flex flex-col gap-6">
@@ -160,7 +171,7 @@ export default function UserOverviewSection() {
         <div className="relative">
           <p className="text-[#c49a4f] text-xs font-bold uppercase tracking-widest mb-1">{fmtDate}</p>
           <h2 className="font-display font-extrabold text-white text-2xl">
-            Welcome back, {MOCK_USER.firstName}
+            Welcome back, {userName}
           </h2>
           <p className="text-white/60 text-sm mt-1">
             {kpis.upcomingCount > 0
@@ -170,8 +181,8 @@ export default function UserOverviewSection() {
         </div>
 
         <img
-          src={MOCK_USER.avatar}
-          alt={MOCK_USER.firstName}
+          src={userAvatar}
+          alt={userName}
           className="relative w-14 h-14 rounded-full object-cover border-2 border-[#c49a4f] shrink-0"
         />
       </div>
@@ -224,7 +235,7 @@ export default function UserOverviewSection() {
         {/* Next trip */}
         <div className="lg:col-span-2 flex flex-col gap-3">
           <h3 className="font-display font-semibold text-[#1a0e02]">Your next trip</h3>
-          <NextTripCard />
+          <NextTripCard trip={kpis.nextTrip} />
         </div>
 
         {/* Quick actions */}

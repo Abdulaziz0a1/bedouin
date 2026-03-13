@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
 import { ListingDraft, INITIAL_DRAFT, SubmittedListing } from "@/lib/types/host";
+import { submitListing } from "@/lib/actions/listing";
 import HostStepProgress from "./HostStepProgress";
 import HostListingPreview from "./HostListingPreview";
 import HostConfirmation from "./HostConfirmation";
@@ -13,13 +14,6 @@ import Step4Amenities   from "./steps/Step4Amenities";
 import Step5Pricing     from "./steps/Step5Pricing";
 import Step6Review      from "./steps/Step6Review";
 
-/* ─── Helpers ──────────────────────────────────────────────────────────────── */
-
-function generateRef(): string {
-  const seg = () => Math.random().toString(36).substring(2, 5).toUpperCase();
-  return `BDN-LST-${seg()}${seg()}`;
-}
-
 type HostStep = 1 | 2 | 3 | 4 | 5 | 6 | "confirmed";
 
 /* ─── Component ────────────────────────────────────────────────────────────── */
@@ -27,8 +21,9 @@ type HostStep = 1 | 2 | 3 | 4 | 5 | 6 | "confirmed";
 export default function HostListingFlow() {
   const [step,    setStep]    = useState<HostStep>(1);
   const [draft,   setDraft]   = useState<ListingDraft>(INITIAL_DRAFT);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted,  setSubmitted]  = useState<SubmittedListing | null>(null);
+  const [submitting,   setSubmitting]   = useState(false);
+  const [submitted,    setSubmitted]    = useState<SubmittedListing | null>(null);
+  const [submitError,  setSubmitError]  = useState<string | null>(null);
 
   /* Generic field updater — type-safe, works for all ListingDraft keys */
   const update = useCallback(
@@ -60,33 +55,22 @@ export default function HostListingFlow() {
     });
   }, []);
 
-  /* Submit — replace setTimeout with Firestore addDoc + Storage uploads */
-  const handleSubmit = useCallback(() => {
+  /* Submit — inserts into listing_submissions via Server Action */
+  const handleSubmit = useCallback(async () => {
     setSubmitting(true);
-    setTimeout(() => {
-      const listing: SubmittedListing = {
-        listingRef:  generateRef(),
-        title:       draft.title || "Untitled Listing",
-        category:    draft.category,
-        region:      draft.region,
-        price:       draft.price,
-        imageUrl:    draft.imagePreviewUrls[0] ?? "",
-        submittedAt: new Date().toISOString(),
-      };
-      setSubmitted(listing);
-      setStep("confirmed");
-      setSubmitting(false);
+    setSubmitError(null);
 
-      /* Firebase integration point:
-         const docRef = await addDoc(collection(db, "listings"), {
-           ...draft,
-           status: "pending_review",
-           hostId: auth.currentUser?.uid,
-           submittedAt: serverTimestamp(),
-         });
-         // Upload images to Storage, update Firestore with URLs
-      */
-    }, 2000);
+    const result = await submitListing(draft);
+
+    setSubmitting(false);
+
+    if (!result.success) {
+      setSubmitError(result.error);
+      return;
+    }
+
+    setSubmitted(result.listing);
+    setStep("confirmed");
   }, [draft]);
 
   /* ─── Confirmation ─────────────────────────────────────────────────── */
@@ -176,14 +160,25 @@ export default function HostListingFlow() {
               />
             )}
             {currentStep === 6 && (
-              <Step6Review
-                draft={draft}
-                onChangeImages={{ add: addImages, remove: removeImage }}
-                onChangeRules={(v) => update("houseRules", v)}
-                onSubmit={handleSubmit}
-                onBack={() => setStep(5)}
-                isSubmitting={submitting}
-              />
+              <>
+                {submitError && (
+                  <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-red-500 shrink-0 mt-0.5">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+                      <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                    <p className="text-sm text-red-600">{submitError}</p>
+                  </div>
+                )}
+                <Step6Review
+                  draft={draft}
+                  onChangeImages={{ add: addImages, remove: removeImage }}
+                  onChangeRules={(v) => update("houseRules", v)}
+                  onSubmit={handleSubmit}
+                  onBack={() => setStep(5)}
+                  isSubmitting={submitting}
+                />
+              </>
             )}
           </div>
 

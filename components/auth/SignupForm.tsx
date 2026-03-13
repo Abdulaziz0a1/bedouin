@@ -29,7 +29,7 @@ export default function SignupForm() {
     setLoading(true);
 
     const supabase = createClient();
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -40,13 +40,30 @@ export default function SignupForm() {
       },
     });
 
-    setLoading(false);
-
     if (signUpError) {
+      setLoading(false);
       setError(signUpError.message);
       return;
     }
 
+    // Insert profiles row so server-side role checks and host resolution work.
+    // Tolerated silently if it fails (e.g. email-confirmation flow where user
+    // row is not yet confirmed) — auth still succeeded.
+    // Upsert so we handle the case where the DB trigger already created the row
+    // before this client-side call lands (race between trigger and client insert).
+    if (signUpData.user) {
+      await supabase.from("profiles").upsert(
+        {
+          id:         signUpData.user.id,
+          first_name: firstName.trim(),
+          last_name:  lastName.trim(),
+          role:       "user",
+        },
+        { onConflict: "id" }
+      );
+    }
+
+    setLoading(false);
     setSuccess(true);
   };
 

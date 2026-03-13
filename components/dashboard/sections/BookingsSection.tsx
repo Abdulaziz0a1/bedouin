@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MOCK_BOOKINGS, type DashboardBooking } from "@/lib/data/dashboard";
+import type { DashboardBooking } from "@/lib/data/dashboard";
 import DashboardEmptyState from "../shared/DashboardEmptyState";
 
 type Tab = "upcoming" | "past";
@@ -113,11 +113,11 @@ function BookingRow({ booking }: { booking: DashboardBooking }) {
   );
 }
 
-export default function BookingsSection() {
+export default function BookingsSection({ bookings }: { bookings: DashboardBooking[] }) {
   const [tab, setTab] = useState<Tab>("upcoming");
 
-  const upcoming = MOCK_BOOKINGS.filter((b) => b.status === "upcoming" || b.status === "active");
-  const past      = MOCK_BOOKINGS.filter((b) => b.status === "completed" || b.status === "cancelled");
+  const upcoming = bookings.filter((b) => b.status === "upcoming" || b.status === "active");
+  const past      = bookings.filter((b) => b.status === "completed" || b.status === "cancelled");
 
   const shown = tab === "upcoming" ? upcoming : past;
 

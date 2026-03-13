@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { MOCK_USER, getUserKPIs } from "@/lib/data/user-dashboard";
+import { MOCK_SAVED_LISTINGS } from "@/lib/data/user-dashboard";
+import type { UserBooking } from "@/lib/types/user";
 import UserOverviewSection  from "./sections/UserOverviewSection";
 import UserBookingsSection  from "./sections/UserBookingsSection";
 import UserSavedSection     from "./sections/UserSavedSection";
@@ -64,10 +65,32 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   },
 ];
 
-export default function UserDashboard() {
+export default function UserDashboard({
+  bookings,
+  userName,
+  userAvatar,
+}: {
+  bookings:   UserBooking[];
+  userName:   string;
+  userAvatar: string;
+}) {
   const [activeTab, setActiveTab]     = useState<Tab>("overview");
   const [mobileNavOpen, setMobileNav] = useState(false);
-  const kpis = getUserKPIs();
+
+  const upcomingBookings = bookings.filter(
+    (b) => b.status === "upcoming" || b.status === "confirmed"
+  );
+  const kpis = {
+    upcomingCount:  upcomingBookings.length,
+    completedCount: bookings.filter((b) => b.status === "completed").length,
+    savedCount:     MOCK_SAVED_LISTINGS.length,
+    totalSpent:     bookings
+      .filter((b) => b.status !== "cancelled")
+      .reduce((s, b) => s + b.totalPrice, 0),
+    nextTrip: [...upcomingBookings].sort((a, b) =>
+      a.checkIn.localeCompare(b.checkIn)
+    )[0] ?? null,
+  };
 
   return (
     <div className="min-h-screen bg-[#f4efe6]">
@@ -129,8 +152,8 @@ export default function UserDashboard() {
               Explore
             </a>
             <img
-              src={MOCK_USER.avatar}
-              alt={MOCK_USER.firstName}
+              src={userAvatar}
+              alt={userName}
               className="w-9 h-9 rounded-full object-cover border-2 border-[#e8dfd4]"
             />
             {/* Mobile burger */}
@@ -179,8 +202,8 @@ export default function UserDashboard() {
         </div>
 
         {/* Section content */}
-        {activeTab === "overview"  && <UserOverviewSection  />}
-        {activeTab === "bookings"  && <UserBookingsSection  />}
+        {activeTab === "overview"  && <UserOverviewSection  bookings={bookings} kpis={kpis} userName={userName} userAvatar={userAvatar} />}
+        {activeTab === "bookings"  && <UserBookingsSection  bookings={bookings} />}
         {activeTab === "saved"     && <UserSavedSection     />}
         {activeTab === "activity"  && <UserActivitySection  />}
         {activeTab === "account"   && <UserAccountSection   />}

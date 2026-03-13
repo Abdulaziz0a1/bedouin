@@ -79,7 +79,7 @@ export async function fetchListingDetail(slug: string): Promise<ListingDetail | 
       return getListingDetail(slug);
     }
 
-    const d = data.listing_details as Record<string, unknown>;
+    const d = data.listing_details as unknown as Record<string, unknown>;
 
     // Normalize: snake_case DB columns + JSONB fields → ListingDetail interface
     const detail: ListingDetail = {

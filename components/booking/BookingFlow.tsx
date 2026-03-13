@@ -124,6 +124,7 @@ export default function BookingFlow({
 
     const result = await createBooking({
       listingSlug:      listing.id,
+      listingCategory:  listing.category,
       listingTitle:     listing.title,
       location:         listing.location,
       image:            listing.images[0],

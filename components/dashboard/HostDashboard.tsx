@@ -1,7 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { MOCK_HOST, getDashboardKPIs } from "@/lib/data/dashboard";
+import { useState, useMemo } from "react";
+import {
+  MOCK_EARNINGS_HISTORY,
+  type DashboardListing,
+  type DashboardBooking,
+  type EarningsMonth,
+} from "@/lib/data/dashboard";
 import OverviewSection  from "./sections/OverviewSection";
 import ListingsSection  from "./sections/ListingsSection";
 import BookingsSection  from "./sections/BookingsSection";
@@ -66,12 +71,81 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   },
 ];
 
-export default function HostDashboard() {
+export default function HostDashboard({
+  listings,
+  bookings,
+  hostName,
+  hostAvatar,
+}: {
+  listings:   DashboardListing[];
+  bookings:   DashboardBooking[];
+  hostName:   string;
+  hostAvatar: string;
+}) {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const kpis = getDashboardKPIs();
 
   const fmtDate = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+
+  // Compute KPIs from real data.
+  const kpis = useMemo(() => {
+    const activeListings = listings.filter((l) => l.status === "approved").length;
+    const totalBookings  = bookings.length;
+    const upcomingCount  = bookings.filter((b) => b.status === "upcoming").length;
+    const totalEarnings  = bookings
+      .filter((b) => b.status === "completed")
+      .reduce((s, b) => s + b.hostPayout, 0);
+    const avgRatingListings = listings.filter((l) => l.avgRating > 0);
+    const avgRating = avgRatingListings.length > 0
+      ? avgRatingListings.reduce((s, l) => s + l.avgRating, 0) / avgRatingListings.length
+      : 0;
+
+    // Derive earnings history from real bookings (last 6 months).
+    // Falls back to MOCK_EARNINGS_HISTORY if no real completed bookings exist.
+    const completedBookings = bookings.filter((b) => b.status === "completed");
+    let earningsHistory: EarningsMonth[] = MOCK_EARNINGS_HISTORY;
+
+    if (completedBookings.length > 0) {
+      const byMonth: Record<string, { gross: number; count: number; year: number; month: string }> = {};
+      for (const b of completedBookings) {
+        const d = new Date(b.createdAt);
+        const key = `${d.getFullYear()}-${d.getMonth()}`;
+        if (!byMonth[key]) {
+          byMonth[key] = {
+            year:  d.getFullYear(),
+            month: d.toLocaleDateString("en-GB", { month: "short" }),
+            gross: 0,
+            count: 0,
+          };
+        }
+        byMonth[key].gross += b.totalPrice;
+        byMonth[key].count += 1;
+      }
+      const sorted = Object.values(byMonth)
+        .sort((a, b) => new Date(`${a.year} ${a.month}`).getTime() - new Date(`${b.year} ${b.month}`).getTime())
+        .slice(-6);
+
+      if (sorted.length > 0) {
+        earningsHistory = sorted.map((m) => ({
+          month:    m.month,
+          year:     m.year,
+          gross:    m.gross,
+          payout:   Math.round(m.gross * 0.825),
+          bookings: m.count,
+        }));
+      }
+    }
+
+    const thisMonth  = earningsHistory[earningsHistory.length - 1]?.payout ?? 0;
+    const lastMonth  = earningsHistory[earningsHistory.length - 2]?.payout ?? 0;
+    const earningsDelta = lastMonth > 0 ? Math.round(((thisMonth - lastMonth) / lastMonth) * 100) : 0;
+
+    return {
+      activeListings, totalBookings, upcomingCount,
+      totalEarnings, avgRating,
+      earningsHistory, thisMonth, earningsDelta,
+    };
+  }, [listings, bookings]);
 
   return (
     <div className="min-h-screen bg-[#f4efe6]">
@@ -99,23 +173,25 @@ export default function HostDashboard() {
               >
                 {tab.icon}
                 {tab.label}
+                {tab.id === "cohosts" && (
+                  <span className={[
+                    "text-[9px] font-bold px-1.5 py-0.5 rounded-full border uppercase tracking-wide leading-none",
+                    activeTab === "cohosts"
+                      ? "bg-white/20 text-white/80 border-white/30"
+                      : "bg-[#fdf8ee] text-[#8b6a1f] border-[#ead9a6]",
+                  ].join(" ")}>
+                    Soon
+                  </span>
+                )}
               </button>
             ))}
           </nav>
 
           {/* Host avatar */}
           <div className="flex items-center gap-3">
-            {MOCK_HOST.superhost && (
-              <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-[#8b5e38] bg-[#fdf5ee] border border-[#e8c89a] px-2.5 py-1 rounded-full">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="#c49a4f">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                </svg>
-                Superhost
-              </span>
-            )}
             <img
-              src={MOCK_HOST.avatar}
-              alt={MOCK_HOST.name}
+              src={hostAvatar}
+              alt={hostName}
               className="w-9 h-9 rounded-full object-cover border-2 border-[#e8dfd4]"
             />
             {/* Mobile menu toggle */}
@@ -146,6 +222,16 @@ export default function HostDashboard() {
               >
                 {tab.icon}
                 {tab.label}
+                {tab.id === "cohosts" && (
+                  <span className={[
+                    "text-[9px] font-bold px-1.5 py-0.5 rounded-full border uppercase tracking-wide leading-none ml-auto",
+                    activeTab === "cohosts"
+                      ? "bg-white/20 text-white/80 border-white/30"
+                      : "bg-[#fdf8ee] text-[#8b6a1f] border-[#ead9a6]",
+                  ].join(" ")}>
+                    Soon
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -159,7 +245,7 @@ export default function HostDashboard() {
           <div>
             <p className="text-xs font-bold text-[#c49a4f] uppercase tracking-[0.14em] mb-1">{fmtDate}</p>
             <h1 className="font-display font-extrabold text-[#1a0e02] text-3xl">
-              Welcome back, {MOCK_HOST.name.split(" ")[0]}
+              Welcome back, {hostName.split(" ")[0]}
             </h1>
             <p className="text-[#64707d] text-sm mt-1">
               {kpis.upcomingCount > 0
@@ -180,10 +266,10 @@ export default function HostDashboard() {
         </div>
 
         {/* Content */}
-        {activeTab === "overview"  && <OverviewSection  />}
-        {activeTab === "listings"  && <ListingsSection  />}
-        {activeTab === "bookings"  && <BookingsSection  />}
-        {activeTab === "earnings"  && <EarningsSection  />}
+        {activeTab === "overview"  && <OverviewSection  listings={listings} bookings={bookings} kpis={kpis} />}
+        {activeTab === "listings"  && <ListingsSection  listings={listings} />}
+        {activeTab === "bookings"  && <BookingsSection  bookings={bookings} />}
+        {activeTab === "earnings"  && <EarningsSection  bookings={bookings} earningsHistory={kpis.earningsHistory} kpis={kpis} />}
         {activeTab === "cohosts"   && <CoHostSection    />}
 
       </main>

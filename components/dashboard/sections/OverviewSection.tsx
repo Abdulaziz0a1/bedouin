@@ -1,11 +1,9 @@
 "use client";
 
 import {
-  getDashboardKPIs,
-  MOCK_BOOKINGS,
-  MOCK_LISTINGS,
-  MOCK_EARNINGS_HISTORY,
   type DashboardBooking,
+  type DashboardListing,
+  type EarningsMonth,
 } from "@/lib/data/dashboard";
 import StatusBadge from "../shared/StatusBadge";
 
@@ -102,13 +100,31 @@ function UpcomingRow({ booking }: { booking: DashboardBooking }) {
   );
 }
 
-export default function OverviewSection() {
-  const kpis = getDashboardKPIs();
-  const upcoming = MOCK_BOOKINGS.filter((b) => b.status === "upcoming").slice(0, 3);
-  const pendingListings = MOCK_LISTINGS.filter((l) => l.status === "pending_review");
-  const rejectedListings = MOCK_LISTINGS.filter((l) => l.status === "rejected");
+type OverviewKPIs = {
+  totalEarnings:  number;
+  earningsDelta:  number;
+  activeListings: number;
+  totalBookings:  number;
+  upcomingCount:  number;
+  avgRating:      number;
+  thisMonth:      number;
+  earningsHistory: EarningsMonth[];
+};
 
-  const chartData = MOCK_EARNINGS_HISTORY.map((m) => ({ month: m.month, payout: m.payout }));
+export default function OverviewSection({
+  listings,
+  bookings,
+  kpis,
+}: {
+  listings: DashboardListing[];
+  bookings: DashboardBooking[];
+  kpis:     OverviewKPIs;
+}) {
+  const upcoming         = bookings.filter((b) => b.status === "upcoming").slice(0, 3);
+  const pendingListings  = listings.filter((l) => l.status === "pending_review");
+  const rejectedListings = listings.filter((l) => l.status === "rejected");
+
+  const chartData = kpis.earningsHistory.map((m) => ({ month: m.month, payout: m.payout }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -165,7 +181,7 @@ export default function OverviewSection() {
         <KPICard
           label="Active Listings"
           value={String(kpis.activeListings)}
-          sub={`${MOCK_LISTINGS.length} total`}
+          sub={`${listings.length} total`}
           icon={
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
@@ -247,7 +263,7 @@ export default function OverviewSection() {
           <h2 className="font-display font-semibold text-[#1a0e02]">Listing status</h2>
         </div>
         <div className="divide-y divide-[#f0e8de]">
-          {MOCK_LISTINGS.map((listing) => (
+          {listings.map((listing) => (
             <div key={listing.id} className="flex items-center gap-4 px-5 py-3">
               <img
                 src={listing.imageUrl}

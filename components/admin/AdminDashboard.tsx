@@ -1,11 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import {
-  ADMIN_LISTINGS,
-  getQueueStats,
-} from "@/lib/data/admin";
 import type { AdminListing, AdminListingStatus } from "@/lib/types/admin";
+import { approveSubmission, rejectSubmission } from "@/lib/actions/admin";
 import AdminStatusBadge from "./shared/AdminStatusBadge";
 import ListingQueueCard from "./ListingQueueCard";
 import ListingReviewPanel from "./ListingReviewPanel";
@@ -19,8 +16,6 @@ const TABS: { id: TabFilter; label: string }[] = [
   { id: "all",            label: "All" },
 ];
 
-// Simulate async Firestore update (replace with real updateDoc in production)
-function delay(ms: number) { return new Promise<void>((r) => setTimeout(r, ms)); }
 
 function EmptyQueue({ tab }: { tab: TabFilter }) {
   const msgs: Record<TabFilter, { title: string; sub: string }> = {
@@ -65,14 +60,25 @@ function SelectionPrompt() {
   );
 }
 
-export default function AdminDashboard() {
-  const [listings,  setListings]  = useState<AdminListing[]>(ADMIN_LISTINGS);
+export default function AdminDashboard({
+  initialListings,
+}: {
+  initialListings: AdminListing[];
+}) {
+  const [listings,  setListings]  = useState<AdminListing[]>(initialListings);
   const [tab,       setTab]       = useState<TabFilter>("pending_review");
   const [search,    setSearch]    = useState("");
   const [selected,  setSelected]  = useState<string | null>(null);
   const [showPanel, setShowPanel] = useState(false); // mobile panel toggle
 
-  const stats = getQueueStats();
+  // Compute stats from live listings state for real-time badge accuracy.
+  const today = new Date().toISOString().slice(0, 10);
+  const stats = {
+    pendingCount:  listings.filter((l) => l.status === "pending_review").length,
+    approvedToday: listings.filter((l) => l.status === "approved" && l.reviewedAt?.startsWith(today)).length,
+    rejectedToday: listings.filter((l) => l.status === "rejected"  && l.reviewedAt?.startsWith(today)).length,
+    avgReviewHours: 52,
+  };
 
   // ── Derived list ────────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
@@ -107,25 +113,47 @@ export default function AdminDashboard() {
   }), [listings]);
 
   // ── Actions ─────────────────────────────────────────────────────────────────
+  // The admin display name is a fixed placeholder — in production it would
+  // come from the authenticated admin's profile.
+  const ADMIN_DISPLAY_NAME = "Admin · Bedouin";
+
   const handleApprove = async (id: string) => {
-    await delay(900); // simulate network
-    // Firestore: updateDoc(doc(db,"listings",id), { status:"approved", reviewedAt: serverTimestamp(), reviewedBy: adminName })
+    const result = await approveSubmission(id, ADMIN_DISPLAY_NAME);
+    if (!result.success) {
+      console.error("Approve failed:", result.error);
+      return;
+    }
+    // Optimistic update — reflect the decision immediately without refetching.
     setListings((prev) =>
       prev.map((l) =>
         l.id === id
-          ? { ...l, status: "approved" as AdminListingStatus, reviewedAt: new Date().toISOString(), reviewedBy: "Admin · Fatima Al-Zahrani" }
+          ? {
+              ...l,
+              status:     "approved" as AdminListingStatus,
+              reviewedAt: new Date().toISOString(),
+              reviewedBy: ADMIN_DISPLAY_NAME,
+            }
           : l
       )
     );
   };
 
   const handleReject = async (id: string, reason: string) => {
-    await delay(900);
-    // Firestore: updateDoc(doc(db,"listings",id), { status:"rejected", rejectionReason: reason, reviewedAt: serverTimestamp(), reviewedBy: adminName })
+    const result = await rejectSubmission(id, reason, ADMIN_DISPLAY_NAME);
+    if (!result.success) {
+      console.error("Reject failed:", result.error);
+      return;
+    }
     setListings((prev) =>
       prev.map((l) =>
         l.id === id
-          ? { ...l, status: "rejected" as AdminListingStatus, rejectionReason: reason, reviewedAt: new Date().toISOString(), reviewedBy: "Admin · Fatima Al-Zahrani" }
+          ? {
+              ...l,
+              status:          "rejected" as AdminListingStatus,
+              rejectionReason: reason,
+              reviewedAt:      new Date().toISOString(),
+              reviewedBy:      ADMIN_DISPLAY_NAME,
+            }
           : l
       )
     );

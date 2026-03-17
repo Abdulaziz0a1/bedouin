@@ -31,21 +31,20 @@ export default function LoginForm() {
       return;
     }
 
-    // Determine where to send the user based on their role.
-    // Falls back to home if profile is missing or role is unrecognised.
+    // Determine where to send the user based on their role and active mode.
+    // Admins → /admin. Host-mode users → /dashboard. Everyone else → /account.
     const { data: { user } } = await supabase.auth.getUser();
-    let destination = "/";
+    let destination = "/account";
 
     if (user) {
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, active_mode")
         .eq("id", user.id)
         .single();
 
       if (profile?.role === "admin") destination = "/admin";
-      else if (profile?.role === "host") destination = "/dashboard";
-      // role === "user" or anything else → home
+      else if (profile?.active_mode === "host") destination = "/dashboard";
     }
 
     router.push(destination);

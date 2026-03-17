@@ -1,13 +1,22 @@
 "use client";
 
-import {
-  MOCK_PAYOUTS,
-  type EarningsMonth,
-  type PayoutRecord,
-  type DashboardBooking,
-} from "@/lib/data/dashboard";
+import { type EarningsMonth } from "@/lib/data/dashboard";
 
 function BarChart({ data }: { data: EarningsMonth[] }) {
+  if (data.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-40 text-center gap-2">
+        <div className="w-10 h-10 rounded-xl bg-[#fdf5ee] flex items-center justify-center text-[#8b5e38]">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+        <p className="text-sm font-semibold text-[#1a0e02]">No earnings yet</p>
+        <p className="text-xs text-[#64707d]">Monthly data will appear here once you receive your first completed booking.</p>
+      </div>
+    );
+  }
+
   const maxGross = Math.max(...data.map((d) => d.gross));
 
   return (
@@ -54,50 +63,12 @@ function BarChart({ data }: { data: EarningsMonth[] }) {
   );
 }
 
-function PayoutStatusChip({ status }: { status: PayoutRecord["status"] }) {
-  const cfg = {
-    paid:       { label: "Paid",       cls: "bg-[#f0faf5] text-[#049153] border-[#c3e8d6]" },
-    processing: { label: "Processing", cls: "bg-[#fdf8ee] text-[#8b6a1f] border-[#ead9a6]" },
-    scheduled:  { label: "Scheduled",  cls: "bg-[#f4f6f8] text-[#64707d] border-[#dddfe3]" },
-  }[status];
-  return (
-    <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${cfg.cls}`}>
-      {cfg.label}
-    </span>
-  );
-}
-
-function PayoutRow({ payout }: { payout: PayoutRecord }) {
-  const fmtDate = (iso: string) =>
-    new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-
-  return (
-    <div className="flex items-center gap-4 py-3.5 border-b last:border-0 border-[#f0e8de]">
-      <div className="w-9 h-9 rounded-xl bg-[#fdf5ee] flex items-center justify-center shrink-0">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-[#8b5e38]">
-          <rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="1.6" />
-          <path d="M2 10h20" stroke="currentColor" strokeWidth="1.6" />
-        </svg>
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-[#1a0e02]">{fmtDate(payout.date)}</p>
-        <p className="text-xs text-[#64707d]">{payout.method} · {payout.reference}</p>
-      </div>
-      <div className="text-right shrink-0 flex flex-col items-end gap-1">
-        <p className="font-display font-bold text-[#1a0e02]">SAR {payout.amount.toLocaleString()}</p>
-        <PayoutStatusChip status={payout.status} />
-      </div>
-    </div>
-  );
-}
-
 export default function EarningsSection({
   earningsHistory,
   kpis,
 }: {
-  bookings:       DashboardBooking[];
   earningsHistory: EarningsMonth[];
-  kpis:           { thisMonth: number; earningsDelta: number };
+  kpis:            { thisMonth: number; earningsDelta: number };
 }) {
   const totalGross    = earningsHistory.reduce((s, m) => s + m.gross,    0);
   const totalPayout   = earningsHistory.reduce((s, m) => s + m.payout,   0);
@@ -116,10 +87,10 @@ export default function EarningsSection({
       {/* Summary KPI strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Total payout",   value: `SAR ${totalPayout.toLocaleString()}`,  sub: "6 months"   },
-          { label: "Guest payments", value: `SAR ${totalGross.toLocaleString()}`,   sub: "6 months"   },
-          { label: "Bedouin fee",    value: `SAR ${beduoinFee.toLocaleString()}`,   sub: "8% of gross" },
-          { label: "Bookings",       value: String(totalBookings),                  sub: "6 months"   },
+          { label: "Total payout",   value: `SAR ${totalPayout.toLocaleString()}`,  sub: "6 months"           },
+          { label: "Guest payments", value: `SAR ${totalGross.toLocaleString()}`,   sub: "6 months"           },
+          { label: "Bedouin fee",    value: `SAR ${beduoinFee.toLocaleString()}`,   sub: "8% of listed price" },
+          { label: "Bookings",       value: String(totalBookings),                  sub: "6 months"           },
         ].map((kpi) => (
           <div key={kpi.label} className="bg-white border border-[#e8dfd4] rounded-2xl p-4">
             <p className="font-display font-extrabold text-[#1a0e02] text-xl">{kpi.value}</p>
@@ -145,10 +116,10 @@ export default function EarningsSection({
         <h3 className="font-display font-semibold text-[#1a0e02] mb-3 text-sm">How your payout is calculated</h3>
         <div className="flex flex-col gap-2">
           {[
-            { label: "Guest pays",         note: "Listing price × nights",    color: "text-[#1a0e02]" },
-            { label: "Bedouin earns",      note: "8% platform fee",           color: "text-[#64707d]" },
-            { label: "Service fee (guest)",note: "12% added to guest total",  color: "text-[#64707d]" },
-            { label: "You receive",        note: "92% of your listed price",  color: "text-[#049153] font-bold" },
+            { label: "You list at",         note: "Price per night × nights",       color: "text-[#1a0e02]"           },
+            { label: "Bedouin platform fee",note: "8% of your listed subtotal",     color: "text-[#64707d]"           },
+            { label: "Service fee (guest)", note: "12% added on top — guest pays",  color: "text-[#64707d]"           },
+            { label: "You receive",         note: "92% of your listed subtotal",    color: "text-[#049153] font-bold" },
           ].map((row) => (
             <div key={row.label} className="flex items-center justify-between text-sm">
               <span className="text-[#64707d]">{row.label}</span>
@@ -158,17 +129,29 @@ export default function EarningsSection({
         </div>
       </div>
 
-      {/* Payout history */}
+      {/* Payout history — honest empty state, no mock records */}
       <div className="bg-white border border-[#e8dfd4] rounded-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-[#f0e8de]">
           <h3 className="font-display font-semibold text-[#1a0e02]">Payout history</h3>
           <p className="text-xs text-[#64707d] mt-0.5">Transferred to your registered bank account</p>
         </div>
-        <div className="px-5 py-2">
-          {MOCK_PAYOUTS.map((p) => (
-            <PayoutRow key={p.id} payout={p} />
-          ))}
+
+        {/* Empty state — payout infrastructure not yet live */}
+        <div className="flex flex-col items-center text-center py-10 px-6 gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#fdf5ee] flex items-center justify-center text-[#8b5e38]">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="1.6" />
+              <path d="M2 10h20" stroke="currentColor" strokeWidth="1.6" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-[#1a0e02]">No payouts yet</p>
+            <p className="text-xs text-[#64707d] mt-0.5 max-w-xs leading-relaxed">
+              Your first payout will appear here after your first completed and settled booking.
+            </p>
+          </div>
         </div>
+
         <div className="px-5 py-4 border-t border-[#f0e8de] bg-[#faf7f4]">
           <p className="text-xs text-[#64707d]">
             Need to update your bank details?{" "}

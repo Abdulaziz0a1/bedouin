@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
 import { fetchUserBookings } from "@/lib/services/bookings";
-import { MOCK_USER_BOOKINGS, MOCK_USER } from "@/lib/data/user-dashboard";
 import UserDashboard from "@/components/user/UserDashboard";
 
 export const metadata: Metadata = {
@@ -11,31 +11,43 @@ export const metadata: Metadata = {
 
 export default async function AccountPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    // INTENTIONAL FALLBACK: unauthenticated visitors (or preview mode) see mock data.
-    return (
-      <UserDashboard
-        bookings={MOCK_USER_BOOKINGS}
-        userName={MOCK_USER.firstName}
-        userAvatar={MOCK_USER.avatar ?? "https://i.pravatar.cc/80"}
-      />
-    );
+    redirect("/login?returnTo=/account");
   }
 
   const [bookings, profileResult] = await Promise.all([
     fetchUserBookings(user.id),
-    supabase.from("profiles").select("first_name, last_name, avatar_url").eq("id", user.id).single(),
+    supabase
+      .from("profiles")
+      .select("first_name, last_name, avatar_url, phone, nationality, created_at, host_status, host_rejection_reason, cohost_status, cohost_rejection_reason")
+      .eq("id", user.id)
+      .single(),
   ]);
 
   const profile = profileResult.data;
-  const userName  = profile
-    ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || user.email?.split("@")[0] || "Traveller"
-    : (user.email?.split("@")[0] ?? "Traveller");
-  const userAvatar = profile?.avatar_url ?? `https://i.pravatar.cc/80?u=${user.id}`;
 
-  return <UserDashboard bookings={bookings} userName={userName} userAvatar={userAvatar} />;
+  const firstName  = profile?.first_name  ?? "";
+  const lastName   = profile?.last_name   ?? "";
+  const userName   = `${firstName} ${lastName}`.trim() || user.email?.split("@")[0] || "Traveller";
+  const userAvatar = profile?.avatar_url  ?? `https://i.pravatar.cc/80?u=${user.id}`;
+
+  return (
+    <UserDashboard
+      bookings={bookings}
+      userName={userName}
+      userAvatar={userAvatar}
+      userEmail={user.email ?? ""}
+      userFirstName={firstName}
+      userLastName={lastName}
+      userPhone={profile?.phone ?? ""}
+      userNationality={profile?.nationality ?? ""}
+      userJoinedAt={profile?.created_at ?? user.created_at ?? ""}
+      hostStatus={(profile?.host_status as "pending" | "approved" | "rejected" | null) ?? null}
+      hostRejectionReason={profile?.host_rejection_reason ?? null}
+      cohostStatus={(profile?.cohost_status as "pending" | "approved" | "rejected" | null) ?? null}
+      cohostRejectionReason={profile?.cohost_rejection_reason ?? null}
+    />
+  );
 }

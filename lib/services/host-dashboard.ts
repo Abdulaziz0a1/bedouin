@@ -1,7 +1,5 @@
 import { createClient } from "@/lib/supabase-server";
 import {
-  MOCK_LISTINGS,
-  MOCK_BOOKINGS,
   type DashboardListing,
   type DashboardBooking,
 } from "@/lib/data/dashboard";
@@ -25,7 +23,8 @@ export async function fetchHostListings(hostId: string): Promise<DashboardListin
       .eq("host_id", hostId)
       .order("submitted_at", { ascending: false });
 
-    if (error || !data || data.length === 0) return MOCK_LISTINGS;
+    if (error || !data) return [];
+    if (data.length === 0) return [];
 
     return data.map((row): DashboardListing => ({
       id:               row.id,
@@ -51,8 +50,7 @@ export async function fetchHostListings(hostId: string): Promise<DashboardListin
       reviewCount:      0,
     }));
   } catch {
-    // INTENTIONAL FALLBACK
-    return MOCK_LISTINGS;
+    return [];
   }
 }
 
@@ -88,7 +86,8 @@ export async function fetchHostBookings(hostId: string): Promise<DashboardBookin
       .eq("host_id", hostId)
       .order("created_at", { ascending: false });
 
-    if (error || !data || data.length === 0) return MOCK_BOOKINGS;
+    if (error || !data) return [];
+    if (data.length === 0) return [];
 
     return data.map((row): DashboardBooking => ({
       id:               row.id,
@@ -106,14 +105,15 @@ export async function fetchHostBookings(hostId: string): Promise<DashboardBookin
       adults:           row.adults,
       children:         row.children,
       totalPrice:       row.total_price,
-      // Platform takes ~17.5%; host payout is 82.5% of total.
-      hostPayout:       Math.round(row.total_price * 0.825),
+      // Platform fee: 8% of the host's listed subtotal (before guest service fee).
+      // Host receives 92% of subtotal. Guest pays an additional 12% service fee
+      // on top, which goes entirely to the platform — so total_price is NOT used here.
+      hostPayout:       Math.round((row.subtotal ?? row.total_price) * 0.92),
       status:           deriveBookingStatus(row.status, row.check_in, row.check_out),
       paymentMethod:    row.payment_method as DashboardBooking["paymentMethod"],
       createdAt:        row.created_at?.slice(0, 10) ?? "",
     }));
   } catch {
-    // INTENTIONAL FALLBACK
-    return MOCK_BOOKINGS;
+    return [];
   }
 }

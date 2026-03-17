@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import type { UserBooking } from "@/lib/types/user";
+import { cancelBooking } from "@/lib/actions/booking";
 import BookingStatusBadge from "../shared/BookingStatusBadge";
 import UserEmptyState from "../shared/UserEmptyState";
 
@@ -14,8 +15,28 @@ const PAYMENT_LABELS: Record<string, string> = {
   apple_pay: "Apple Pay",
 };
 
-function BookingCard({ booking }: { booking: UserBooking }) {
-  const [expanded, setExpanded] = useState(false);
+function BookingCard({
+  booking,
+  onCancelled,
+}: {
+  booking:     UserBooking;
+  onCancelled: (id: string) => void;
+}) {
+  const [expanded, setExpanded]     = useState(false);
+  const [cancelError, setCancelErr] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  const handleCancel = () => {
+    setCancelErr(null);
+    startTransition(async () => {
+      const result = await cancelBooking(booking.id);
+      if (result.success) {
+        onCancelled(booking.id);
+      } else {
+        setCancelErr(result.error);
+      }
+    });
+  };
 
   const checkIn  = new Date(booking.checkIn);
   const checkOut = new Date(booking.checkOut);
@@ -125,9 +146,16 @@ function BookingCard({ booking }: { booking: UserBooking }) {
                 </button>
               )}
               {booking.canCancel && (
-                <button className="px-3 py-1.5 border border-red-200 rounded-xl text-xs font-semibold text-red-500 hover:bg-red-50 transition-colors">
-                  Cancel
+                <button
+                  onClick={handleCancel}
+                  disabled={isPending}
+                  className="px-3 py-1.5 border border-red-200 rounded-xl text-xs font-semibold text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isPending ? "Cancelling…" : "Cancel"}
                 </button>
+              )}
+              {cancelError && (
+                <p className="w-full text-[10px] text-red-500 mt-1">{cancelError}</p>
               )}
               <button
                 onClick={() => setExpanded(!expanded)}
@@ -211,8 +239,16 @@ function BookingCard({ booking }: { booking: UserBooking }) {
   );
 }
 
-export default function UserBookingsSection({ bookings }: { bookings: UserBooking[] }) {
-  const [tab, setTab] = useState<Tab>("upcoming");
+export default function UserBookingsSection({ bookings: initialBookings }: { bookings: UserBooking[] }) {
+  const [tab, setTab]       = useState<Tab>("upcoming");
+  // Local state so cancellation reflects immediately without a page reload.
+  const [bookings, setBookings] = useState<UserBooking[]>(initialBookings);
+
+  const handleCancelled = (id: string) => {
+    setBookings((prev) =>
+      prev.map((b) => b.id === id ? { ...b, status: "cancelled" as const, canCancel: false } : b)
+    );
+  };
 
   const upcoming = bookings.filter(
     (b) => b.status === "upcoming" || b.status === "confirmed" || b.status === "active"
@@ -295,7 +331,7 @@ export default function UserBookingsSection({ bookings }: { bookings: UserBookin
         />
       ) : (
         <div className="flex flex-col gap-4">
-          {shown.map((b) => <BookingCard key={b.id} booking={b} />)}
+          {shown.map((b) => <BookingCard key={b.id} booking={b} onCancelled={handleCancelled} />)}
         </div>
       )}
     </div>

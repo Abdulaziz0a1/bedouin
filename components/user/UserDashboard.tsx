@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { MOCK_SAVED_LISTINGS } from "@/lib/data/user-dashboard";
 import type { UserBooking } from "@/lib/types/user";
 import UserOverviewSection  from "./sections/UserOverviewSection";
 import UserBookingsSection  from "./sections/UserBookingsSection";
@@ -65,14 +64,36 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   },
 ];
 
+type ApplicationStatus = "pending" | "approved" | "rejected" | null;
+
 export default function UserDashboard({
   bookings,
   userName,
   userAvatar,
+  userEmail           = "",
+  userFirstName       = "",
+  userLastName        = "",
+  userPhone           = "",
+  userNationality     = "",
+  userJoinedAt        = "",
+  hostStatus          = null,
+  hostRejectionReason = null,
+  cohostStatus        = null,
+  cohostRejectionReason = null,
 }: {
-  bookings:   UserBooking[];
-  userName:   string;
-  userAvatar: string;
+  bookings:              UserBooking[];
+  userName:              string;
+  userAvatar:            string;
+  userEmail?:            string;
+  userFirstName?:        string;
+  userLastName?:         string;
+  userPhone?:            string;
+  userNationality?:      string;
+  userJoinedAt?:         string;
+  hostStatus?:           ApplicationStatus;
+  hostRejectionReason?:  string | null;
+  cohostStatus?:         ApplicationStatus;
+  cohostRejectionReason?: string | null;
 }) {
   const [activeTab, setActiveTab]     = useState<Tab>("overview");
   const [mobileNavOpen, setMobileNav] = useState(false);
@@ -83,7 +104,7 @@ export default function UserDashboard({
   const kpis = {
     upcomingCount:  upcomingBookings.length,
     completedCount: bookings.filter((b) => b.status === "completed").length,
-    savedCount:     MOCK_SAVED_LISTINGS.length,
+    savedCount:     0, // Wishlist not yet backed by DB — honest zero
     totalSpent:     bookings
       .filter((b) => b.status !== "cancelled")
       .reduce((s, b) => s + b.totalPrice, 0),
@@ -194,6 +215,114 @@ export default function UserDashboard({
       {/* ─── Main content ─── */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
 
+        {/* ── Application status banners ── */}
+        {(hostStatus || cohostStatus) && (
+          <div className="flex flex-col gap-3 mb-6">
+
+            {/* Host application banner */}
+            {hostStatus === "pending" && (
+              <div className="flex items-start gap-3 bg-[#fdf5ee] border border-[#e8dfd4] rounded-2xl px-5 py-4">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-[#b17a50] shrink-0 mt-0.5">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                  <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+                <div>
+                  <p className="text-sm font-bold text-[#1a0e02]">Host Application Under Review</p>
+                  <p className="text-xs text-[#64707d] mt-0.5">
+                    Our team is reviewing your host application. You&apos;ll hear back within 1–2 business days.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {hostStatus === "approved" && (
+              <div className="flex items-start gap-3 bg-[#f0faf5] border border-[#c8ead8] rounded-2xl px-5 py-4">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-[#049153] shrink-0 mt-0.5">
+                  <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <div>
+                  <p className="text-sm font-bold text-[#1a0e02]">Host Application Approved</p>
+                  <p className="text-xs text-[#64707d] mt-0.5">
+                    You&apos;re now a verified Bedouin host. Use the &quot;Switch to Hosting&quot; button in the navbar to access your Host Dashboard.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {hostStatus === "rejected" && (
+              <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-2xl px-5 py-4">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-red-500 shrink-0 mt-0.5">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+                  <path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-[#1a0e02]">Host Application Not Approved</p>
+                  {hostRejectionReason && (
+                    <p className="text-xs text-red-700 mt-0.5">Reason: {hostRejectionReason}</p>
+                  )}
+                  <a
+                    href="/host/onboarding"
+                    className="inline-block mt-2 text-xs font-bold text-[#461e00] underline hover:no-underline"
+                  >
+                    Re-apply as a host →
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {/* Co-host application banner */}
+            {cohostStatus === "pending" && (
+              <div className="flex items-start gap-3 bg-[#f0f9ff] border border-[#bfdfff] rounded-2xl px-5 py-4">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-[#0046cc] shrink-0 mt-0.5">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                  <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+                <div>
+                  <p className="text-sm font-bold text-[#1a0e02]">Service Provider Application Under Review</p>
+                  <p className="text-xs text-[#64707d] mt-0.5">
+                    Our team is reviewing your co-host application. You&apos;ll hear back within 1–2 business days.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {cohostStatus === "approved" && (
+              <div className="flex items-start gap-3 bg-[#f0faf5] border border-[#c8ead8] rounded-2xl px-5 py-4">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-[#049153] shrink-0 mt-0.5">
+                  <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <div>
+                  <p className="text-sm font-bold text-[#1a0e02]">Service Provider Profile Approved</p>
+                  <p className="text-xs text-[#64707d] mt-0.5">
+                    Your profile is now live on the Bedouin co-host marketplace. Hosts can find and invite you.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {cohostStatus === "rejected" && (
+              <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-2xl px-5 py-4">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-red-500 shrink-0 mt-0.5">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+                  <path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-[#1a0e02]">Service Provider Application Not Approved</p>
+                  {cohostRejectionReason && (
+                    <p className="text-xs text-red-700 mt-0.5">Reason: {cohostRejectionReason}</p>
+                  )}
+                  <a
+                    href="/provide-service"
+                    className="inline-block mt-2 text-xs font-bold text-[#461e00] underline hover:no-underline"
+                  >
+                    Re-apply as a service provider →
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-xs text-[#64707d] mb-6">
           <a href="/" className="hover:text-[#8b5e38] transition-colors">Home</a>
@@ -206,7 +335,17 @@ export default function UserDashboard({
         {activeTab === "bookings"  && <UserBookingsSection  bookings={bookings} />}
         {activeTab === "saved"     && <UserSavedSection     />}
         {activeTab === "activity"  && <UserActivitySection  />}
-        {activeTab === "account"   && <UserAccountSection   />}
+        {activeTab === "account"   && (
+          <UserAccountSection
+            firstName={userFirstName}
+            lastName={userLastName}
+            email={userEmail}
+            phone={userPhone}
+            nationality={userNationality}
+            avatarUrl={userAvatar}
+            joinedAt={userJoinedAt}
+          />
+        )}
 
       </main>
 

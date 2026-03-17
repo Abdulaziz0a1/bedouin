@@ -31,6 +31,23 @@ export async function submitListing(
       };
     }
 
+    // Mode guard: only users in Host mode (or admins) may create listings.
+    // This is a server-side enforcement — client-side checks are insufficient.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, active_mode")
+      .eq("id", user.id)
+      .single();
+
+    if (profile?.role !== "admin" && profile?.active_mode !== "host") {
+      return {
+        success: false,
+        error:
+          "Switch to Host mode before submitting a listing. " +
+          "Use the 'Switch to Hosting' button in the navigation bar.",
+      };
+    }
+
     const id          = crypto.randomUUID();
     const reference   = `BDN-LST-${id.replace(/-/g, "").slice(0, 8).toUpperCase()}`;
     const submittedAt = new Date().toISOString();

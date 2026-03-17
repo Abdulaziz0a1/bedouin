@@ -13,6 +13,8 @@ const PROTECTED_PREFIXES = [
   "/messages",
   "/wishlist",
   "/host/new",
+  "/host/onboarding",
+  "/provide-service",
   "/admin",
 ] as const;
 
@@ -74,6 +76,8 @@ export async function middleware(request: NextRequest) {
   if (isProtected && !user) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
+    // Preserve the original destination so LoginForm can redirect back after sign-in.
+    loginUrl.searchParams.set("returnTo", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
@@ -81,9 +85,12 @@ export async function middleware(request: NextRequest) {
   const isAuthPath = (AUTH_PATHS as readonly string[]).includes(pathname);
 
   if (isAuthPath && user) {
-    const dashboardUrl = request.nextUrl.clone();
-    dashboardUrl.pathname = "/dashboard";
-    return NextResponse.redirect(dashboardUrl);
+    // Redirect authenticated users away from auth pages.
+    // Use /account (works for every role) rather than /dashboard
+    // which is role-gated to host/admin only.
+    const accountUrl = request.nextUrl.clone();
+    accountUrl.pathname = "/account";
+    return NextResponse.redirect(accountUrl);
   }
 
   // ── 3. All other routes — pass through with refreshed session cookie ───────

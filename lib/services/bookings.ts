@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase-server";
-import { MOCK_USER_BOOKINGS } from "@/lib/data/user-dashboard";
 import type { UserBooking } from "@/lib/types/user";
 
 /**
@@ -26,10 +25,7 @@ function deriveStatus(
 
 /**
  * Fetches bookings for a given user from Supabase.
- *
- * Falls back to MOCK_USER_BOOKINGS on any error or empty result.
- * INTENTIONAL FALLBACK – keeps the dashboard functional with seed data
- * when the real table is empty or unavailable.
+ * Returns [] on error or empty result — no mock fallback.
  */
 export async function fetchUserBookings(userId: string): Promise<UserBooking[]> {
   try {
@@ -41,15 +37,16 @@ export async function fetchUserBookings(userId: string): Promise<UserBooking[]> 
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
-    if (error || !data || data.length === 0) return MOCK_USER_BOOKINGS;
+    if (error || !data || data.length === 0) return [];
 
     const today = new Date().toISOString().slice(0, 10);
 
     return data.map((row): UserBooking => {
       const status   = deriveStatus(row.status, row.check_in, row.check_out);
-      const canCancel =
-        (status === "upcoming" || status === "confirmed") &&
-        row.check_in > today;
+      // canCancel: only upcoming bookings whose check-in is still in the future.
+      // "confirmed" is the DB-stored status, not a derived display status,
+      // so it never appears here — the correct check is status === "upcoming".
+      const canCancel = status === "upcoming" && row.check_in > today;
 
       return {
         id:              row.id,
@@ -79,7 +76,6 @@ export async function fetchUserBookings(userId: string): Promise<UserBooking[]> 
       };
     });
   } catch {
-    // INTENTIONAL FALLBACK
-    return MOCK_USER_BOOKINGS;
+    return [];
   }
 }

@@ -8,6 +8,7 @@ import TopSights from "@/components/home/TopSights";
 import TopThingsToDo from "@/components/home/TopThingsToDo";
 import FarmsSection from "@/components/home/FarmsSection";
 import BecomeHostCTA from "@/components/home/BecomeHostCTA";
+import ProvideServiceCTA from "@/components/home/ProvideServiceCTA";
 import SearchSection from "@/components/home/SearchSection";
 
 export default function Home() {
@@ -31,6 +32,7 @@ export default function Home() {
         <TopSights />
         <TopThingsToDo />
         <FarmsSection />
+        <ProvideServiceCTA />
         <BecomeHostCTA />
       </main>
 

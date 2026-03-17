@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { MOCK_SAVED_LISTINGS } from "@/lib/data/user-dashboard";
 import type { SavedListing } from "@/lib/types/user";
 import RatingBadge from "@/components/ui/RatingBadge";
 import UserEmptyState from "../shared/UserEmptyState";
@@ -105,7 +104,8 @@ function SavedCard({ listing, onRemove }: { listing: SavedListing; onRemove: (id
 }
 
 export default function UserSavedSection() {
-  const [items, setItems]       = useState(MOCK_SAVED_LISTINGS);
+  // Wishlist is not yet backed by the database — start empty.
+  const [items, setItems]       = useState<SavedListing[]>([]);
   const [sort, setSort]         = useState<SortOrder>("recent");
 
   const sorted = [...items].sort((a, b) => {

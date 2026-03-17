@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { MOCK_ACTIVITY } from "@/lib/data/user-dashboard";
 import type { ActivityEvent } from "@/lib/types/user";
 import UserEmptyState from "../shared/UserEmptyState";
 
@@ -147,9 +146,9 @@ function groupByMonth(events: ActivityEvent[]): { label: string; events: Activit
 }
 
 export default function UserActivitySection() {
-  const sorted = [...MOCK_ACTIVITY].sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-  );
+  // Activity log is not yet backed by the database.
+  // Show an honest empty state rather than fabricated events.
+  const sorted: ActivityEvent[] = [];
   const groups = groupByMonth(sorted);
 
   return (

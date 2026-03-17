@@ -14,10 +14,24 @@ export default async function HostNewPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Unauthenticated visitors must log in first.
-  // returnTo ensures they land back here after login.
+  // ── Auth guard ──────────────────────────────────────────────────────────────
   if (!user) {
     redirect("/login?returnTo=/host/new");
+  }
+
+  // ── Mode guard ──────────────────────────────────────────────────────────────
+  // Only users in Host mode (or admins) may create listings.
+  // Tourist-mode users are redirected to their account page with a prompt.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, active_mode")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.role !== "admin" && profile?.active_mode !== "host") {
+    // Redirect back to account with a query param so the UI can surface a
+    // "Switch to Host mode to add a listing" prompt if desired.
+    redirect("/account?switch_hint=host");
   }
 
   return (

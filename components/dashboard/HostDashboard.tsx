@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from "react";
 import {
-  MOCK_EARNINGS_HISTORY,
   type DashboardListing,
   type DashboardBooking,
   type EarningsMonth,
@@ -100,10 +99,10 @@ export default function HostDashboard({
       ? avgRatingListings.reduce((s, l) => s + l.avgRating, 0) / avgRatingListings.length
       : 0;
 
-    // Derive earnings history from real bookings (last 6 months).
-    // Falls back to MOCK_EARNINGS_HISTORY if no real completed bookings exist.
+    // Derive earnings history from real completed bookings (last 6 months).
+    // Empty array when no completed bookings exist — honest state, not mock data.
     const completedBookings = bookings.filter((b) => b.status === "completed");
-    let earningsHistory: EarningsMonth[] = MOCK_EARNINGS_HISTORY;
+    let earningsHistory: EarningsMonth[] = [];
 
     if (completedBookings.length > 0) {
       const byMonth: Record<string, { gross: number; count: number; year: number; month: string }> = {};
@@ -269,7 +268,7 @@ export default function HostDashboard({
         {activeTab === "overview"  && <OverviewSection  listings={listings} bookings={bookings} kpis={kpis} />}
         {activeTab === "listings"  && <ListingsSection  listings={listings} />}
         {activeTab === "bookings"  && <BookingsSection  bookings={bookings} />}
-        {activeTab === "earnings"  && <EarningsSection  bookings={bookings} earningsHistory={kpis.earningsHistory} kpis={kpis} />}
+        {activeTab === "earnings"  && <EarningsSection  earningsHistory={kpis.earningsHistory} kpis={kpis} />}
         {activeTab === "cohosts"   && <CoHostSection    />}
 
       </main>

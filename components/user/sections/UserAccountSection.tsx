@@ -1,30 +1,100 @@
 "use client";
 
-import { useState } from "react";
-import { MOCK_USER } from "@/lib/data/user-dashboard";
+import { useState, useTransition } from "react";
+import { updateProfile } from "@/lib/actions/profile";
 
-function FieldRow({ label, value, editable }: { label: string; value: string; editable?: boolean }) {
+function FieldRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between py-3.5 border-b last:border-0 border-[#f0e8de] gap-4">
+    <div className="flex items-center py-3.5 border-b last:border-0 border-[#f0e8de] gap-4">
       <div className="min-w-0">
         <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest mb-0.5">{label}</p>
-        <p className="text-sm font-medium text-[#1a0e02] truncate">{value}</p>
+        <p className="text-sm font-medium text-[#1a0e02] truncate">{value || "—"}</p>
       </div>
-      {editable && (
-        <button className="text-xs font-semibold text-[#8b5e38] hover:underline shrink-0">Edit</button>
-      )}
     </div>
   );
 }
 
-export default function UserAccountSection() {
-  const [notifBooking, setNotifBooking]  = useState(true);
-  const [notifPromo,   setNotifPromo]    = useState(false);
-  const [notifRemind,  setNotifRemind]   = useState(true);
+export default function UserAccountSection({
+  firstName    = "",
+  lastName     = "",
+  email        = "",
+  phone        = "",
+  nationality  = "",
+  avatarUrl    = "",
+  joinedAt     = "",
+}: {
+  firstName?:   string;
+  lastName?:    string;
+  email?:       string;
+  phone?:       string;
+  nationality?: string;
+  avatarUrl?:   string;
+  joinedAt?:    string;
+}) {
+  const [notifBooking, setNotifBooking] = useState(true);
+  const [notifPromo,   setNotifPromo]   = useState(false);
+  const [notifRemind,  setNotifRemind]  = useState(true);
 
-  const joinedDate = new Date(MOCK_USER.joinedAt).toLocaleDateString("en-GB", {
-    day: "numeric", month: "long", year: "numeric",
-  });
+  // Edit-mode state
+  const [editing,       setEditing]     = useState(false);
+  const [editFirst,     setEditFirst]   = useState(firstName);
+  const [editLast,      setEditLast]    = useState(lastName);
+  const [editPhone,     setEditPhone]   = useState(phone);
+  const [editNat,       setEditNat]     = useState(nationality);
+  const [saveError,     setSaveError]   = useState<string | null>(null);
+  const [saveSuccess,   setSaveSuccess] = useState(false);
+  const [isPending, startTransition]    = useTransition();
+
+  // Derived display values (update optimistically after save)
+  const [displayFirst, setDisplayFirst] = useState(firstName);
+  const [displayLast,  setDisplayLast]  = useState(lastName);
+  const [displayPhone, setDisplayPhone] = useState(phone);
+  const [displayNat,   setDisplayNat]   = useState(nationality);
+
+  const fullName = `${displayFirst} ${displayLast}`.trim() || "—";
+
+  const handleEdit = () => {
+    setEditFirst(displayFirst);
+    setEditLast(displayLast);
+    setEditPhone(displayPhone);
+    setEditNat(displayNat);
+    setSaveError(null);
+    setSaveSuccess(false);
+    setEditing(true);
+  };
+
+  const handleSave = () => {
+    setSaveError(null);
+    setSaveSuccess(false);
+    startTransition(async () => {
+      const result = await updateProfile({
+        firstName:   editFirst,
+        lastName:    editLast,
+        phone:       editPhone,
+        nationality: editNat,
+      });
+      if (result.success) {
+        setDisplayFirst(editFirst);
+        setDisplayLast(editLast);
+        setDisplayPhone(editPhone);
+        setDisplayNat(editNat);
+        setSaveSuccess(true);
+        setEditing(false);
+      } else {
+        setSaveError(result.error);
+      }
+    });
+  };
+
+  const joinedDate = joinedAt
+    ? new Date(joinedAt).toLocaleDateString("en-GB", {
+        day: "numeric", month: "long", year: "numeric",
+      })
+    : "—";
+
+  const initials = firstName
+    ? firstName.charAt(0).toUpperCase()
+    : email.charAt(0).toUpperCase() || "?";
 
   function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
     return (
@@ -61,11 +131,18 @@ export default function UserAccountSection() {
         {/* Header row */}
         <div className="flex items-center gap-4 px-6 py-5 border-b border-[#f0e8de]">
           <div className="relative shrink-0">
-            <img
-              src={MOCK_USER.avatar}
-              alt={`${MOCK_USER.firstName} ${MOCK_USER.lastName}`}
-              className="w-16 h-16 rounded-full object-cover border-2 border-[#e8dfd4]"
-            />
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={fullName}
+                className="w-16 h-16 rounded-full object-cover border-2 border-[#e8dfd4]"
+              />
+            ) : (
+              /* Initials fallback when no avatar is set */
+              <div className="w-16 h-16 rounded-full bg-[#8b5e38] flex items-center justify-center text-white text-xl font-bold border-2 border-[#e8dfd4]">
+                {initials}
+              </div>
+            )}
             <button
               className="absolute -bottom-1 -right-1 w-6 h-6 bg-[#8b5e38] rounded-full flex items-center justify-center hover:bg-[#7a5030] transition-colors"
               aria-label="Change photo"
@@ -77,24 +154,107 @@ export default function UserAccountSection() {
             </button>
           </div>
           <div>
-            <h3 className="font-display font-semibold text-[#1a0e02] text-lg">
-              {MOCK_USER.firstName} {MOCK_USER.lastName}
-            </h3>
+            <h3 className="font-display font-semibold text-[#1a0e02] text-lg">{fullName}</h3>
             <p className="text-xs text-[#64707d]">Member since {joinedDate}</p>
           </div>
-          <button className="ml-auto px-4 py-2 border border-[#e8dfd4] rounded-xl text-sm font-semibold text-[#64707d] hover:border-[#8b5e38] hover:text-[#8b5e38] transition-colors shrink-0">
-            Edit profile
-          </button>
+          {!editing && (
+            <button
+              onClick={handleEdit}
+              className="ml-auto px-4 py-2 border border-[#e8dfd4] rounded-xl text-sm font-semibold text-[#64707d] hover:border-[#8b5e38] hover:text-[#8b5e38] transition-colors shrink-0"
+            >
+              Edit profile
+            </button>
+          )}
         </div>
 
-        {/* Fields */}
-        <div className="px-6 py-2">
-          <FieldRow label="Full name"    value={`${MOCK_USER.firstName} ${MOCK_USER.lastName}`} editable />
-          <FieldRow label="Email"        value={MOCK_USER.email}        editable />
-          <FieldRow label="Phone"        value={MOCK_USER.phone ?? "—"}  editable />
-          <FieldRow label="Nationality"  value={MOCK_USER.nationality ?? "—"} editable />
-        </div>
+        {/* Fields — view mode */}
+        {!editing && (
+          <div className="px-6 py-2">
+            <FieldRow label="Full name"   value={fullName}      />
+            <FieldRow label="Email"       value={email}         />
+            <FieldRow label="Phone"       value={displayPhone}  />
+            <FieldRow label="Nationality" value={displayNat}    />
+          </div>
+        )}
+
+        {/* Fields — edit mode */}
+        {editing && (
+          <div className="px-6 py-4 flex flex-col gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[
+                { label: "First name",  value: editFirst, onChange: setEditFirst },
+                { label: "Last name",   value: editLast,  onChange: setEditLast  },
+              ].map(({ label, value, onChange }) => (
+                <div key={label}>
+                  <label className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest block mb-1">
+                    {label}
+                  </label>
+                  <input
+                    type="text"
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-[#e8dfd4] rounded-xl text-sm text-[#1a0e02] placeholder:text-[#a09080] focus:outline-none focus:border-[#8b5e38] bg-white transition-colors"
+                  />
+                </div>
+              ))}
+              <div>
+                <label className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest block mb-1">
+                  Phone
+                </label>
+                <input
+                  type="tel"
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-[#e8dfd4] rounded-xl text-sm text-[#1a0e02] placeholder:text-[#a09080] focus:outline-none focus:border-[#8b5e38] bg-white transition-colors"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest block mb-1">
+                  Nationality
+                </label>
+                <input
+                  type="text"
+                  value={editNat}
+                  onChange={(e) => setEditNat(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-[#e8dfd4] rounded-xl text-sm text-[#1a0e02] placeholder:text-[#a09080] focus:outline-none focus:border-[#8b5e38] bg-white transition-colors"
+                />
+              </div>
+            </div>
+
+            {saveError && (
+              <p className="text-xs text-red-500">{saveError}</p>
+            )}
+
+            <div className="flex items-center gap-3 pt-1">
+              <button
+                onClick={handleSave}
+                disabled={isPending}
+                className="px-5 py-2.5 bg-[#8b5e38] text-white text-sm font-semibold rounded-xl hover:bg-[#7a5030] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isPending ? "Saving…" : "Save changes"}
+              </button>
+              <button
+                onClick={() => setEditing(false)}
+                disabled={isPending}
+                className="px-5 py-2.5 border border-[#e8dfd4] text-sm font-semibold text-[#64707d] rounded-xl hover:border-[#8b5e38] hover:text-[#8b5e38] transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Success banner */}
+      {saveSuccess && (
+        <div className="flex items-center gap-3 px-5 py-3 bg-[#f0faf5] border border-[#c3e6d8] rounded-xl text-sm font-semibold text-[#049153]">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+          </svg>
+          Profile updated successfully.
+        </div>
+      )}
 
       {/* Notifications */}
       <div className="bg-white border border-[#e8dfd4] rounded-2xl overflow-hidden">
@@ -129,8 +289,8 @@ export default function UserAccountSection() {
         </div>
         <div className="px-6 py-2">
           {[
-            { label: "Password",          sub: "Last changed 3 months ago", action: "Change" },
-            { label: "Linked accounts",   sub: "Google account connected",  action: "Manage" },
+            { label: "Password",        sub: "Update your account password",    action: "Change" },
+            { label: "Linked accounts", sub: "Manage connected sign-in methods", action: "Manage" },
           ].map(({ label, sub, action }) => (
             <div
               key={label}

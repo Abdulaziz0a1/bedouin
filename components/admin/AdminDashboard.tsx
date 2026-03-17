@@ -2,32 +2,42 @@
 
 import { useState, useMemo } from "react";
 import type { AdminListing, AdminListingStatus } from "@/lib/types/admin";
-import { approveSubmission, rejectSubmission } from "@/lib/actions/admin";
-import AdminStatusBadge from "./shared/AdminStatusBadge";
+import type { HostApplicationRow, CohostApplicationRow } from "@/lib/services/admin";
+import {
+  approveSubmission, rejectSubmission,
+  approveHostApplication, rejectHostApplication,
+  approveCohostApplication, rejectCohostApplication,
+} from "@/lib/actions/admin";
 import ListingQueueCard from "./ListingQueueCard";
 import ListingReviewPanel from "./ListingReviewPanel";
 
-type TabFilter = "pending_review" | "approved" | "rejected" | "all";
+// ──────────────────────────────────────────────────────────────────────────────
+// Types
+// ──────────────────────────────────────────────────────────────────────────────
 
-const TABS: { id: TabFilter; label: string }[] = [
+type Section   = "listings" | "hosts" | "cohosts";
+type TabFilter = "pending_review" | "approved" | "rejected" | "all";
+type AppStatus = "pending" | "approved" | "rejected";
+
+const LISTING_TABS: { id: TabFilter; label: string }[] = [
   { id: "pending_review", label: "Pending" },
   { id: "approved",       label: "Approved" },
   { id: "rejected",       label: "Rejected" },
   { id: "all",            label: "All" },
 ];
 
+const APP_TABS: { id: AppStatus | "all"; label: string }[] = [
+  { id: "pending",  label: "Pending"  },
+  { id: "approved", label: "Approved" },
+  { id: "rejected", label: "Rejected" },
+  { id: "all",      label: "All"      },
+];
 
-function EmptyQueue({ tab }: { tab: TabFilter }) {
-  const msgs: Record<TabFilter, { title: string; sub: string }> = {
-    pending_review: {
-      title: "Queue is clear",
-      sub: "All submitted listings have been reviewed. Check back when hosts submit new properties.",
-    },
-    approved: { title: "No approved listings yet", sub: "Approved listings will appear here." },
-    rejected: { title: "No rejected listings",     sub: "Rejected listings will appear here."  },
-    all:      { title: "No listings found",         sub: "No listings match your search."       },
-  };
-  const { title, sub } = msgs[tab];
+// ──────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────────────────────────────────────────
+
+function EmptyState({ message }: { message: string }) {
   return (
     <div className="flex flex-col items-center text-center py-16 px-6">
       <div className="w-14 h-14 rounded-2xl bg-[#f0e8de] flex items-center justify-center text-[#8b5e38] mb-4">
@@ -36,128 +46,339 @@ function EmptyQueue({ tab }: { tab: TabFilter }) {
           <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
         </svg>
       </div>
-      <p className="font-display font-semibold text-[#1a0e02] text-sm mb-1">{title}</p>
-      <p className="text-xs text-[#64707d] leading-relaxed max-w-[220px]">{sub}</p>
+      <p className="font-display font-semibold text-[#1a0e02] text-sm mb-1">{message}</p>
     </div>
   );
 }
 
-function SelectionPrompt() {
+function RejectModal({
+  onConfirm,
+  onCancel,
+  title,
+}: {
+  onConfirm: (reason: string) => void;
+  onCancel: () => void;
+  title: string;
+}) {
+  const [reason, setReason] = useState("");
   return (
-    <div className="flex flex-col items-center justify-center h-full text-center px-10">
-      <div className="w-16 h-16 rounded-2xl bg-[#f0e8de] flex items-center justify-center text-[#8b5e38] mb-4">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-          <rect x="9" y="3" width="6" height="4" rx="1" stroke="currentColor" strokeWidth="1.7" />
-          <path d="M9 12h6M9 16h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-        </svg>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
+        <h3 className="font-display font-bold text-[#1a0e02] text-base mb-1">Reject Application</h3>
+        <p className="text-xs text-[#64707d] mb-4">{title}</p>
+        <textarea
+          rows={3}
+          placeholder="Reason for rejection (required)"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          className="w-full border border-[#e8dfd4] rounded-xl px-3 py-2.5 text-sm text-[#1a0e02] placeholder:text-[#a09080] focus:outline-none focus:border-[#8b5e38] resize-none"
+        />
+        <div className="flex gap-3 mt-4">
+          <button onClick={onCancel} className="flex-1 py-2 rounded-xl border border-[#e8dfd4] text-sm font-semibold text-[#64707d] hover:bg-[#f0e8de]">Cancel</button>
+          <button
+            onClick={() => { if (reason.trim()) onConfirm(reason.trim()); }}
+            disabled={!reason.trim()}
+            className="flex-1 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 disabled:opacity-50"
+          >
+            Reject
+          </button>
+        </div>
       </div>
-      <h3 className="font-display font-semibold text-[#1a0e02] mb-2">Select a listing to review</h3>
-      <p className="text-sm text-[#64707d] leading-relaxed max-w-xs">
-        Choose a listing from the queue to see its full details and take a moderation decision.
-      </p>
     </div>
   );
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Application card (host or cohost)
+// ──────────────────────────────────────────────────────────────────────────────
+
+function ApplicationCard({
+  id,
+  name,
+  status,
+  region,
+  city,
+  submittedAt,
+  services,
+  isSelected,
+  onClick,
+}: {
+  id: string;
+  name: string;
+  status: string;
+  region: string;
+  city: string;
+  submittedAt: string;
+  services?: string[];
+  isSelected: boolean;
+  onClick: () => void;
+}) {
+  const statusColor =
+    status === "approved" ? "text-[#049153] bg-[#f0faf5] border-[#c8ead8]"
+    : status === "rejected" ? "text-red-600 bg-red-50 border-red-200"
+    : "text-[#8b6a1f] bg-[#fdf8ee] border-[#ead9a6]";
+
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full text-left px-4 py-3.5 border-b border-[#f0e8de] flex flex-col gap-1.5 transition-colors ${isSelected ? "bg-[#fdf5ee]" : "hover:bg-[#fdf9f6]"}`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-semibold text-[#1a0e02] text-sm truncate">{name}</span>
+        <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border shrink-0 ${statusColor}`}>
+          {status}
+        </span>
+      </div>
+      <p className="text-xs text-[#64707d]">{city}, {region}</p>
+      {services && services.length > 0 && (
+        <p className="text-xs text-[#8b94a4] truncate">
+          {services.slice(0, 3).join(", ")}{services.length > 3 ? ` +${services.length - 3}` : ""}
+        </p>
+      )}
+      <p className="text-[11px] text-[#a09080]">{new Date(submittedAt).toLocaleDateString()}</p>
+    </button>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Application detail panel (host or cohost)
+// ──────────────────────────────────────────────────────────────────────────────
+
+function ApplicationDetailPanel({
+  app,
+  type,
+  onApprove,
+  onReject,
+  onClose,
+}: {
+  app: HostApplicationRow | CohostApplicationRow;
+  type: "host" | "cohost";
+  onApprove: (id: string) => void;
+  onReject:  (id: string, reason: string) => void;
+  onClose:   () => void;
+}) {
+  const [showRejectModal, setShowRejectModal] = useState(false);
+
+  const isPending = app.status === "pending";
+
+  const fields: { label: string; value: string | number }[] = [
+    { label: "Applicant",  value: app.userName },
+    { label: "Region",     value: app.region   },
+    { label: "City",       value: app.city     },
+    { label: "Phone",      value: app.phone    },
+    { label: "Experience", value: `${app.experienceYears} yr${app.experienceYears === 1 ? "" : "s"}` },
+    { label: "Languages",  value: app.languages.join(", ") || "—" },
+    ...(type === "host"
+      ? [
+          { label: "Property types", value: (app as HostApplicationRow).propertyTypes.join(", ") || "—" },
+          { label: "Bank",      value: (app as HostApplicationRow).paymentInfo?.bank_name ?? "—" },
+          { label: "IBAN",      value: (app as HostApplicationRow).paymentInfo?.iban ?? "—" },
+          { label: "Account holder", value: (app as HostApplicationRow).paymentInfo?.account_holder ?? "—" },
+        ]
+      : [
+          { label: "Services", value: (app as CohostApplicationRow).serviceTypes.join(", ") || "—" },
+          { label: "Fee model", value: (app as CohostApplicationRow).feeModel },
+          ...(((app as CohostApplicationRow).feeValue) != null
+            ? [{ label: "Fee value", value: String((app as CohostApplicationRow).feeValue) }]
+            : []),
+        ]
+    ),
+  ];
+
+  return (
+    <>
+      {showRejectModal && (
+        <RejectModal
+          title={`Rejecting ${app.userName}'s ${type === "host" ? "host" : "service provider"} application`}
+          onConfirm={(reason) => { onReject(app.id, reason); setShowRejectModal(false); }}
+          onCancel={() => setShowRejectModal(false)}
+        />
+      )}
+
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <button onClick={onClose} className="md:hidden p-1.5 rounded-lg hover:bg-[#f0e8de] transition-colors">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M15 18l-6-6 6-6" stroke="#1a0e02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <div>
+            <h2 className="font-display font-bold text-[#1a0e02] text-lg">{app.userName}</h2>
+            <p className="text-xs text-[#64707d]">
+              {type === "host" ? "Host" : "Service Provider"} Application · Submitted {new Date(app.submittedAt).toLocaleDateString()}
+            </p>
+          </div>
+        </div>
+
+        {/* Bio */}
+        <div className="bg-[#fdf9f6] border border-[#e8dfd4] rounded-2xl p-4 mb-4">
+          <p className="text-xs font-bold text-[#1a0e02] uppercase tracking-wide mb-2">Bio</p>
+          <p className="text-sm text-[#1a0e02] leading-relaxed">{app.bio}</p>
+        </div>
+
+        {/* Fields */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          {fields.map(({ label, value }) => (
+            <div key={label} className="bg-white border border-[#e8dfd4] rounded-xl p-3">
+              <p className="text-[10px] font-bold text-[#8b94a4] uppercase tracking-wide mb-0.5">{label}</p>
+              <p className="text-sm text-[#1a0e02] font-medium truncate">{value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Rejection reason if already rejected */}
+        {app.status === "rejected" && app.rejectionReason && (
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
+            <p className="text-xs font-bold text-red-600 mb-1">Rejection reason</p>
+            <p className="text-sm text-red-700">{app.rejectionReason}</p>
+          </div>
+        )}
+
+        {/* Actions */}
+        {isPending && (
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={() => onApprove(app.id)}
+              className="flex-1 bg-[#049153] text-white font-bold py-3 rounded-2xl hover:bg-[#038044] transition-colors"
+            >
+              Approve
+            </button>
+            <button
+              onClick={() => setShowRejectModal(true)}
+              className="flex-1 bg-red-600 text-white font-bold py-3 rounded-2xl hover:bg-red-700 transition-colors"
+            >
+              Reject
+            </button>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Main component
+// ──────────────────────────────────────────────────────────────────────────────
 
 export default function AdminDashboard({
   initialListings,
+  initialHostApplications,
+  initialCohostApplications,
+  adminName = "Admin",
 }: {
-  initialListings: AdminListing[];
+  initialListings:           AdminListing[];
+  initialHostApplications:   HostApplicationRow[];
+  initialCohostApplications: CohostApplicationRow[];
+  adminName?:                string;
 }) {
+  // ── Listings state ─────────────────────────────────────────────────────────
   const [listings,  setListings]  = useState<AdminListing[]>(initialListings);
-  const [tab,       setTab]       = useState<TabFilter>("pending_review");
+  const [listingTab, setListingTab] = useState<TabFilter>("pending_review");
   const [search,    setSearch]    = useState("");
-  const [selected,  setSelected]  = useState<string | null>(null);
-  const [showPanel, setShowPanel] = useState(false); // mobile panel toggle
+  const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
 
-  // Compute stats from live listings state for real-time badge accuracy.
+  // ── Host applications state ────────────────────────────────────────────────
+  const [hostApps,    setHostApps]    = useState<HostApplicationRow[]>(initialHostApplications);
+  const [hostAppTab,  setHostAppTab]  = useState<AppStatus | "all">("pending");
+  const [selectedHostAppId, setSelectedHostAppId] = useState<string | null>(null);
+
+  // ── Cohost applications state ──────────────────────────────────────────────
+  const [cohostApps,    setCohostApps]    = useState<CohostApplicationRow[]>(initialCohostApplications);
+  const [cohostAppTab,  setCohostAppTab]  = useState<AppStatus | "all">("pending");
+  const [selectedCohostAppId, setSelectedCohostAppId] = useState<string | null>(null);
+
+  // ── Section ────────────────────────────────────────────────────────────────
+  const [section, setSection] = useState<Section>("listings");
+  const [showPanel, setShowPanel] = useState(false);
+
+  // ── Derived ────────────────────────────────────────────────────────────────
   const today = new Date().toISOString().slice(0, 10);
-  const stats = {
-    pendingCount:  listings.filter((l) => l.status === "pending_review").length,
-    approvedToday: listings.filter((l) => l.status === "approved" && l.reviewedAt?.startsWith(today)).length,
-    rejectedToday: listings.filter((l) => l.status === "rejected"  && l.reviewedAt?.startsWith(today)).length,
-    avgReviewHours: 52,
-  };
 
-  // ── Derived list ────────────────────────────────────────────────────────────
-  const filtered = useMemo(() => {
-    let result = listings;
-    if (tab !== "all") result = result.filter((l) => l.status === tab);
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(
-        (l) =>
-          l.title.toLowerCase().includes(q) ||
-          l.host.name.toLowerCase().includes(q) ||
-          l.region.toLowerCase().includes(q) ||
-          l.listingRef.toLowerCase().includes(q)
-      );
-    }
-    // pending first, then by submittedAt desc
-    return [...result].sort((a, b) => {
-      if (a.status === "pending_review" && b.status !== "pending_review") return -1;
-      if (b.status === "pending_review" && a.status !== "pending_review") return  1;
-      return b.submittedAt.localeCompare(a.submittedAt);
-    });
-  }, [listings, tab, search]);
+  const pendingListingCount = listings.filter((l) => l.status === "pending_review").length;
+  const pendingHostCount    = hostApps.filter((a) => a.status === "pending").length;
+  const pendingCohostCount  = cohostApps.filter((a) => a.status === "pending").length;
+  const totalPending        = pendingListingCount + pendingHostCount + pendingCohostCount;
 
-  const selectedListing = listings.find((l) => l.id === selected) ?? null;
-
-  // Tab counts
-  const counts: Record<TabFilter, number> = useMemo(() => ({
+  const listingCounts = useMemo(() => ({
     pending_review: listings.filter((l) => l.status === "pending_review").length,
     approved:       listings.filter((l) => l.status === "approved").length,
     rejected:       listings.filter((l) => l.status === "rejected").length,
     all:            listings.length,
   }), [listings]);
 
-  // ── Actions ─────────────────────────────────────────────────────────────────
-  // The admin display name is a fixed placeholder — in production it would
-  // come from the authenticated admin's profile.
-  const ADMIN_DISPLAY_NAME = "Admin · Bedouin";
-
-  const handleApprove = async (id: string) => {
-    const result = await approveSubmission(id, ADMIN_DISPLAY_NAME);
-    if (!result.success) {
-      console.error("Approve failed:", result.error);
-      return;
+  const filteredListings = useMemo(() => {
+    let res = listings;
+    if (listingTab !== "all") res = res.filter((l) => l.status === listingTab);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      res = res.filter((l) =>
+        l.title.toLowerCase().includes(q) ||
+        l.host.name.toLowerCase().includes(q) ||
+        l.region.toLowerCase().includes(q) ||
+        l.listingRef.toLowerCase().includes(q)
+      );
     }
-    // Optimistic update — reflect the decision immediately without refetching.
-    setListings((prev) =>
-      prev.map((l) =>
-        l.id === id
-          ? {
-              ...l,
-              status:     "approved" as AdminListingStatus,
-              reviewedAt: new Date().toISOString(),
-              reviewedBy: ADMIN_DISPLAY_NAME,
-            }
-          : l
-      )
-    );
+    return [...res].sort((a, b) => {
+      if (a.status === "pending_review" && b.status !== "pending_review") return -1;
+      if (b.status === "pending_review" && a.status !== "pending_review") return  1;
+      return b.submittedAt.localeCompare(a.submittedAt);
+    });
+  }, [listings, listingTab, search]);
+
+  const filteredHostApps = useMemo(() =>
+    hostAppTab === "all" ? hostApps : hostApps.filter((a) => a.status === hostAppTab),
+  [hostApps, hostAppTab]);
+
+  const filteredCohostApps = useMemo(() =>
+    cohostAppTab === "all" ? cohostApps : cohostApps.filter((a) => a.status === cohostAppTab),
+  [cohostApps, cohostAppTab]);
+
+  const selectedListing  = listings.find((l) => l.id === selectedListingId) ?? null;
+  const selectedHostApp  = hostApps.find((a) => a.id === selectedHostAppId) ?? null;
+  const selectedCohostApp = cohostApps.find((a) => a.id === selectedCohostAppId) ?? null;
+
+  // ── Listing actions ────────────────────────────────────────────────────────
+  const handleApprove = async (id: string) => {
+    const result = await approveSubmission(id);
+    if (!result.success) { console.error("Approve failed:", result.error); return; }
+    setListings((prev) => prev.map((l) => l.id === id ? { ...l, status: "approved" as AdminListingStatus, reviewedAt: new Date().toISOString() } : l));
   };
 
   const handleReject = async (id: string, reason: string) => {
-    const result = await rejectSubmission(id, reason, ADMIN_DISPLAY_NAME);
-    if (!result.success) {
-      console.error("Reject failed:", result.error);
-      return;
-    }
-    setListings((prev) =>
-      prev.map((l) =>
-        l.id === id
-          ? {
-              ...l,
-              status:          "rejected" as AdminListingStatus,
-              rejectionReason: reason,
-              reviewedAt:      new Date().toISOString(),
-              reviewedBy:      ADMIN_DISPLAY_NAME,
-            }
-          : l
-      )
-    );
+    const result = await rejectSubmission(id, reason);
+    if (!result.success) { console.error("Reject failed:", result.error); return; }
+    setListings((prev) => prev.map((l) => l.id === id ? { ...l, status: "rejected" as AdminListingStatus, rejectionReason: reason, reviewedAt: new Date().toISOString() } : l));
   };
+
+  // ── Host application actions ───────────────────────────────────────────────
+  const handleApproveHost = async (id: string) => {
+    const result = await approveHostApplication(id);
+    if (!result.success) { console.error("Approve host failed:", result.error); return; }
+    setHostApps((prev) => prev.map((a) => a.id === id ? { ...a, status: "approved", reviewedAt: new Date().toISOString() } : a));
+  };
+
+  const handleRejectHost = async (id: string, reason: string) => {
+    const result = await rejectHostApplication(id, reason);
+    if (!result.success) { console.error("Reject host failed:", result.error); return; }
+    setHostApps((prev) => prev.map((a) => a.id === id ? { ...a, status: "rejected", rejectionReason: reason, reviewedAt: new Date().toISOString() } : a));
+  };
+
+  // ── Cohost application actions ─────────────────────────────────────────────
+  const handleApproveCohost = async (id: string) => {
+    const result = await approveCohostApplication(id);
+    if (!result.success) { console.error("Approve cohost failed:", result.error); return; }
+    setCohostApps((prev) => prev.map((a) => a.id === id ? { ...a, status: "approved", reviewedAt: new Date().toISOString() } : a));
+  };
+
+  const handleRejectCohost = async (id: string, reason: string) => {
+    const result = await rejectCohostApplication(id, reason);
+    if (!result.success) { console.error("Reject cohost failed:", result.error); return; }
+    setCohostApps((prev) => prev.map((a) => a.id === id ? { ...a, status: "rejected", rejectionReason: reason, reviewedAt: new Date().toISOString() } : a));
+  };
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Render
+  // ──────────────────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-[#f4efe6] flex flex-col">
@@ -166,137 +387,226 @@ export default function AdminDashboard({
       <header className="bg-white border-b border-[#e8dfd4] sticky top-0 z-40">
         <div className="max-w-[1440px] mx-auto px-6 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <a href="/" className="font-display font-extrabold text-[#1a0e02] text-xl tracking-tight">
-              Bedouin
-            </a>
+            <a href="/" className="font-display font-extrabold text-[#1a0e02] text-xl tracking-tight">Bedouin</a>
             <span className="text-[#e8dfd4]">·</span>
             <span className="text-sm font-semibold text-[#64707d]">Admin</span>
-            <span className="text-[10px] font-bold text-[#8b5e38] bg-[#fdf5ee] border border-[#e8c89a] px-2 py-0.5 rounded-full ml-1">
-              Internal
-            </span>
+            <span className="text-[10px] font-bold text-[#8b5e38] bg-[#fdf5ee] border border-[#e8c89a] px-2 py-0.5 rounded-full ml-1">Internal</span>
           </div>
           <div className="flex items-center gap-3">
-            {stats.pendingCount > 0 && (
+            {totalPending > 0 && (
               <span className="flex items-center gap-1.5 text-xs font-semibold text-[#8b6a1f] bg-[#fdf8ee] border border-[#ead9a6] px-3 py-1.5 rounded-full">
                 <span className="w-2 h-2 rounded-full bg-[#c49a4f] animate-pulse" />
-                {stats.pendingCount} pending
+                {totalPending} pending
               </span>
             )}
-            <div className="w-8 h-8 rounded-full bg-[#1a0e02] flex items-center justify-center text-white text-xs font-bold">
-              FA
+            <div className="w-8 h-8 rounded-full bg-[#1a0e02] flex items-center justify-center text-white text-xs font-bold" title={adminName}>
+              {adminName.split(" ").map((w) => w.charAt(0).toUpperCase()).slice(0, 2).join("")}
             </div>
           </div>
         </div>
       </header>
 
-      {/* ── Stats strip ─────────────────────────────────────────────────────── */}
+      {/* ── Section selector ────────────────────────────────────────────────── */}
       <div className="bg-white border-b border-[#e8dfd4]">
-        <div className="max-w-[1440px] mx-auto px-6 py-3 flex items-center gap-6 overflow-x-auto">
+        <div className="max-w-[1440px] mx-auto px-6 flex items-center gap-1 pt-3 pb-0">
+          {([
+            { id: "listings" as Section, label: "Listings",           count: pendingListingCount },
+            { id: "hosts"    as Section, label: "Host Applications",  count: pendingHostCount   },
+            { id: "cohosts"  as Section, label: "Co-host Applications", count: pendingCohostCount },
+          ] as const).map(({ id, label, count }) => (
+            <button
+              key={id}
+              onClick={() => { setSection(id); setShowPanel(false); }}
+              className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+                section === id
+                  ? "border-[#461e00] text-[#1a0e02]"
+                  : "border-transparent text-[#64707d] hover:text-[#1a0e02]"
+              }`}
+            >
+              {label}
+              {count > 0 && (
+                <span className="text-[10px] font-bold bg-[#c49a4f] text-white rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
+                  {count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+        {/* Stats strip */}
+        <div className="px-6 pb-3 pt-2 flex items-center gap-6 overflow-x-auto">
           {[
-            { label: "Pending review", value: counts.pending_review, color: "text-[#8b6a1f]", bg: "bg-[#fdf8ee]" },
-            { label: "Approved",       value: counts.approved,       color: "text-[#049153]", bg: "bg-[#f0faf5]" },
-            { label: "Rejected",       value: counts.rejected,       color: "text-red-600",   bg: "bg-red-50"    },
-            { label: "Avg. review time", value: `${stats.avgReviewHours}h`, color: "text-[#1a0e02]", bg: "bg-[#f4f6f8]" },
+            { label: "Listing queue", value: pendingListingCount, color: "text-[#8b6a1f]", bg: "bg-[#fdf8ee]" },
+            { label: "Host applicants", value: pendingHostCount,   color: "text-[#0046cc]", bg: "bg-[#f0f9ff]" },
+            { label: "Co-host applicants", value: pendingCohostCount, color: "text-[#049153]", bg: "bg-[#f0faf5]" },
+            { label: "Approved today", value: listings.filter((l) => l.status === "approved" && l.reviewedAt?.startsWith(today)).length, color: "text-[#049153]", bg: "bg-[#f0faf5]" },
           ].map(({ label, value, color, bg }) => (
             <div key={label} className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl ${bg} shrink-0`}>
-              <span className={`font-display font-extrabold text-lg ${color}`}>{value}</span>
+              <span className={`font-display font-extrabold text-base ${color}`}>{value}</span>
               <span className="text-[10px] text-[#64707d] font-bold uppercase tracking-wide leading-tight">{label}</span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* ── Main content: split pane ─────────────────────────────────────────── */}
-      <div className="flex-1 flex max-w-[1440px] w-full mx-auto overflow-hidden" style={{ height: "calc(100vh - 116px)" }}>
+      {/* ── Main ────────────────────────────────────────────────────────────── */}
+      <div className="flex-1 flex max-w-[1440px] w-full mx-auto overflow-hidden" style={{ height: "calc(100vh - 148px)" }}>
 
-        {/* ── Left: Queue ────────────────────────────────────────────────────── */}
-        <div className={`w-full md:w-[380px] md:shrink-0 flex flex-col bg-white border-r border-[#e8dfd4] overflow-hidden ${showPanel ? "hidden md:flex" : "flex"}`}>
-
-          {/* Queue controls */}
-          <div className="px-4 pt-4 pb-3 border-b border-[#f0e8de] flex flex-col gap-3 shrink-0">
-            {/* Tabs */}
-            <div className="flex gap-1 bg-[#f0e8de] rounded-xl p-1">
-              {TABS.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => { setTab(t.id); setSelected(null); }}
-                  className={[
-                    "flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-semibold transition-all",
-                    tab === t.id ? "bg-white text-[#1a0e02] shadow-sm" : "text-[#64707d] hover:text-[#1a0e02]",
-                  ].join(" ")}
-                >
-                  {t.label}
-                  {counts[t.id] > 0 && (
-                    <span className={`text-[10px] font-bold rounded-full px-1 min-w-[16px] text-center ${
-                      tab === t.id
-                        ? t.id === "pending_review" ? "bg-[#c49a4f] text-white"
-                        : t.id === "approved"       ? "bg-[#049153] text-white"
-                        : t.id === "rejected"       ? "bg-red-500 text-white"
-                        :                             "bg-[#64707d] text-white"
-                        : "bg-[#e8dfd4] text-[#64707d]"
-                    }`}>
-                      {counts[t.id]}
-                    </span>
-                  )}
-                </button>
-              ))}
+        {/* ── Listings section ────────────────────────────────────────────── */}
+        {section === "listings" && (
+          <>
+            {/* Left: queue */}
+            <div className={`w-full md:w-[380px] md:shrink-0 flex flex-col bg-white border-r border-[#e8dfd4] overflow-hidden ${showPanel ? "hidden md:flex" : "flex"}`}>
+              <div className="px-4 pt-4 pb-3 border-b border-[#f0e8de] flex flex-col gap-3 shrink-0">
+                <div className="flex gap-1 bg-[#f0e8de] rounded-xl p-1">
+                  {LISTING_TABS.map((t) => (
+                    <button key={t.id} onClick={() => { setListingTab(t.id); setSelectedListingId(null); }}
+                      className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${listingTab === t.id ? "bg-white text-[#1a0e02] shadow-sm" : "text-[#64707d] hover:text-[#1a0e02]"}`}>
+                      {t.label}
+                      {listingCounts[t.id] > 0 && (
+                        <span className={`text-[10px] font-bold rounded-full px-1 min-w-[16px] text-center ${listingTab === t.id ? t.id === "pending_review" ? "bg-[#c49a4f] text-white" : t.id === "approved" ? "bg-[#049153] text-white" : t.id === "rejected" ? "bg-red-500 text-white" : "bg-[#64707d] text-white" : "bg-[#e8dfd4] text-[#64707d]"}`}>
+                          {listingCounts[t.id]}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <div className="relative">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a09080]">
+                    <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="1.8" />
+                    <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  </svg>
+                  <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search title, host, region…"
+                    className="w-full pl-9 pr-3 py-2 border border-[#e8dfd4] rounded-xl text-sm text-[#1a0e02] placeholder:text-[#a09080] focus:outline-none focus:border-[#8b5e38] bg-white transition-colors" />
+                </div>
+                <p className="text-[10px] text-[#a09080] font-medium">{filteredListings.length} listing{filteredListings.length !== 1 ? "s" : ""}</p>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                {filteredListings.length === 0
+                  ? <EmptyState message="No listings in this view." />
+                  : filteredListings.map((listing) => (
+                    <ListingQueueCard key={listing.id} listing={listing} isSelected={selectedListingId === listing.id}
+                      onClick={() => { setSelectedListingId(listing.id); setShowPanel(true); }} />
+                  ))
+                }
+              </div>
             </div>
-
-            {/* Search */}
-            <div className="relative">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a09080]">
-                <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="1.8" />
-                <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              </svg>
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search title, host, region, ref…"
-                className="w-full pl-9 pr-3 py-2 border border-[#e8dfd4] rounded-xl text-sm text-[#1a0e02] placeholder:text-[#a09080] focus:outline-none focus:border-[#8b5e38] bg-white transition-colors"
-              />
+            {/* Right: review panel */}
+            <div className={`flex-1 flex flex-col overflow-hidden ${showPanel || !selectedListingId ? "block" : "hidden md:block"}`}>
+              {selectedListing ? (
+                <ListingReviewPanel key={selectedListing.id} listing={selectedListing}
+                  onApprove={handleApprove} onReject={handleReject} onClose={() => setShowPanel(false)} />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-center px-10">
+                  <div className="w-16 h-16 rounded-2xl bg-[#f0e8de] flex items-center justify-center text-[#8b5e38] mb-4">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+                      <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                      <rect x="9" y="3" width="6" height="4" rx="1" stroke="currentColor" strokeWidth="1.7" />
+                    </svg>
+                  </div>
+                  <h3 className="font-display font-semibold text-[#1a0e02] mb-2">Select a listing to review</h3>
+                  <p className="text-sm text-[#64707d] max-w-xs">Choose a listing from the queue to see its full details.</p>
+                </div>
+              )}
             </div>
+          </>
+        )}
 
-            <p className="text-[10px] text-[#a09080] font-medium">
-              {filtered.length} listing{filtered.length !== 1 ? "s" : ""}
-            </p>
-          </div>
+        {/* ── Host Applications section ───────────────────────────────────── */}
+        {section === "hosts" && (
+          <>
+            <div className={`w-full md:w-[380px] md:shrink-0 flex flex-col bg-white border-r border-[#e8dfd4] overflow-hidden ${showPanel ? "hidden md:flex" : "flex"}`}>
+              <div className="px-4 pt-4 pb-3 border-b border-[#f0e8de] flex flex-col gap-3 shrink-0">
+                <div className="flex gap-1 bg-[#f0e8de] rounded-xl p-1">
+                  {APP_TABS.map((t) => (
+                    <button key={t.id} onClick={() => { setHostAppTab(t.id); setSelectedHostAppId(null); }}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${hostAppTab === t.id ? "bg-white text-[#1a0e02] shadow-sm" : "text-[#64707d] hover:text-[#1a0e02]"}`}>
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-[#a09080] font-medium">{filteredHostApps.length} application{filteredHostApps.length !== 1 ? "s" : ""}</p>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                {filteredHostApps.length === 0
+                  ? <EmptyState message="No host applications in this view." />
+                  : filteredHostApps.map((app) => (
+                    <ApplicationCard key={app.id} id={app.id} name={app.userName} status={app.status}
+                      region={app.region} city={app.city} submittedAt={app.submittedAt}
+                      services={app.propertyTypes}
+                      isSelected={selectedHostAppId === app.id}
+                      onClick={() => { setSelectedHostAppId(app.id); setShowPanel(true); }} />
+                  ))
+                }
+              </div>
+            </div>
+            <div className={`flex-1 flex flex-col overflow-hidden ${showPanel || !selectedHostAppId ? "block" : "hidden md:block"}`}>
+              {selectedHostApp ? (
+                <ApplicationDetailPanel app={selectedHostApp} type="host"
+                  onApprove={handleApproveHost} onReject={handleRejectHost} onClose={() => setShowPanel(false)} />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-center px-10">
+                  <div className="w-16 h-16 rounded-2xl bg-[#f0e8de] flex items-center justify-center text-[#8b5e38] mb-4">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.7" />
+                      <path d="M4 20c0-4 3.58-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                  <h3 className="font-display font-semibold text-[#1a0e02] mb-2">Select an application</h3>
+                  <p className="text-sm text-[#64707d] max-w-xs">Choose a host application from the list to review and decide.</p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
 
-          {/* Scrollable queue */}
-          <div className="flex-1 overflow-y-auto">
-            {filtered.length === 0 ? (
-              <EmptyQueue tab={tab} />
-            ) : (
-              filtered.map((listing) => (
-                <ListingQueueCard
-                  key={listing.id}
-                  listing={listing}
-                  isSelected={selected === listing.id}
-                  onClick={() => {
-                    setSelected(listing.id);
-                    setShowPanel(true);
-                  }}
-                />
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* ── Right: Review panel ─────────────────────────────────────────────── */}
-        <div className={`flex-1 flex flex-col overflow-hidden ${showPanel || !selected ? "block" : "hidden md:block"}`}>
-          {selectedListing ? (
-            <ListingReviewPanel
-              key={selectedListing.id}
-              listing={selectedListing}
-              onApprove={handleApprove}
-              onReject={handleReject}
-              onClose={() => setShowPanel(false)}
-            />
-          ) : (
-            <SelectionPrompt />
-          )}
-        </div>
-
+        {/* ── Co-host Applications section ────────────────────────────────── */}
+        {section === "cohosts" && (
+          <>
+            <div className={`w-full md:w-[380px] md:shrink-0 flex flex-col bg-white border-r border-[#e8dfd4] overflow-hidden ${showPanel ? "hidden md:flex" : "flex"}`}>
+              <div className="px-4 pt-4 pb-3 border-b border-[#f0e8de] flex flex-col gap-3 shrink-0">
+                <div className="flex gap-1 bg-[#f0e8de] rounded-xl p-1">
+                  {APP_TABS.map((t) => (
+                    <button key={t.id} onClick={() => { setCohostAppTab(t.id); setSelectedCohostAppId(null); }}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${cohostAppTab === t.id ? "bg-white text-[#1a0e02] shadow-sm" : "text-[#64707d] hover:text-[#1a0e02]"}`}>
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-[#a09080] font-medium">{filteredCohostApps.length} application{filteredCohostApps.length !== 1 ? "s" : ""}</p>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                {filteredCohostApps.length === 0
+                  ? <EmptyState message="No co-host applications in this view." />
+                  : filteredCohostApps.map((app) => (
+                    <ApplicationCard key={app.id} id={app.id} name={app.userName} status={app.status}
+                      region={app.region} city={app.city} submittedAt={app.submittedAt}
+                      services={app.serviceTypes}
+                      isSelected={selectedCohostAppId === app.id}
+                      onClick={() => { setSelectedCohostAppId(app.id); setShowPanel(true); }} />
+                  ))
+                }
+              </div>
+            </div>
+            <div className={`flex-1 flex flex-col overflow-hidden ${showPanel || !selectedCohostAppId ? "block" : "hidden md:block"}`}>
+              {selectedCohostApp ? (
+                <ApplicationDetailPanel app={selectedCohostApp} type="cohost"
+                  onApprove={handleApproveCohost} onReject={handleRejectCohost} onClose={() => setShowPanel(false)} />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-center px-10">
+                  <div className="w-16 h-16 rounded-2xl bg-[#f0e8de] flex items-center justify-center text-[#8b5e38] mb-4">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+                      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                      <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.7" />
+                      <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                  <h3 className="font-display font-semibold text-[#1a0e02] mb-2">Select an application</h3>
+                  <p className="text-sm text-[#64707d] max-w-xs">Choose a co-host application from the list to review and decide.</p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

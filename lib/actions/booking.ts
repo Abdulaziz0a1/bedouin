@@ -140,3 +140,76 @@ export async function createBooking(
     return { success: false, error: message };
   }
 }
+
+/* ─── Cancel Booking ─────────────────────────────────────────────────────── */
+
+export type CancelBookingResult =
+  | { success: true }
+  | { success: false; error: string };
+
+/**
+ * Cancels a guest's own booking.
+ *
+ * Rules enforced server-side:
+ *   1. The caller must be authenticated.
+ *   2. The booking must belong to the caller (user_id = auth.uid()).
+ *   3. The booking must be in "confirmed" status (i.e. not already cancelled).
+ *   4. check_in must be in the future — past/active stays cannot be cancelled here.
+ */
+export async function cancelBooking(
+  bookingId: string
+): Promise<CancelBookingResult> {
+  try {
+    const supabase = await createClient();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: "You must be signed in to cancel a booking." };
+    }
+
+    // Fetch the booking to verify ownership and eligibility.
+    const { data: booking, error: fetchErr } = await supabase
+      .from("bookings")
+      .select("id, user_id, status, check_in")
+      .eq("id", bookingId)
+      .single();
+
+    if (fetchErr || !booking) {
+      return { success: false, error: "Booking not found." };
+    }
+
+    if (booking.user_id !== user.id) {
+      return { success: false, error: "You do not have permission to cancel this booking." };
+    }
+
+    if (booking.status === "cancelled") {
+      return { success: false, error: "This booking is already cancelled." };
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    if (booking.check_in <= today) {
+      return {
+        success: false,
+        error: "Check-in is today or has already passed — cancellations are no longer accepted.",
+      };
+    }
+
+    const { error: updateErr } = await supabase
+      .from("bookings")
+      .update({ status: "cancelled" })
+      .eq("id", bookingId)
+      .eq("user_id", user.id); // double-check at DB layer
+
+    if (updateErr) {
+      return { success: false, error: updateErr.message };
+    }
+
+    return { success: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "An unexpected error occurred.";
+    return { success: false, error: message };
+  }
+}

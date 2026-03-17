@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
 import { fetchHostListings, fetchHostBookings } from "@/lib/services/host-dashboard";
-import { MOCK_LISTINGS, MOCK_BOOKINGS, MOCK_HOST } from "@/lib/data/dashboard";
 import HostDashboard from "@/components/dashboard/HostDashboard";
 
 export const metadata: Metadata = {
@@ -21,32 +20,29 @@ export default async function DashboardPage() {
     redirect("/login?returnTo=/dashboard");
   }
 
-  // ── Role guard: only hosts and admins may access the host dashboard ─────────
-  // Profile is fetched here (not later) so we can reuse the data for display.
+  // ── Mode guard: only users in Host mode (or admins) may see the host dashboard ─
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, first_name, last_name")
+    .select("role, active_mode, first_name, last_name")
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "host" && profile?.role !== "admin") {
-    redirect("/");
+  // Redirect tourist-mode users to their own dashboard (/account).
+  // Admins bypass the mode check — they always have access.
+  if (profile?.role !== "admin" && profile?.active_mode !== "host") {
+    redirect("/account");
   }
 
-  // ── Data ────────────────────────────────────────────────────────────────────
-  let listings   = MOCK_LISTINGS;
-  let bookings   = MOCK_BOOKINGS;
-  let hostName   = MOCK_HOST.name;
-  let hostAvatar = MOCK_HOST.avatar;
+  // ── Identity ─────────────────────────────────────────────────────────────────
+  // Use real profile data only. No mock identity fallback in a restricted area.
+  const hostName   = profile
+    ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || user.email?.split("@")[0] || "Host"
+    : (user.email?.split("@")[0] ?? "Host");
+  const hostAvatar = `https://i.pravatar.cc/80?u=${user.id}`;
 
-  // Profile already fetched above — use it for display name + avatar placeholder.
-  if (profile) {
-    hostName   = `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || hostName;
-    hostAvatar = `https://i.pravatar.cc/80?u=${user.id}`;
-  }
-
-  // INTENTIONAL FALLBACK: each fetch falls back to mock if DB is empty.
-  [listings, bookings] = await Promise.all([
+  // ── Data ─────────────────────────────────────────────────────────────────────
+  // Services return empty arrays on error or empty result — no mock fallback.
+  const [listings, bookings] = await Promise.all([
     fetchHostListings(user.id),
     fetchHostBookings(user.id),
   ]);

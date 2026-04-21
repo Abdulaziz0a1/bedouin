@@ -2,6 +2,8 @@
 
 export interface DashboardListing {
   id: string;
+  /** Slug of the live listing in the `listings` table — only set when status = 'approved'. */
+  listingSlug?: string;
   title: string;
   category: string;
   region: string;

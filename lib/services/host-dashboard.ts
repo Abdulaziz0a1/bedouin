@@ -26,29 +26,53 @@ export async function fetchHostListings(hostId: string): Promise<DashboardListin
     if (error || !data) return [];
     if (data.length === 0) return [];
 
-    return data.map((row): DashboardListing => ({
-      id:               row.id,
-      title:            row.title,
-      category:         row.category,
-      region:           row.region,
-      location:         row.location ?? "",
-      price:            row.price,
-      priceUnit:        row.price_unit,
-      originalPrice:    row.original_price ?? undefined,
-      imageUrl:         (row.image_urls as string[])?.[0] ?? "",
-      status:           row.status as DashboardListing["status"],
-      submittedAt:      row.submitted_at?.slice(0, 10) ?? "",
-      approvedAt:       row.reviewed_at && row.status === "approved"
-                          ? row.reviewed_at.slice(0, 10)
-                          : undefined,
-      rejectionReason:  row.rejection_reason ?? undefined,
-      // Booking stats are not stored on the submission — default to 0.
-      // TODO: compute from bookings JOIN when bookings volume warrants it.
-      totalBookings:    0,
-      totalEarned:      0,
-      avgRating:        0,
-      reviewCount:      0,
-    }));
+    // Build a slug map for approved submissions by querying the listings table.
+    // listing_submissions.listing_id is set by approveSubmission() and is the FK
+    // to listings.id. We need the slug to construct the correct /listing/{slug} URL.
+    const approvedListingIds = data
+      .filter((row) => row.status === "approved" && row.listing_id)
+      .map((row) => row.listing_id as string);
+
+    const slugMap: Record<string, string> = {};
+    if (approvedListingIds.length > 0) {
+      const { data: listings } = await supabase
+        .from("listings")
+        .select("id, slug")
+        .in("id", approvedListingIds);
+      (listings ?? []).forEach((l) => { slugMap[l.id] = l.slug; });
+    }
+
+    return data
+      .filter((row) => {
+        // If a submission is marked approved but listing_id is NULL, the live listing
+        // was deleted after approval (ON DELETE SET NULL). Exclude it — there is no
+        // live listing to show, and displaying it as "Approved" would be misleading.
+        if (row.status === "approved" && !row.listing_id) return false;
+        return true;
+      })
+      .map((row): DashboardListing => ({
+        id:               row.id,
+        listingSlug:      row.listing_id ? slugMap[row.listing_id as string] : undefined,
+        title:            row.title,
+        category:         row.category,
+        region:           row.region,
+        location:         row.location ?? "",
+        price:            row.price,
+        priceUnit:        row.price_unit,
+        originalPrice:    row.original_price ?? undefined,
+        imageUrl:         (row.image_urls as string[])?.[0] ?? "",
+        status:           row.status as DashboardListing["status"],
+        submittedAt:      row.submitted_at?.slice(0, 10) ?? "",
+        approvedAt:       row.reviewed_at && row.status === "approved"
+                            ? row.reviewed_at.slice(0, 10)
+                            : undefined,
+        rejectionReason:  row.rejection_reason ?? undefined,
+        // Booking stats are not stored on the submission — default to 0.
+        totalBookings:    0,
+        totalEarned:      0,
+        avgRating:        0,
+        reviewCount:      0,
+      }));
   } catch {
     return [];
   }
@@ -96,8 +120,7 @@ export async function fetchHostBookings(hostId: string): Promise<DashboardBookin
       listingTitle:     row.listing_title,
       listingImage:     row.image,
       guestName:        row.guest_name,
-      // Guest avatar not stored in bookings — deterministic placeholder.
-      guestAvatar:      `https://i.pravatar.cc/40?u=${row.id}`,
+      guestAvatar:      "",   // no fake avatar; BookingsSection renders initials
       guestNationality: row.guest_nationality ?? "",
       checkIn:          row.check_in,
       checkOut:         row.check_out,

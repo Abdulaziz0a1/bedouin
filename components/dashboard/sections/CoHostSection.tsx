@@ -1,15 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import {
-  MOCK_ASSIGNMENTS,
-  MOCK_INVITATIONS,
-  SERVICE_LABELS,
-} from "@/lib/data/cohost";
+import { useState, useTransition } from "react";
+import Link from "next/link";
+import { SERVICE_LABELS } from "@/lib/data/cohost";
+import { cancelInvitation, removeAssignment } from "@/lib/actions/cohost";
 import type { CoHostAssignment, CoHostInvitation } from "@/lib/types/cohost";
+import UserAvatar from "@/components/ui/UserAvatar";
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Sub-components
+// Helpers
 // ──────────────────────────────────────────────────────────────────────────────
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -38,14 +37,20 @@ function EmptyState({ title, sub, cta }: { title: string; sub: string; cta?: Rea
   );
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
+// AssignmentCard
+// ──────────────────────────────────────────────────────────────────────────────
+
 function AssignmentCard({
   assignment,
   onRemove,
 }: {
   assignment: CoHostAssignment;
-  onRemove: (id: string) => void;
+  onRemove:   (id: string) => Promise<void>;
 }) {
+  const [pending, startTransition] = useTransition();
   const [confirming, setConfirming] = useState(false);
+
   const fmtDate = (iso: string) =>
     new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
@@ -59,18 +64,16 @@ function AssignmentCard({
 
       <div className="p-4 flex items-start gap-4">
         {/* Avatar */}
-        <img
-          src={assignment.coHostAvatar}
-          alt={assignment.coHostName}
-          className="w-12 h-12 rounded-xl object-cover border-2 border-[#e8dfd4] shrink-0"
-        />
+        <UserAvatar name={assignment.coHostName} size={48} className="border-2 border-[#e8dfd4] shrink-0 rounded-xl" />
 
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="font-display font-semibold text-[#1a0e02] text-sm">{assignment.coHostName}</p>
-              <p className="text-[11px] text-[#8b5e38] font-medium mb-2">📍 {assignment.coHostRegion}</p>
+              {assignment.coHostRegion && (
+                <p className="text-[11px] text-[#8b5e38] font-medium mb-2">📍 {assignment.coHostRegion}</p>
+              )}
             </div>
             {!confirming && (
               <button
@@ -84,11 +87,15 @@ function AssignmentCard({
 
           {/* Listing */}
           <div className="flex items-center gap-2 bg-[#faf7f4] border border-[#f0e8de] rounded-xl p-2.5 mb-2.5">
-            <img
-              src={assignment.listingImage}
-              alt={assignment.listingTitle}
-              className="w-9 h-7 rounded-lg object-cover shrink-0"
-            />
+            {assignment.listingImage ? (
+              <img
+                src={assignment.listingImage}
+                alt={assignment.listingTitle}
+                className="w-9 h-7 rounded-lg object-cover shrink-0"
+              />
+            ) : (
+              <div className="w-9 h-7 rounded-lg bg-[#e8dfd4] shrink-0" />
+            )}
             <div className="min-w-0">
               <p className="text-xs font-semibold text-[#1a0e02] truncate">{assignment.listingTitle}</p>
               <p className="text-[10px] text-[#a09080]">Since {fmtDate(assignment.assignedAt)}</p>
@@ -96,13 +103,26 @@ function AssignmentCard({
           </div>
 
           {/* Services */}
-          <div className="flex flex-wrap gap-1">
-            {assignment.services.map((s) => (
-              <span key={s} className="text-[9px] font-semibold text-[#64707d] bg-[#f0e8de] px-1.5 py-0.5 rounded-md">
-                {SERVICE_LABELS[s]}
-              </span>
-            ))}
-          </div>
+          {assignment.services.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-2.5">
+              {assignment.services.map((s) => (
+                <span key={s} className="text-[9px] font-semibold text-[#64707d] bg-[#f0e8de] px-1.5 py-0.5 rounded-md">
+                  {SERVICE_LABELS[s]}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Message link */}
+          <Link
+            href={`/messages?with=${assignment.coHostId}`}
+            className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#8b5e38] hover:text-[#461e00] transition-colors"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Message co-host
+          </Link>
         </div>
       </div>
 
@@ -117,10 +137,14 @@ function AssignmentCard({
             Cancel
           </button>
           <button
-            onClick={() => { setConfirming(false); onRemove(assignment.id); }}
-            className="text-xs font-semibold text-white bg-red-600 px-3 py-1.5 rounded-lg hover:bg-red-700 transition-colors"
+            disabled={pending}
+            onClick={() => {
+              setConfirming(false);
+              startTransition(() => onRemove(assignment.id));
+            }}
+            className="text-xs font-semibold text-white bg-red-600 px-3 py-1.5 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-60"
           >
-            Remove
+            {pending ? "Removing…" : "Remove"}
           </button>
         </div>
       )}
@@ -128,13 +152,18 @@ function AssignmentCard({
   );
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
+// InvitationCard
+// ──────────────────────────────────────────────────────────────────────────────
+
 function InvitationCard({
   invitation,
   onCancel,
 }: {
   invitation: CoHostInvitation;
-  onCancel: (id: string) => void;
+  onCancel:   (id: string) => Promise<void>;
 }) {
+  const [pending, startTransition] = useTransition();
   const fmtDate = (iso: string) =>
     new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
@@ -147,11 +176,7 @@ function InvitationCard({
 
   return (
     <div className="bg-white border border-[#e8dfd4] rounded-2xl p-4 flex items-start gap-4">
-      <img
-        src={invitation.coHostAvatar}
-        alt={invitation.coHostName}
-        className="w-11 h-11 rounded-xl object-cover border-2 border-[#e8dfd4] shrink-0"
-      />
+      <UserAvatar name={invitation.coHostName} size={44} className="border-2 border-[#e8dfd4] shrink-0 rounded-xl" />
 
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2 mb-0.5">
@@ -168,10 +193,11 @@ function InvitationCard({
 
         {invitation.status === "pending" && (
           <button
-            onClick={() => onCancel(invitation.id)}
-            className="mt-2.5 text-[10px] font-bold text-[#a09080] hover:text-red-600 transition-colors"
+            disabled={pending}
+            onClick={() => startTransition(() => onCancel(invitation.id))}
+            className="mt-2.5 text-[10px] font-bold text-[#a09080] hover:text-red-600 transition-colors disabled:opacity-60"
           >
-            Cancel invitation
+            {pending ? "Cancelling…" : "Cancel invitation"}
           </button>
         )}
       </div>
@@ -183,18 +209,28 @@ function InvitationCard({
 // Main section
 // ──────────────────────────────────────────────────────────────────────────────
 
-export default function CoHostSection() {
-  const [assignments,  setAssignments]  = useState<CoHostAssignment[]>(MOCK_ASSIGNMENTS);
-  const [invitations,  setInvitations]  = useState<CoHostInvitation[]>(MOCK_INVITATIONS);
+export default function CoHostSection({
+  assignments:  initialAssignments,
+  invitations:  initialInvitations,
+}: {
+  assignments: CoHostAssignment[];
+  invitations: CoHostInvitation[];
+}) {
+  const [assignments, setAssignments] = useState<CoHostAssignment[]>(initialAssignments);
+  const [invitations, setInvitations] = useState<CoHostInvitation[]>(initialInvitations);
 
-  const handleRemoveAssignment = (id: string) => {
-    // Firestore: deleteDoc(doc(db,"listings",listingId,"coHosts",coHostId))
-    setAssignments((prev) => prev.filter((a) => a.id !== id));
+  const handleRemoveAssignment = async (id: string) => {
+    const result = await removeAssignment(id);
+    if (result.success) {
+      setAssignments((prev) => prev.filter((a) => a.id !== id));
+    }
   };
 
-  const handleCancelInvitation = (id: string) => {
-    // Firestore: updateDoc(doc(db,"collaborations",id), { status:"cancelled" })
-    setInvitations((prev) => prev.filter((i) => i.id !== id));
+  const handleCancelInvitation = async (id: string) => {
+    const result = await cancelInvitation(id);
+    if (result.success) {
+      setInvitations((prev) => prev.filter((i) => i.id !== id));
+    }
   };
 
   const hasAny = assignments.length > 0 || invitations.length > 0;
@@ -202,24 +238,17 @@ export default function CoHostSection() {
   return (
     <div className="flex flex-col gap-8">
 
-      {/* Header + Coming Soon notice */}
+      {/* Header */}
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <div className="flex items-center gap-2.5 mb-1">
-            <h2 className="font-display font-bold text-[#1a0e02] text-xl">My Co-hosts</h2>
-            <span className="text-[10px] font-bold text-[#8b6a1f] bg-[#fdf8ee] border border-[#ead9a6] px-2 py-0.5 rounded-full uppercase tracking-wide">
-              Coming Soon
-            </span>
-          </div>
+          <h2 className="font-display font-bold text-[#1a0e02] text-xl mb-1">My Co-hosts</h2>
           <p className="text-sm text-[#64707d]">
-            The co-host marketplace is under development. This section shows a preview of how co-host management will work.
+            Manage the co-hosts working on your listings and track pending invitations.
           </p>
         </div>
-        {/* Disabled until the co-host marketplace is live */}
-        <button
-          disabled
-          title="Co-host marketplace coming soon"
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#e8dfd4] text-[#a09080] text-sm font-semibold rounded-xl cursor-not-allowed"
+        <a
+          href="/cohost"
+          className="flex items-center gap-2 px-5 py-2.5 bg-[#8b5e38] text-white text-sm font-semibold rounded-xl hover:bg-[#7a5030] transition-colors"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
             <circle cx="11" cy="7" r="4" stroke="currentColor" strokeWidth="2" />
@@ -227,15 +256,15 @@ export default function CoHostSection() {
             <path d="M19 11v6M16 14h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
           Browse co-hosts
-        </button>
+        </a>
       </div>
 
       {/* Summary strip */}
       {hasAny && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {[
-            { label: "Active co-hosts",     value: assignments.length,  color: "text-[#049153]", bg: "bg-[#f0faf5]" },
-            { label: "Pending invitations",  value: invitations.filter((i) => i.status === "pending").length,  color: "text-[#8b6a1f]", bg: "bg-[#fdf8ee]" },
+            { label: "Active co-hosts",     value: assignments.length,                                color: "text-[#049153]", bg: "bg-[#f0faf5]" },
+            { label: "Pending invitations",  value: invitations.filter((i) => i.status === "pending").length, color: "text-[#8b6a1f]", bg: "bg-[#fdf8ee]" },
             { label: "Listings supported",  value: [...new Set(assignments.map((a) => a.listingId))].length, color: "text-[#1a0e02]", bg: "bg-[#f4f6f8]" },
           ].map(({ label, value, color, bg }) => (
             <div key={label} className={`flex items-center gap-3 px-4 py-3 rounded-xl ${bg} border border-[#e8dfd4]`}>
@@ -252,15 +281,14 @@ export default function CoHostSection() {
         {assignments.length === 0 ? (
           <EmptyState
             title="No active co-hosts yet"
-            sub="Once a co-host accepts your invitation and is assigned to a listing, they'll appear here."
+            sub="Once a co-host accepts your invitation, they'll appear here."
             cta={
-              <button
-                disabled
-                title="Co-host marketplace coming soon"
-                className="flex items-center gap-2 px-5 py-2.5 bg-[#e8dfd4] text-[#a09080] text-sm font-semibold rounded-xl cursor-not-allowed"
+              <a
+                href="/cohost"
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#8b5e38] text-white text-sm font-semibold rounded-xl hover:bg-[#7a5030] transition-colors"
               >
                 Browse co-hosts
-              </button>
+              </a>
             }
           />
         ) : (
@@ -277,7 +305,10 @@ export default function CoHostSection() {
         <SectionLabel>Invitations sent</SectionLabel>
         {invitations.length === 0 ? (
           <div className="text-sm text-[#a09080] bg-white border border-[#e8dfd4] rounded-2xl px-5 py-6 text-center">
-            No invitations sent yet. Browse available co-hosts to get started.
+            No invitations sent yet.{" "}
+            <a href="/cohost" className="text-[#8b5e38] font-semibold underline">
+              Browse available co-hosts →
+            </a>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -288,7 +319,7 @@ export default function CoHostSection() {
         )}
       </div>
 
-      {/* Explainer card */}
+      {/* How it works */}
       <div className="bg-[#1a0e02] rounded-2xl p-5 flex items-start gap-4">
         <div className="w-10 h-10 rounded-xl bg-[#2e1a06] flex items-center justify-center text-[#c49a4f] shrink-0">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -299,13 +330,11 @@ export default function CoHostSection() {
         <div>
           <p className="font-display font-semibold text-white text-sm mb-1">How co-hosting works</p>
           <p className="text-xs text-[#a09080] leading-relaxed">
-            Co-hosts help you manage your listings — handling guest check-ins, communication, and day-to-day operations.
-            Browse verified co-hosts, send an invitation with a note, and once accepted they can be assigned to a listing.
-            You can remove a co-host at any time.
+            Browse verified co-hosts, send an invitation with a note, and once accepted they are assigned to manage your listing.
+            You can remove a co-host at any time from this page.
           </p>
         </div>
       </div>
-
     </div>
   );
 }

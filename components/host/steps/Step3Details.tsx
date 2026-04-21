@@ -57,12 +57,18 @@ function Counter({
 }
 
 export default function Step3Details({ draft, onChange, onNext, onBack }: Step3DetailsProps) {
-  const [errors, setErrors] = useState<{ region?: string; location?: string }>({});
+  const [errors, setErrors] = useState<{ region?: string; location?: string; mapsUrl?: string }>({});
 
   const validate = (): boolean => {
     const e: typeof errors = {};
     if (!draft.region)          e.region   = "Please select your region.";
     if (!draft.location.trim()) e.location = "Please enter the specific area or address.";
+    const mapsUrl = draft.mapsUrl.trim();
+    if (!mapsUrl) {
+      e.mapsUrl = "Please paste a Google Maps link for your location.";
+    } else if (!/^https?:\/\/.+/i.test(mapsUrl)) {
+      e.mapsUrl = "Must be a valid URL starting with https://";
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -118,6 +124,26 @@ export default function Step3Details({ draft, onChange, onNext, onBack }: Step3D
             Exact address will only be shared with confirmed guests.
           </p>
         </div>
+
+        <div>
+          <label className={labelCls}>
+            Google Maps link <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="url"
+            value={draft.mapsUrl}
+            onChange={(e) => {
+              onChange("mapsUrl", e.target.value);
+              setErrors((v) => ({ ...v, mapsUrl: "" }));
+            }}
+            placeholder="https://maps.google.com/... or https://maps.app.goo.gl/..."
+            className={inputCls(errors.mapsUrl)}
+          />
+          {errors.mapsUrl && <p className="text-xs text-red-600 mt-1">{errors.mapsUrl}</p>}
+          <p className="text-[10px] text-[#a09080] mt-1">
+            Open Google Maps, search your location, tap Share → Copy link. Paste it here.
+          </p>
+        </div>
       </div>
 
       {/* Guest & room capacity */}
@@ -133,12 +159,12 @@ export default function Step3Details({ draft, onChange, onNext, onBack }: Step3D
           <Counter label="Bedrooms" sub="Number of bedrooms"     value={draft.bedrooms}  min={0} max={20}
             onDec={() => onChange("bedrooms",  Math.max(0, draft.bedrooms  - 1))}
             onInc={() => onChange("bedrooms",  Math.min(20, draft.bedrooms + 1))} />
-          <Counter label="Beds"     sub="Total sleeping spaces"  value={draft.beds}      min={1} max={30}
-            onDec={() => onChange("beds",      Math.max(1, draft.beds      - 1))}
-            onInc={() => onChange("beds",      Math.min(30, draft.beds     + 1))} />
-          <Counter label="Baths"    sub="Including half-baths"   value={draft.baths}     min={1} max={20}
-            onDec={() => onChange("baths",     Math.max(1, draft.baths     - 1))}
-            onInc={() => onChange("baths",     Math.min(20, draft.baths    + 1))} />
+          <Counter label="Beds"     sub="Sleeping spaces (0 for experiences)"  value={draft.beds}  min={0} max={30}
+            onDec={() => onChange("beds",  Math.max(0, draft.beds  - 1))}
+            onInc={() => onChange("beds",  Math.min(30, draft.beds + 1))} />
+          <Counter label="Baths"    sub="Bathrooms (0 for experiences)"        value={draft.baths} min={0} max={20}
+            onDec={() => onChange("baths", Math.max(0, draft.baths - 1))}
+            onInc={() => onChange("baths", Math.min(20, draft.baths + 1))} />
           <Counter label="Min. nights" sub="Minimum booking length" value={draft.minNights} min={1} max={30}
             onDec={() => onChange("minNights", Math.max(1, draft.minNights - 1))}
             onInc={() => onChange("minNights", Math.min(30, draft.minNights + 1))} />

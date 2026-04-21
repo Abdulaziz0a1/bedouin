@@ -4,7 +4,7 @@ import { ALL_LISTINGS, Listing } from "./listings";
 
 export interface Host {
   name: string;
-  avatar: string;
+  avatar?: string;   // empty string or undefined → HostCard renders initials
   joinedYear: number;
   reviewCount: number;
   responseRate: number;  // 0–100
@@ -55,6 +55,7 @@ export interface ListingDetail extends Listing {
   checkOutTime: string;
   minNights: number;
   houseRules: string[];
+  mapsUrl?: string;      // Google Maps / GPS link — optional, set by host on submission
 }
 
 /* ─── Mock detail data ────────────────────────────────────────────────────── */

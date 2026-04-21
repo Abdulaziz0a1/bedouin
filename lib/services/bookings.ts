@@ -66,10 +66,9 @@ export async function fetchUserBookings(userId: string): Promise<UserBooking[]> 
         serviceFee:      row.service_fee,
         totalPrice:      row.total_price,
         paymentMethod:   row.payment_method as UserBooking["paymentMethod"],
+        hostId:          row.host_id ?? null,
         hostName:        row.host_name ?? "Host",
-        // Host avatar is not stored in bookings (stale-data risk if host changes
-        // their photo). Use a deterministic placeholder based on host_id.
-        hostAvatar:      `https://i.pravatar.cc/40?u=${row.host_id ?? row.id}`,
+        hostAvatar:      "",
         status,
         canCancel,
         createdAt:       row.created_at,

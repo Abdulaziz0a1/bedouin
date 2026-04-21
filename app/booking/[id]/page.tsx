@@ -1,19 +1,20 @@
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
-import { getListingDetail } from "@/lib/data/listing-details";
 import { fetchListingDetail } from "@/lib/services/listing-detail";
 import BookingFlow from "@/components/booking/BookingFlow";
-// TODO (tech debt): unify generateMetadata with fetchListingDetail once a
-// shared cache layer (React cache / unstable_cache) is in place.
+
+// Deduplicated fetch: generateMetadata and the page share one DB call per request.
+const getCachedListingDetail = cache(fetchListingDetail);
 
 interface Props {
   params: Promise<{ id: string }>;
-  searchParams?: { [key: string]: string | undefined };
+  searchParams?: Promise<{ [key: string]: string | undefined }>;
 }
 
 export async function generateMetadata({ params }: Props) {
   const { id } = await params;
-  const listing = getListingDetail(id);
+  const listing = await getCachedListingDetail(id);
   if (!listing) return { title: "Booking – Bedouin" };
   return {
     title: `Book ${listing.title} – Bedouin`,
@@ -23,13 +24,14 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function BookingPage({ params, searchParams }: Props) {
   const { id } = await params;
-  const listing = await fetchListingDetail(id);
+  const listing = await getCachedListingDetail(id);
   if (!listing) notFound();
 
-  const checkInStr  = searchParams?.checkIn  ?? "";
-  const checkOutStr = searchParams?.checkOut ?? "";
-  const adults      = Math.max(1, parseInt(searchParams?.adults   ?? "1",  10));
-  const children    = Math.max(0, parseInt(searchParams?.children ?? "0", 10));
+  const sp = await searchParams;
+  const checkInStr  = sp?.checkIn  ?? "";
+  const checkOutStr = sp?.checkOut ?? "";
+  const adults      = Math.max(1, parseInt(sp?.adults   ?? "1",  10));
+  const children    = Math.max(0, parseInt(sp?.children ?? "0", 10));
 
   return (
     <div className="min-h-screen bg-[#f4efe6]">

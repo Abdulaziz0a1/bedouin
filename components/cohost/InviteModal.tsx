@@ -1,23 +1,29 @@
 "use client";
 
 import { useState } from "react";
-import type { CoHost } from "@/lib/types/cohost";
-import { INVITE_MODAL_LISTINGS } from "@/lib/data/cohost";
+import type { CoHost, InviteModalListing } from "@/lib/types/cohost";
 
 interface Props {
-  cohost: CoHost;
-  onConfirm: (listingId: string, listingTitle: string, message: string) => void;
-  onCancel: () => void;
+  cohost:       CoHost;
+  listings:     InviteModalListing[];
+  onConfirm:    (listingId: string, listingTitle: string, listingImage: string, message: string) => void;
+  onCancel:     () => void;
   isSubmitting: boolean;
 }
 
-export default function InviteModal({ cohost, onConfirm, onCancel, isSubmitting }: Props) {
+export default function InviteModal({
+  cohost,
+  listings,
+  onConfirm,
+  onCancel,
+  isSubmitting,
+}: Props) {
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
   const [message, setMessage] = useState(
     `Salaam ${cohost.firstName}! I'm interested in working with you to co-host one of my listings. I'd love to discuss how we can collaborate.`
   );
 
-  const selectedListing = INVITE_MODAL_LISTINGS.find((l) => l.id === selectedListingId);
+  const selectedListing = listings.find((l) => l.id === selectedListingId);
   const canSubmit = !!selectedListingId && message.trim().length > 0 && !isSubmitting;
 
   return (
@@ -31,17 +37,16 @@ export default function InviteModal({ cohost, onConfirm, onCancel, isSubmitting 
         {/* Header */}
         <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-[#f0e8de]">
           <div className="flex items-center gap-3">
-            <img
-              src={cohost.avatar}
-              alt={cohost.name}
-              className="w-10 h-10 rounded-xl object-cover border-2 border-[#e8dfd4] shrink-0"
-            />
+            <div className="w-10 h-10 rounded-xl bg-[#f0e8de] flex items-center justify-center shrink-0 text-[#8b5e38] font-bold text-sm border-2 border-[#e8dfd4]">
+              {cohost.firstName.charAt(0).toUpperCase()}
+            </div>
             <div>
               <h2 className="font-display font-semibold text-[#1a0e02] text-sm">
                 Invite {cohost.firstName} as co-host
               </h2>
               <p className="text-[11px] text-[#64707d]">
-                📍 {cohost.city} · {cohost.rating}★ ({cohost.reviewCount} reviews)
+                📍 {cohost.city}
+                {cohost.rating > 0 && ` · ${cohost.rating}★ (${cohost.reviewCount} reviews)`}
               </p>
             </div>
           </div>
@@ -56,45 +61,66 @@ export default function InviteModal({ cohost, onConfirm, onCancel, isSubmitting 
         </div>
 
         {/* Body */}
-        <div className="px-6 py-5 flex flex-col gap-5">
+        <div className="px-6 py-5 flex flex-col gap-5 max-h-[60vh] overflow-y-auto">
 
           {/* Listing selector */}
           <div>
             <label className="block text-[10px] font-bold text-[#64707d] uppercase tracking-widest mb-2">
               Select listing <span className="text-[#8b5e38]">*</span>
             </label>
-            <div className="flex flex-col gap-2">
-              {INVITE_MODAL_LISTINGS.map((listing) => (
-                <button
-                  key={listing.id}
-                  type="button"
-                  onClick={() => setSelectedListingId(listing.id)}
-                  className={[
-                    "flex items-center gap-3 p-3 rounded-xl border text-left transition-all",
-                    selectedListingId === listing.id
-                      ? "border-[#8b5e38] bg-[#fdf5ee]"
-                      : "border-[#e8dfd4] hover:border-[#c49a4f] bg-white",
-                  ].join(" ")}
-                >
-                  <img
-                    src={listing.image}
-                    alt={listing.title}
-                    className="w-12 h-9 rounded-lg object-cover shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-[#1a0e02] truncate">{listing.title}</p>
-                    <p className="text-[11px] text-[#64707d]">📍 {listing.region}</p>
-                  </div>
-                  {selectedListingId === listing.id && (
-                    <div className="w-5 h-5 rounded-full bg-[#8b5e38] flex items-center justify-center shrink-0">
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
-                        <path d="M5 13l4 4L19 7" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
+
+            {listings.length === 0 ? (
+              <div className="flex flex-col items-center text-center py-6 px-4 border border-dashed border-[#e8dfd4] rounded-xl">
+                <p className="text-sm font-semibold text-[#1a0e02] mb-1">No live listings yet</p>
+                <p className="text-xs text-[#64707d]">
+                  You need at least one approved listing to invite a co-host.{" "}
+                  <a href="/host/new" className="text-[#8b5e38] font-semibold underline">
+                    Add a listing →
+                  </a>
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {listings.map((listing) => (
+                  <button
+                    key={listing.id}
+                    type="button"
+                    onClick={() => setSelectedListingId(listing.id)}
+                    className={[
+                      "flex items-center gap-3 p-3 rounded-xl border text-left transition-all",
+                      selectedListingId === listing.id
+                        ? "border-[#8b5e38] bg-[#fdf5ee]"
+                        : "border-[#e8dfd4] hover:border-[#c49a4f] bg-white",
+                    ].join(" ")}
+                  >
+                    {listing.image ? (
+                      <img
+                        src={listing.image}
+                        alt={listing.title}
+                        className="w-12 h-9 rounded-lg object-cover shrink-0"
+                      />
+                    ) : (
+                      <div className="w-12 h-9 rounded-lg bg-[#f0e8de] shrink-0 flex items-center justify-center">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-[#a09080]">
+                          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[#1a0e02] truncate">{listing.title}</p>
+                      <p className="text-[11px] text-[#64707d]">📍 {listing.region}</p>
                     </div>
-                  )}
-                </button>
-              ))}
-            </div>
+                    {selectedListingId === listing.id && (
+                      <div className="w-5 h-5 rounded-full bg-[#8b5e38] flex items-center justify-center shrink-0">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                          <path d="M5 13l4 4L19 7" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Message */}
@@ -123,11 +149,17 @@ export default function InviteModal({ cohost, onConfirm, onCancel, isSubmitting 
           </button>
           <button
             type="button"
-            onClick={() =>
-              selectedListing && canSubmit &&
-              onConfirm(selectedListing.id, selectedListing.title, message.trim())
-            }
-            disabled={!canSubmit}
+            disabled={!canSubmit || listings.length === 0}
+            onClick={() => {
+              if (selectedListing && canSubmit) {
+                onConfirm(
+                  selectedListing.id,
+                  selectedListing.title,
+                  selectedListing.image,
+                  message.trim()
+                );
+              }
+            }}
             className="flex-[2] py-2.5 bg-[#8b5e38] text-white rounded-xl text-sm font-semibold hover:bg-[#7a5030] transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
           >
             {isSubmitting ? (

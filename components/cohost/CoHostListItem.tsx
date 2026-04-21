@@ -1,6 +1,7 @@
 import type { CoHost } from "@/lib/types/cohost";
 import { SERVICE_LABELS } from "@/lib/data/cohost";
 import CoHostStatusBadge from "./shared/CoHostStatusBadge";
+import UserAvatar from "@/components/ui/UserAvatar";
 
 interface Props {
   cohost: CoHost;
@@ -39,11 +40,7 @@ export default function CoHostListItem({ cohost, isActive, onClick }: Props) {
     >
       {/* Avatar */}
       <div className="relative shrink-0">
-        <img
-          src={cohost.avatar}
-          alt={cohost.name}
-          className="w-11 h-11 rounded-full object-cover border-2 border-[#e8dfd4]"
-        />
+        <UserAvatar src={cohost.avatar} name={cohost.name} size={44} className="border-2 border-[#e8dfd4] rounded-full" />
       </div>
 
       {/* Info */}

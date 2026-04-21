@@ -26,13 +26,17 @@ const CATEGORY_COLORS: Record<string, string> = {
 interface Step6ReviewProps {
   draft: ListingDraft;
   onChangeImages: {
-    add:    (files: FileList | File[]) => void;
+    add:    (url: string) => void;
     remove: (index: number) => void;
   };
   onChangeRules:  (rules: string[]) => void;
   onSubmit:       () => void;
   onBack:         () => void;
   isSubmitting:   boolean;
+  /** Override the submit button label. Defaults to "Submit for Approval →" */
+  submitLabel?:   string;
+  /** Authenticated host UID — passed to ImageUploadZone to avoid a redundant getSession() call */
+  userId:         string;
 }
 
 /* ── Helper: collapsible review section ─────────────────────────────────── */
@@ -53,7 +57,7 @@ function ReviewSection({
 }
 
 export default function Step6Review({
-  draft, onChangeImages, onChangeRules, onSubmit, onBack, isSubmitting,
+  draft, onChangeImages, onChangeRules, onSubmit, onBack, isSubmitting, submitLabel, userId,
 }: Step6ReviewProps) {
   const [newRule, setNewRule]   = useState("");
   const [photoError, setPhotoError] = useState("");
@@ -70,8 +74,8 @@ export default function Step6Review({
   };
 
   const handleSubmit = () => {
-    if (draft.imagePreviewUrls.length < 1) {
-      setPhotoError("Please upload at least 1 photo before submitting.");
+    if (draft.imagePreviewUrls.length < 3) {
+      setPhotoError("Please add at least 3 photos before submitting.");
       return;
     }
     setPhotoError("");
@@ -107,6 +111,7 @@ export default function Step6Review({
           onRemove={onChangeImages.remove}
           minImages={3}
           maxImages={10}
+          userId={userId}
         />
         {photoError && (
           <p className="text-xs text-red-600 mt-2 flex items-center gap-1.5">
@@ -306,10 +311,10 @@ export default function Step6Review({
                 <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.3)" strokeWidth="2.5" />
                 <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
               </svg>
-              Submitting for review…
+              Saving…
             </>
           ) : (
-            "Submit for Approval →"
+            submitLabel ?? "Submit for Approval →"
           )}
         </button>
       </div>

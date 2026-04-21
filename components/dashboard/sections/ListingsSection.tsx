@@ -128,9 +128,9 @@ function ListingCard({ listing }: { listing: DashboardListing }) {
 
         {/* Action buttons */}
         <div className={`flex gap-2 ${isRejected || isPending || isLive ? "mt-4" : "mt-0"}`}>
-          {isLive && (
+          {isLive && listing.listingSlug && (
             <a
-              href={`/listing/${listing.id}`}
+              href={`/listing/${listing.listingSlug}`}
               className="flex-1 py-2 border border-[#e8dfd4] rounded-xl text-xs font-semibold text-[#1a0e02] text-center hover:border-[#8b5e38] hover:text-[#8b5e38] transition-colors"
             >
               View listing
@@ -149,9 +149,14 @@ function ListingCard({ listing }: { listing: DashboardListing }) {
               Awaiting review…
             </span>
           )}
-          <button className="px-3 py-2 border border-[#e8dfd4] rounded-xl text-xs font-semibold text-[#64707d] hover:border-[#8b5e38] hover:text-[#8b5e38] transition-colors">
-            Edit
-          </button>
+          {!isLive && (
+            <a
+              href={`/host/listings/${listing.id}/edit`}
+              className="px-3 py-2 border border-[#e8dfd4] rounded-xl text-xs font-semibold text-[#64707d] hover:border-[#8b5e38] hover:text-[#8b5e38] transition-colors"
+            >
+              Edit
+            </a>
+          )}
         </div>
       </div>
     </div>
@@ -178,20 +183,9 @@ export default function ListingsSection({ listings }: { listings: DashboardListi
     <div className="flex flex-col gap-6">
 
       {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h2 className="font-display font-semibold text-[#1a0e02] text-lg">My Listings</h2>
-          <p className="text-xs text-[#64707d] mt-0.5">{listings.length} properties managed</p>
-        </div>
-        <a
-          href="/host/new"
-          className="flex items-center gap-2 px-4 py-2.5 bg-[#8b5e38] text-white text-sm font-semibold rounded-xl hover:bg-[#7a5030] transition-colors"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-          </svg>
-          Add listing
-        </a>
+      <div>
+        <h2 className="font-display font-semibold text-[#1a0e02] text-lg">My Listings</h2>
+        <p className="text-xs text-[#64707d] mt-0.5">{listings.length} properties managed</p>
       </div>
 
       {/* Filter tabs */}

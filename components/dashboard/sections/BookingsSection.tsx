@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { DashboardBooking } from "@/lib/data/dashboard";
+import UserAvatar from "@/components/ui/UserAvatar";
 import DashboardEmptyState from "../shared/DashboardEmptyState";
 
 type Tab = "upcoming" | "past";
@@ -38,11 +39,7 @@ function BookingRow({ booking }: { booking: DashboardBooking }) {
         className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-[#faf7f4] transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
-        <img
-          src={booking.guestAvatar}
-          alt={booking.guestName}
-          className="w-10 h-10 rounded-full object-cover shrink-0"
-        />
+        <UserAvatar src={booking.guestAvatar} name={booking.guestName} size={40} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-sm font-semibold text-[#1a0e02]">{booking.guestName}</p>

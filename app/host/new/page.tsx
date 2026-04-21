@@ -21,24 +21,28 @@ export default async function HostNewPage() {
 
   // ── Mode guard ──────────────────────────────────────────────────────────────
   // Only users in Host mode (or admins) may create listings.
-  // Tourist-mode users are redirected to their account page with a prompt.
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, active_mode")
+    .select("role, active_mode, host_status")
     .eq("id", user.id)
     .single();
 
   if (profile?.role !== "admin" && profile?.active_mode !== "host") {
-    // Redirect back to account with a query param so the UI can surface a
-    // "Switch to Host mode to add a listing" prompt if desired.
-    redirect("/account?switch_hint=host");
+    // Approved host but currently in tourist mode — redirect to account which
+    // shows the "Host Application Approved" banner with switch instructions.
+    if (profile?.host_status === "approved") {
+      redirect("/account");
+    }
+    // Not yet approved (null, pending, or rejected) — send to onboarding.
+    // The onboarding page handles each state with the correct UI.
+    redirect("/host/onboarding");
   }
 
   return (
     <div className="min-h-screen bg-[#f4efe6]">
       <Navbar />
       <main className="pt-[72px]">
-        <HostListingFlow />
+        <HostListingFlow userId={user.id} />
       </main>
     </div>
   );

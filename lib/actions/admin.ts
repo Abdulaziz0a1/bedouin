@@ -107,6 +107,7 @@ export async function approveSubmission(
       check_out_time: sub.check_out_time,
       host_id:        sub.host_id,
       submission_id:  submissionId,
+      maps_url:       sub.maps_url ?? null,
     });
 
     if (insertErr) return { success: false, error: insertErr.message };
@@ -131,12 +132,17 @@ export async function approveSubmission(
     }));
 
     // Build the host card JSONB from the resolved profile.
+    // Include all fields HostCard renders so it works without mock fallbacks.
     const hostJson = {
       name:         hostDisplayName,
-      avatar:       `https://i.pravatar.cc/80?u=${sub.host_id}`,
+      avatar:       "",   // no fake avatar; HostCard renders initials when empty
       tagline:      "Verified Bedouin host",
+      bio:          "Verified Bedouin host with a passion for authentic Saudi experiences.",
       since:        new Date().getFullYear().toString(),
       responseRate: 100,
+      responseTime: "within a few hours",
+      languages:    ["Arabic", "English"],
+      reviewCount:  0,
       superhost:    false,
     };
 

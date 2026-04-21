@@ -1,5 +1,5 @@
-import Image from "next/image";
 import { Host } from "@/lib/data/listing-details";
+import UserAvatar from "@/components/ui/UserAvatar";
 
 interface HostCardProps {
   host: Host;
@@ -10,15 +10,7 @@ export default function HostCard({ host }: HostCardProps) {
     <div className="flex flex-col gap-5">
       {/* Host header */}
       <div className="flex items-start gap-4">
-        <div className="relative w-16 h-16 rounded-full overflow-hidden shrink-0">
-          <Image
-            src={host.avatar}
-            alt={host.name}
-            fill
-            className="object-cover"
-            sizes="64px"
-          />
-        </div>
+        <UserAvatar src={host.avatar} name={host.name} size={64} />
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-2">
             <h3 className="font-display font-bold text-[#1a0e02] text-xl leading-tight">

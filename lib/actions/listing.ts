@@ -1,7 +1,122 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase-server";
-import type { ListingDraft, SubmittedListing } from "@/lib/types/host";
+import type { SubmittedListing, DraftCategory, DraftRegion } from "@/lib/types/host";
+
+/**
+ * Clean, serializable payload sent from the client to both submitListing and
+ * updateListing. Only contains fields the action actually writes to the DB.
+ * Keeping this free of optional / undefined fields prevents Next.js wire-format
+ * serialization errors ("Invalid Server Actions request").
+ */
+export interface ListingPayload {
+  category:         string;
+  title:            string;
+  description:      string;
+  highlights:       string[];
+  region:           string;
+  location:         string;
+  mapsUrl:          string;
+  maxGuests:        number;
+  bedrooms:         number;
+  beds:             number;
+  baths:            number;
+  minNights:        number;
+  checkInTime:      string;
+  checkOutTime:     string;
+  amenities:        string[];
+  price:            number;
+  originalPrice:    number;
+  priceUnit:        string;
+  imagePreviewUrls: string[];
+  houseRules:       string[];
+}
+
+/* ─── Update (edit & resubmit) ──────────────────────────────────────────────── */
+
+export type UpdateListingResult =
+  | { success: true }
+  | { success: false; error: string };
+
+/**
+ * Updates an existing `listing_submissions` row owned by the current host.
+ * Only allowed when status is `pending_review` or `rejected`.
+ * After update the status is reset to `pending_review` so admin re-reviews it.
+ */
+export async function updateListing(
+  submissionId: string,
+  draft: ListingPayload
+): Promise<UpdateListingResult> {
+  try {
+    const supabase = await createClient();
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return { success: false, error: "You must be signed in to edit a listing." };
+    }
+
+    // Verify the submission belongs to this host and is in an editable state.
+    const { data: existing, error: fetchError } = await supabase
+      .from("listing_submissions")
+      .select("id, host_id, status")
+      .eq("id", submissionId)
+      .single();
+
+    if (fetchError || !existing) {
+      return { success: false, error: "Listing not found." };
+    }
+    if (existing.host_id !== user.id) {
+      return { success: false, error: "You do not own this listing." };
+    }
+    if (existing.status === "approved") {
+      return { success: false, error: "Approved listings cannot be edited through this flow." };
+    }
+
+    const { error } = await supabase
+      .from("listing_submissions")
+      .update({
+        title:          draft.title       || "Untitled Listing",
+        category:       draft.category,
+        region:         draft.region,
+        location:       draft.location,
+        description:    draft.description,
+        highlights:     draft.highlights,
+        amenities:      draft.amenities,
+        house_rules:    draft.houseRules,
+        max_guests:     draft.maxGuests,
+        bedrooms:       draft.bedrooms,
+        beds:           draft.beds,
+        baths:          draft.baths,
+        min_nights:     draft.minNights,
+        check_in_time:  draft.checkInTime,
+        check_out_time: draft.checkOutTime,
+        price:          draft.price,
+        original_price: draft.originalPrice || null,
+        price_unit:     draft.priceUnit,
+        maps_url:       draft.mapsUrl.trim() || null,
+        image_urls:     draft.imagePreviewUrls.filter((u) => u.startsWith("http")),
+        // Reset to pending_review so admin re-reviews the updated content.
+        status:           "pending_review",
+        submitted_at:     new Date().toISOString(),
+        reviewed_at:      null,
+        reviewed_by:      null,
+        rejection_reason: null,
+        admin_notes:      null,
+      })
+      .eq("id", submissionId);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "An unexpected error occurred.";
+    return { success: false, error: message };
+  }
+}
 
 export type SubmitListingResult =
   | { success: true;  listing: SubmittedListing }
@@ -15,7 +130,7 @@ export type SubmitListingResult =
  * screen's imageUrl. The DB stores an empty array until Storage integration.
  */
 export async function submitListing(
-  draft: ListingDraft
+  draft: ListingPayload
 ): Promise<SubmitListingResult> {
   try {
     const supabase = await createClient();
@@ -74,9 +189,9 @@ export async function submitListing(
       price:          draft.price,
       original_price: draft.originalPrice,
       price_unit:     draft.priceUnit,
-      // TODO: upload images to Supabase Storage and store returned URLs here.
-      // blob: URLs are client-side only and cannot be persisted.
-      image_urls:     [],
+      maps_url:       draft.mapsUrl.trim() || null,
+      // Store the image URLs directly (real Supabase Storage URLs or pasted URLs).
+      image_urls:     draft.imagePreviewUrls.filter((u) => u.startsWith("http")),
       status:         "pending_review",
       submitted_at:   submittedAt,
     });
@@ -85,13 +200,14 @@ export async function submitListing(
       return { success: false, error: error.message };
     }
 
+    revalidatePath("/dashboard");
     return {
       success: true,
       listing: {
         listingRef:  reference,
         title:       draft.title || "Untitled Listing",
-        category:    draft.category,
-        region:      draft.region,
+        category:    draft.category as DraftCategory,
+        region:      draft.region   as DraftRegion,
         price:       draft.price,
         // imagePreviewUrls are blob: URLs — valid on the originating client only.
         // Returned here solely so HostConfirmation can display the preview image.

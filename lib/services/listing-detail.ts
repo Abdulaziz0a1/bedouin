@@ -53,6 +53,14 @@ export async function fetchListingDetail(slug: string): Promise<ListingDetail | 
         badge,
         badge_color,
         tags,
+        maps_url,
+        max_guests,
+        bedrooms,
+        beds,
+        baths,
+        check_in_time,
+        check_out_time,
+        min_nights,
         listing_details (
           images,
           description,
@@ -74,18 +82,43 @@ export async function fetchListingDetail(slug: string): Promise<ListingDetail | 
       .eq("slug", slug)
       .single();
 
-    if (error || !data || !data.listing_details) {
-      // INTENTIONAL FALLBACK: no Supabase detail row for this slug — using mock data.
+    if (error || !data) {
+      // Listing not found in DB at all — fall back to mock (handles seeded slugs).
       return getListingDetail(slug);
     }
 
-    const d = data.listing_details as unknown as Record<string, unknown>;
+    // Listing exists in DB. Supabase may return listing_details as a single object
+    // (one-to-one UNIQUE FK) or as an array (PostgREST default). Handle both.
+    // If listing_details is missing entirely, use {} so we render with safe defaults
+    // instead of falling back to mock (which returns null for unknown slugs → 404).
+    const rawDetails = data.listing_details;
+    const d: Record<string, unknown> = (() => {
+      if (!rawDetails) return {};
+      if (Array.isArray(rawDetails)) return (rawDetails[0] as Record<string, unknown>) ?? {};
+      return rawDetails as unknown as Record<string, unknown>;
+    })();
+
+    // Safely map the host JSONB from the DB to the full Host interface.
+    // The DB stores a compact shape: {name, avatar, tagline, since, responseRate, superhost}.
+    // We backfill the richer fields with safe defaults so HostCard never crashes.
+    const dbHost = (d.host as Record<string, unknown>) ?? {};
+    const mappedHost: Host = {
+      name:         (dbHost.name         as string)   || "Host",
+      avatar:       (dbHost.avatar       as string)   || "",
+      joinedYear:   parseInt(String(dbHost.since ?? new Date().getFullYear())) || new Date().getFullYear(),
+      reviewCount:  (dbHost.reviewCount  as number)   || 0,
+      responseRate: (dbHost.responseRate as number)   ?? 100,
+      responseTime: (dbHost.responseTime as string)   || "within a day",
+      languages:    (dbHost.languages    as string[]) || ["Arabic", "English"],
+      bio:          (dbHost.bio          as string)   || (dbHost.tagline as string) || "Verified Bedouin host.",
+      superhost:    (dbHost.superhost    as boolean)  || false,
+    };
 
     // Normalize: snake_case DB columns + JSONB fields → ListingDetail interface
     const detail: ListingDetail = {
       // Base Listing fields (slug used as id for URL routing compatibility)
       id:            data.slug ?? data.id,
-      image:         data.image,
+      image:         data.image || `https://picsum.photos/seed/${data.slug ?? data.id}/600/440`,
       title:         data.title,
       location:      data.location,
       region:        data.region as ListingDetail["region"],
@@ -99,22 +132,29 @@ export async function fetchListingDetail(slug: string): Promise<ListingDetail | 
       badgeColor:    data.badge_color ?? undefined,
       tags:          (data.tags as string[]) ?? [],
 
-      // Detail fields
-      images:          (d.images as string[]) ?? [],
+      // Detail fields — filter empty strings; fall back to hero if gallery is empty
+      images: (() => {
+        const raw = (d.images as string[]) ?? [];
+        const valid = raw.filter((u) => u && u.startsWith("http"));
+        const fallback = data.image || `https://picsum.photos/seed/${data.slug ?? data.id}/600/440`;
+        return valid.length > 0 ? valid : [fallback];
+      })(),
       description:     (d.description as string) ?? "",
       highlights:      (d.highlights as string[]) ?? [],
-      host:            (d.host as Host),
+      host:            mappedHost,
       amenities:       (d.amenities as Amenity[]) ?? [],
       reviews:         (d.reviews as Review[]) ?? [],
-      ratingBreakdown: (d.rating_breakdown as RatingBreakdown),
-      maxGuests:       Number(d.max_guests),
-      bedrooms:        Number(d.bedrooms),
-      beds:            Number(d.beds),
-      baths:           Number(d.baths),
-      checkInTime:     (d.check_in_time as string) ?? "3:00 PM",
-      checkOutTime:    (d.check_out_time as string) ?? "11:00 AM",
-      minNights:       Number(d.min_nights),
+      ratingBreakdown: (d.rating_breakdown as RatingBreakdown) ?? null,
+      // Fall back to the denormalized values on the listings row when details are missing.
+      maxGuests:       Number(d.max_guests)  || Number(data.max_guests)  || 1,
+      bedrooms:        Number(d.bedrooms)    || Number(data.bedrooms)    || 0,
+      beds:            Number(d.beds)        || Number(data.beds)        || 1,
+      baths:           Number(d.baths)       || Number(data.baths)       || 1,
+      checkInTime:     (d.check_in_time  as string) || (data.check_in_time  as string) || "3:00 PM",
+      checkOutTime:    (d.check_out_time as string) || (data.check_out_time as string) || "11:00 AM",
+      minNights:       Number(d.min_nights)  || Number(data.min_nights)  || 1,
       houseRules:      (d.house_rules as string[]) ?? [],
+      mapsUrl:         (data.maps_url as string | null) ?? undefined,
     };
 
     return detail;

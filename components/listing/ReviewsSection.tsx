@@ -8,21 +8,22 @@ interface ReviewsSectionProps {
   score: number;
   reviewCount: number;
   reviews: Review[];
-  breakdown: RatingBreakdown;
+  breakdown: RatingBreakdown | null | undefined;
 }
 
-function StarRow({ label, value }: { label: string; value: number }) {
+function StarRow({ label, value }: { label: string; value: number | undefined }) {
+  const v = value ?? 0;
   return (
     <div className="flex items-center justify-between gap-4">
       <span className="text-sm text-[#2b3037] w-36 shrink-0">{label}</span>
       <div className="flex-1 h-1.5 bg-[#e8dfd4] rounded-full overflow-hidden">
         <div
           className="h-full bg-[#1a0e02] rounded-full transition-all"
-          style={{ width: `${(value / 5) * 100}%` }}
+          style={{ width: `${(v / 5) * 100}%` }}
         />
       </div>
       <span className="text-sm font-semibold text-[#1a0e02] w-7 text-right shrink-0">
-        {value.toFixed(1)}
+        {v.toFixed(1)}
       </span>
     </div>
   );
@@ -70,12 +71,12 @@ export default function ReviewsSection({
 
         {/* Breakdown bars */}
         <div className="flex-1 flex flex-col gap-3 justify-center">
-          <StarRow label="Cleanliness"    value={breakdown.cleanliness} />
-          <StarRow label="Accuracy"       value={breakdown.accuracy} />
-          <StarRow label="Check-in"       value={breakdown.checkin} />
-          <StarRow label="Communication"  value={breakdown.communication} />
-          <StarRow label="Location"       value={breakdown.location} />
-          <StarRow label="Value"          value={breakdown.value} />
+          <StarRow label="Cleanliness"    value={breakdown?.cleanliness} />
+          <StarRow label="Accuracy"       value={breakdown?.accuracy} />
+          <StarRow label="Check-in"       value={breakdown?.checkin} />
+          <StarRow label="Communication"  value={breakdown?.communication} />
+          <StarRow label="Location"       value={breakdown?.location} />
+          <StarRow label="Value"          value={breakdown?.value} />
         </div>
       </div>
 

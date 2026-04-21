@@ -19,9 +19,10 @@ const HEADER_STATS = [
 export default async function ExplorePage({
   searchParams,
 }: {
-  searchParams?: { [key: string]: string | undefined };
+  searchParams?: Promise<{ [key: string]: string | undefined }>;
 }) {
-  const initialQuery = searchParams?.location ?? searchParams?.q ?? "";
+  const sp = await searchParams;
+  const initialQuery = sp?.location ?? sp?.q ?? "";
   const listings = await fetchListings();
 
   return (

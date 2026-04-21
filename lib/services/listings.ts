@@ -26,9 +26,10 @@ export async function fetchListings(): Promise<Listing[]> {
     }
 
     // Map snake_case DB columns → camelCase Listing interface
+    // IMPORTANT: use slug as id — listing detail page routes on /listing/[slug]
     return data.map((row) => ({
-      id:            row.id,
-      image:         row.image,
+      id:            row.slug,
+      image:         row.image || `https://picsum.photos/seed/${row.slug}/600/440`,
       title:         row.title,
       location:      row.location,
       region:        row.region,

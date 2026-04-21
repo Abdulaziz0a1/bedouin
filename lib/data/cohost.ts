@@ -63,6 +63,7 @@ export const COHOSTS: CoHost[] = [
   // 1. Noura — AlUla, check-in specialist
   {
     id: "ch-001",
+    userId: "ch-001",
     name: "Noura Al-Dosari",
     firstName: "Noura",
     avatar: "https://i.pravatar.cc/160?img=49",
@@ -113,6 +114,7 @@ export const COHOSTS: CoHost[] = [
   // 2. Faisal — Abha, maintenance + local guide
   {
     id: "ch-002",
+    userId: "ch-002",
     name: "Faisal Al-Harthi",
     firstName: "Faisal",
     avatar: "https://i.pravatar.cc/160?img=57",
@@ -155,6 +157,7 @@ export const COHOSTS: CoHost[] = [
   // 3. Reema — multi-region, ASSIGNED to current host
   {
     id: "ch-003",
+    userId: "ch-003",
     name: "Reema Al-Saud",
     firstName: "Reema",
     avatar: "https://i.pravatar.cc/160?img=45",
@@ -204,6 +207,7 @@ export const COHOSTS: CoHost[] = [
   // 4. Khalid — Hail desert specialist, INVITED (pending)
   {
     id: "ch-004",
+    userId: "ch-004",
     name: "Khalid Al-Otaibi",
     firstName: "Khalid",
     avatar: "https://i.pravatar.cc/160?img=53",
@@ -246,6 +250,7 @@ export const COHOSTS: CoHost[] = [
   // 5. Dana — Taif, photography + cleaning
   {
     id: "ch-005",
+    userId: "ch-005",
     name: "Dana Al-Zahrani",
     firstName: "Dana",
     avatar: "https://i.pravatar.cc/160?img=47",
@@ -288,6 +293,7 @@ export const COHOSTS: CoHost[] = [
   // 6. Omar — Jeddah, coastal + communication
   {
     id: "ch-006",
+    userId: "ch-006",
     name: "Omar Al-Qahtani",
     firstName: "Omar",
     avatar: "https://i.pravatar.cc/160?img=56",
@@ -322,6 +328,7 @@ export const COHOSTS: CoHost[] = [
   // 7. Lujain — Madinah, cultural + local guide
   {
     id: "ch-007",
+    userId: "ch-007",
     name: "Lujain Al-Harbi",
     firstName: "Lujain",
     avatar: "https://i.pravatar.cc/160?img=48",
@@ -363,6 +370,7 @@ export const COHOSTS: CoHost[] = [
   // 8. Saleh — AlUla, photography + listing, DECLINED previous invite
   {
     id: "ch-008",
+    userId: "ch-008",
     name: "Saleh Al-Shamri",
     firstName: "Saleh",
     avatar: "https://i.pravatar.cc/160?img=59",

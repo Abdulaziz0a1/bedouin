@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
@@ -8,11 +9,11 @@ import HostCard from "@/components/listing/HostCard";
 import AmenitiesGrid from "@/components/listing/AmenitiesGrid";
 import ReviewsSection from "@/components/listing/ReviewsSection";
 import RelatedListings from "@/components/listing/RelatedListings";
-import { getListingDetail } from "@/lib/data/listing-details";
 import { fetchListingDetail } from "@/lib/services/listing-detail";
 import { fetchRelatedListings } from "@/lib/services/listings";
-// TODO (tech debt): unify generateMetadata with fetchListingDetail once a
-// shared cache layer (React cache / unstable_cache) is in place.
+
+// Deduplicated fetch: generateMetadata and the page share one DB call per request.
+const getCachedListingDetail = cache(fetchListingDetail);
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -20,17 +21,17 @@ interface Props {
 
 export async function generateMetadata({ params }: Props) {
   const { id } = await params;
-  const listing = getListingDetail(id);
+  const listing = await getCachedListingDetail(id);
   if (!listing) return { title: "Not Found – Bedouin" };
   return {
     title: `${listing.title} – Bedouin`,
-    description: listing.description.slice(0, 150),
+    description: listing.description?.slice(0, 150) ?? listing.title,
   };
 }
 
 export default async function ListingPage({ params }: Props) {
   const { id } = await params;
-  const listing = await fetchListingDetail(id);
+  const listing = await getCachedListingDetail(id);
   if (!listing) notFound();
 
   const related = await fetchRelatedListings(id, listing.category, listing.region, 4);
@@ -211,6 +212,38 @@ export default async function ListingPage({ params }: Props) {
                         {rule}
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Location map link */}
+              {listing.mapsUrl && (
+                <div>
+                  <h2 className="font-display font-bold text-[#1a0e02] text-xl mb-4">Location</h2>
+                  <div className="bg-white border border-[#e8dfd4] rounded-2xl p-5 flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-[#fdf5ee] flex items-center justify-center shrink-0 text-[#8b5e38]">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"
+                          fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="1.5" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[#1a0e02]">{listing.location}</p>
+                      <p className="text-xs text-[#64707d]">{listing.region} · Exact address shared after booking</p>
+                    </div>
+                    <a
+                      href={listing.mapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-4 py-2 bg-[#1a0e02] text-white text-xs font-bold rounded-xl hover:bg-[#2d1a07] transition-colors shrink-0"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                        <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <polyline points="15 3 21 3 21 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <line x1="10" y1="14" x2="21" y2="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      </svg>
+                      View on Maps
+                    </a>
                   </div>
                 </div>
               )}

@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
 import { ListingDraft, INITIAL_DRAFT, SubmittedListing } from "@/lib/types/host";
-import { submitListing } from "@/lib/actions/listing";
+import { submitListing, type ListingPayload } from "@/lib/actions/listing";
 import HostStepProgress from "./HostStepProgress";
 import HostListingPreview from "./HostListingPreview";
 import HostConfirmation from "./HostConfirmation";
@@ -18,7 +18,7 @@ type HostStep = 1 | 2 | 3 | 4 | 5 | 6 | "confirmed";
 
 /* ─── Component ────────────────────────────────────────────────────────────── */
 
-export default function HostListingFlow() {
+export default function HostListingFlow({ userId }: { userId: string }) {
   const [step,    setStep]    = useState<HostStep>(1);
   const [draft,   setDraft]   = useState<ListingDraft>(INITIAL_DRAFT);
   const [submitting,   setSubmitting]   = useState(false);
@@ -33,26 +33,19 @@ export default function HostListingFlow() {
     []
   );
 
-  /* Image management — designed for Firebase Storage integration */
-  const addImages = useCallback((files: FileList | File[]) => {
-    const arr = Array.from(files);
-    const urls = arr.map((f) => URL.createObjectURL(f));
-    setDraft((d) => {
-      const next = {
-        imagePreviewUrls: [...d.imagePreviewUrls, ...urls].slice(0, 10),
-      };
-      return { ...d, ...next };
-    });
+  /* Image management — URL-based (no file upload; avoids blob: persistence issue) */
+  const addImages = useCallback((url: string) => {
+    setDraft((d) => ({
+      ...d,
+      imagePreviewUrls: [...d.imagePreviewUrls, url].slice(0, 10),
+    }));
   }, []);
 
   const removeImage = useCallback((index: number) => {
-    setDraft((d) => {
-      URL.revokeObjectURL(d.imagePreviewUrls[index]);
-      return {
-        ...d,
-        imagePreviewUrls: d.imagePreviewUrls.filter((_, i) => i !== index),
-      };
-    });
+    setDraft((d) => ({
+      ...d,
+      imagePreviewUrls: d.imagePreviewUrls.filter((_, i) => i !== index),
+    }));
   }, []);
 
   /* Submit — inserts into listing_submissions via Server Action */
@@ -60,7 +53,34 @@ export default function HostListingFlow() {
     setSubmitting(true);
     setSubmitError(null);
 
-    const result = await submitListing(draft);
+    // Construct a clean, fully-serializable payload.
+    // Do NOT pass the full ListingDraft — it contains optional undefined fields
+    // (hostId, submittedAt, listingRef) that can break Next.js wire-format encoding.
+    const payload: ListingPayload = {
+      category:         draft.category,
+      title:            draft.title,
+      description:      draft.description,
+      highlights:       draft.highlights,
+      region:           draft.region,
+      location:         draft.location,
+      mapsUrl:          draft.mapsUrl,
+      maxGuests:        draft.maxGuests,
+      bedrooms:         draft.bedrooms,
+      beds:             draft.beds,
+      baths:            draft.baths,
+      minNights:        draft.minNights,
+      checkInTime:      draft.checkInTime,
+      checkOutTime:     draft.checkOutTime,
+      amenities:        draft.amenities,
+      price:            draft.price,
+      originalPrice:    draft.originalPrice,
+      priceUnit:        draft.priceUnit,
+      imagePreviewUrls: draft.imagePreviewUrls,
+      houseRules:       draft.houseRules,
+    };
+    console.log("[submitListing] action: submitListing | flow: create | payload:", payload);
+
+    const result = await submitListing(payload);
 
     setSubmitting(false);
 
@@ -177,6 +197,7 @@ export default function HostListingFlow() {
                   onSubmit={handleSubmit}
                   onBack={() => setStep(5)}
                   isSubmitting={submitting}
+                  userId={userId}
                 />
               </>
             )}

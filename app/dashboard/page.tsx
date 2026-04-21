@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
 import { fetchHostListings, fetchHostBookings } from "@/lib/services/host-dashboard";
+import { fetchHostInvitations, fetchHostAssignments } from "@/lib/services/cohost";
 import HostDashboard from "@/components/dashboard/HostDashboard";
+
+// Always render fresh — never serve a cached RSC payload for the dashboard.
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Host Dashboard · Bedouin",
@@ -23,7 +27,7 @@ export default async function DashboardPage() {
   // ── Mode guard: only users in Host mode (or admins) may see the host dashboard ─
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, active_mode, first_name, last_name")
+    .select("role, active_mode, first_name, last_name, avatar_url")
     .eq("id", user.id)
     .single();
 
@@ -38,13 +42,14 @@ export default async function DashboardPage() {
   const hostName   = profile
     ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || user.email?.split("@")[0] || "Host"
     : (user.email?.split("@")[0] ?? "Host");
-  const hostAvatar = `https://i.pravatar.cc/80?u=${user.id}`;
+  const hostAvatar = profile?.avatar_url ?? "";
 
   // ── Data ─────────────────────────────────────────────────────────────────────
-  // Services return empty arrays on error or empty result — no mock fallback.
-  const [listings, bookings] = await Promise.all([
+  const [listings, bookings, cohostAssignments, cohostInvitations] = await Promise.all([
     fetchHostListings(user.id),
     fetchHostBookings(user.id),
+    fetchHostAssignments(user.id),
+    fetchHostInvitations(user.id),
   ]);
 
   return (
@@ -53,6 +58,8 @@ export default async function DashboardPage() {
       bookings={bookings}
       hostName={hostName}
       hostAvatar={hostAvatar}
+      cohostAssignments={cohostAssignments}
+      cohostInvitations={cohostInvitations}
     />
   );
 }

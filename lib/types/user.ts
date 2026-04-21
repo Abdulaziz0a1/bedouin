@@ -41,6 +41,7 @@ export interface UserBooking {
   serviceFee: number;
   totalPrice: number;
   paymentMethod: "card" | "mada" | "apple_pay";
+  hostId: string | null;
   hostName: string;
   hostAvatar: string;
   status: "upcoming" | "confirmed" | "active" | "completed" | "cancelled";

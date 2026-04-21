@@ -48,7 +48,8 @@ export interface CoHostReview {
 
 /** A verified co-host profile */
 export interface CoHost {
-  id: string;                              // Firestore uid or cohosts/{id}
+  id: string;                              // cohost_application UUID (used as application ref)
+  userId: string;                          // auth.users UUID (used to match invitations/assignments)
   name: string;
   firstName: string;
   avatar: string;

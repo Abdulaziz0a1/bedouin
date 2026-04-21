@@ -39,7 +39,7 @@ export default function ProductCard({
       {/* Image */}
       <div className="relative w-full h-[210px] overflow-hidden">
         <Image
-          src={image}
+          src={image || "https://picsum.photos/seed/listing-placeholder/600/440"}
           alt={title}
           fill
           className="object-cover transition-transform duration-500 group-hover:scale-105"

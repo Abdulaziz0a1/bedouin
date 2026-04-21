@@ -15,8 +15,7 @@ function buildAdminHost(
   return {
     id:               hostId,
     name,
-    // Avatar and contact details are not stored in profiles — use placeholder.
-    avatar:           `https://i.pravatar.cc/80?u=${hostId}`,
+    avatar:           "",   // no avatar stored; admin panel renders initials
     email:            "",
     phone:            "",
     joinedAt:         "",

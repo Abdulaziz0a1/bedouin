@@ -1,8 +1,10 @@
 "use client";
 
 import type { CoHost } from "@/lib/types/cohost";
+import type { CoHostRelation } from "./CoHostBrowsePage";
 import { SERVICE_LABELS, SERVICE_ICONS, PROPERTY_TYPE_LABELS } from "@/lib/data/cohost";
 import CoHostStatusBadge from "./shared/CoHostStatusBadge";
+import UserAvatar from "@/components/ui/UserAvatar";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Sub-components
@@ -66,12 +68,23 @@ function ReviewCard({ review }: { review: CoHost["reviews"][0] }) {
 
 interface Props {
   cohost: CoHost;
+  relation?: CoHostRelation;
   onInvite: () => void;
+  onCancelInvite?: () => void;
+  onRemoveAssignment?: () => void;
   onClose?: () => void;
 }
 
-export default function CoHostProfilePanel({ cohost, onInvite, onClose }: Props) {
-  const canInvite = cohost.status === "available";
+export default function CoHostProfilePanel({
+  cohost,
+  relation,
+  onInvite,
+  onCancelInvite,
+  onRemoveAssignment,
+  onClose,
+}: Props) {
+  const effectiveStatus = relation?.status ?? cohost.status;
+  const canInvite = effectiveStatus === "available" || effectiveStatus === "declined";
 
   const feeLabel = (() => {
     if (cohost.feeModel === "percentage" && cohost.feeValue)
@@ -102,16 +115,17 @@ export default function CoHostProfilePanel({ cohost, onInvite, onClose }: Props)
             </button>
           )}
 
-          <img
+          <UserAvatar
             src={cohost.avatar}
-            alt={cohost.name}
-            className="w-14 h-14 rounded-2xl object-cover border-2 border-[#e8dfd4] shrink-0"
+            name={cohost.name}
+            size={56}
+            className="rounded-2xl border-2 border-[#e8dfd4] shrink-0"
           />
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-0.5">
               <h2 className="font-display font-bold text-[#1a0e02] text-base">{cohost.name}</h2>
-              <CoHostStatusBadge status={cohost.status} size="sm" />
+              <CoHostStatusBadge status={effectiveStatus} size="sm" />
             </div>
             <p className="text-xs text-[#8b5e38] font-medium mb-1">
               📍 {cohost.city}, {cohost.region}
@@ -125,23 +139,60 @@ export default function CoHostProfilePanel({ cohost, onInvite, onClose }: Props)
             </div>
           </div>
 
-          {/* Invite CTA */}
-          <button
-            onClick={onInvite}
-            disabled={!canInvite}
-            className={[
-              "shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-colors",
-              canInvite
-                ? "bg-[#8b5e38] text-white hover:bg-[#7a5030]"
-                : "bg-[#f0e8de] text-[#a09080] cursor-not-allowed",
-            ].join(" ")}
-          >
-            {cohost.status === "invited"   && "Invited"}
-            {cohost.status === "accepted"  && "Accepted"}
-            {cohost.status === "assigned"  && "Co-hosting"}
-            {cohost.status === "declined"  && "Declined"}
-            {cohost.status === "available" && "Invite"}
-          </button>
+          {/* Status CTA — top-right of header */}
+          <div className="shrink-0 flex flex-col items-end gap-1.5">
+            {effectiveStatus === "available" && (
+              <button
+                onClick={onInvite}
+                className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#8b5e38] text-white hover:bg-[#7a5030] transition-colors"
+              >
+                Invite
+              </button>
+            )}
+            {effectiveStatus === "declined" && (
+              <>
+                <span className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-50 text-red-600 border border-red-200">
+                  Declined
+                </span>
+                <button
+                  onClick={onInvite}
+                  className="text-[11px] text-[#8b5e38] underline hover:text-[#7a5030] transition-colors"
+                >
+                  Re-invite
+                </button>
+              </>
+            )}
+            {effectiveStatus === "invited" && (
+              <>
+                <span className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                  Invitation pending
+                </span>
+                {onCancelInvite && (
+                  <button
+                    onClick={onCancelInvite}
+                    className="text-[11px] text-[#64707d] underline hover:text-red-600 transition-colors"
+                  >
+                    Cancel invite
+                  </button>
+                )}
+              </>
+            )}
+            {(effectiveStatus === "accepted" || effectiveStatus === "assigned") && (
+              <>
+                <span className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
+                  {effectiveStatus === "assigned" ? "Co-hosting" : "Accepted"}
+                </span>
+                {effectiveStatus === "assigned" && onRemoveAssignment && (
+                  <button
+                    onClick={onRemoveAssignment}
+                    className="text-[11px] text-[#64707d] underline hover:text-red-600 transition-colors"
+                  >
+                    Remove co-host
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -229,7 +280,7 @@ export default function CoHostProfilePanel({ cohost, onInvite, onClose }: Props)
             </div>
           )}
 
-          {/* Invite CTA (bottom) */}
+          {/* Bottom CTA */}
           {canInvite && (
             <button
               onClick={onInvite}
@@ -238,7 +289,23 @@ export default function CoHostProfilePanel({ cohost, onInvite, onClose }: Props)
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
                 <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
               </svg>
-              Invite {cohost.firstName} to a listing
+              {effectiveStatus === "declined" ? `Re-invite ${cohost.firstName}` : `Invite ${cohost.firstName} to a listing`}
+            </button>
+          )}
+          {effectiveStatus === "invited" && onCancelInvite && (
+            <button
+              onClick={onCancelInvite}
+              className="w-full py-3 border border-red-200 text-red-600 rounded-2xl text-sm font-semibold hover:bg-red-50 transition-colors"
+            >
+              Cancel invitation
+            </button>
+          )}
+          {effectiveStatus === "assigned" && onRemoveAssignment && (
+            <button
+              onClick={onRemoveAssignment}
+              className="w-full py-3 border border-red-200 text-red-600 rounded-2xl text-sm font-semibold hover:bg-red-50 transition-colors"
+            >
+              Remove {cohost.firstName} as co-host
             </button>
           )}
         </div>

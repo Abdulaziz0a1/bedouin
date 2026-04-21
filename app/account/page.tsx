@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
 import { fetchUserBookings } from "@/lib/services/bookings";
+import { fetchCohostAssignments } from "@/lib/services/cohost";
 import UserDashboard from "@/components/user/UserDashboard";
 
 export const metadata: Metadata = {
@@ -26,12 +27,17 @@ export default async function AccountPage() {
       .single(),
   ]);
 
+  const cohostStatusValue = (profileResult.data?.cohost_status ?? null) as "pending" | "approved" | "rejected" | null;
+  const cohostAssignments = cohostStatusValue === "approved"
+    ? await fetchCohostAssignments(user.id)
+    : [];
+
   const profile = profileResult.data;
 
   const firstName  = profile?.first_name  ?? "";
   const lastName   = profile?.last_name   ?? "";
   const userName   = `${firstName} ${lastName}`.trim() || user.email?.split("@")[0] || "Traveller";
-  const userAvatar = profile?.avatar_url  ?? `https://i.pravatar.cc/80?u=${user.id}`;
+  const userAvatar = profile?.avatar_url  ?? "";
 
   return (
     <UserDashboard
@@ -46,8 +52,9 @@ export default async function AccountPage() {
       userJoinedAt={profile?.created_at ?? user.created_at ?? ""}
       hostStatus={(profile?.host_status as "pending" | "approved" | "rejected" | null) ?? null}
       hostRejectionReason={profile?.host_rejection_reason ?? null}
-      cohostStatus={(profile?.cohost_status as "pending" | "approved" | "rejected" | null) ?? null}
+      cohostStatus={cohostStatusValue}
       cohostRejectionReason={profile?.cohost_rejection_reason ?? null}
+      cohostAssignments={cohostAssignments}
     />
   );
 }

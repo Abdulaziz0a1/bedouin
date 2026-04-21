@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { UserBooking } from "@/lib/types/user";
+import type { CohostAssignmentItem } from "@/lib/services/cohost";
 import BookingStatusBadge from "../shared/BookingStatusBadge";
 
 function KPITile({
@@ -147,11 +148,15 @@ export default function UserOverviewSection({
   kpis,
   userName,
   userAvatar,
+  cohostAssignments = [],
+  onViewAssignments,
 }: {
-  bookings:   UserBooking[];
-  kpis:       KPIs;
-  userName:   string;
-  userAvatar: string;
+  bookings:             UserBooking[];
+  kpis:                 KPIs;
+  userName:             string;
+  userAvatar:           string;
+  cohostAssignments?:   CohostAssignmentItem[];
+  onViewAssignments?:   () => void;
 }) {
   const fmtDate = new Date().toLocaleDateString("en-GB", {
     weekday: "long", day: "numeric", month: "long",
@@ -228,6 +233,38 @@ export default function UserOverviewSection({
           }
         />
       </div>
+
+      {/* Co-host work banner — shown when user has active assignments */}
+      {cohostAssignments.length > 0 && (
+        <div className="bg-[#f0faf5] border border-[#9edcbb] rounded-2xl px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#d0f0e0] flex items-center justify-center text-[#049153] shrink-0">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.8" />
+                <path d="M3 20c0-4 2.7-7 6-7s6 3 6 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                <path d="M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                <path d="M21 18c0-3.5-2.24-6-5-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-bold text-[#1a0e02]">
+                You are co-hosting {cohostAssignments.length} listing{cohostAssignments.length > 1 ? "s" : ""}
+              </p>
+              <p className="text-xs text-[#64707d]">
+                {cohostAssignments.map((a) => a.listingTitle).join(" · ")}
+              </p>
+            </div>
+          </div>
+          {onViewAssignments && (
+            <button
+              onClick={onViewAssignments}
+              className="text-xs font-semibold text-[#049153] border border-[#9edcbb] px-3 py-1.5 rounded-lg hover:bg-[#d0f0e0] transition-colors shrink-0"
+            >
+              View assignments →
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Main 2-col: next trip + quick actions */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">

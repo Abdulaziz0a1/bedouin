@@ -28,6 +28,7 @@ export interface ListingDraft {
   /* Step 3 – Location & capacity */
   region: DraftRegion;
   location: string;         // specific area / neighbourhood
+  mapsUrl: string;          // Google Maps / GPS link (required)
   maxGuests: number;
   bedrooms: number;
   beds: number;
@@ -62,6 +63,7 @@ export const INITIAL_DRAFT: ListingDraft = {
   highlights:       [],
   region:           "",
   location:         "",
+  mapsUrl:          "",
   maxGuests:        2,
   bedrooms:         1,
   beds:             1,

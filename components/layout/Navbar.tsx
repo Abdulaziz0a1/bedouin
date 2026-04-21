@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthProvider";
+import UserAvatar from "@/components/ui/UserAvatar";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Nav links visible to everyone
@@ -144,8 +145,9 @@ export default function Navbar() {
   // ── Display helpers ───────────────────────────────────────────────────────
   const firstName   = (user?.user_metadata?.first_name as string | undefined) ?? "";
   const lastName    = (user?.user_metadata?.last_name  as string | undefined) ?? "";
-  const initials    = firstName ? firstName.charAt(0).toUpperCase() : (user?.email?.charAt(0).toUpperCase() ?? "?");
+  const avatarUrl   = (user?.user_metadata?.avatar_url as string | undefined) ?? "";
   const displayName = firstName || "Account";
+  const fullName    = `${firstName} ${lastName}`.trim() || user?.email?.split("@")[0] || "User";
 
   return (
     <>
@@ -173,6 +175,11 @@ export default function Navbar() {
                 {label}
               </Link>
             ))}
+            {user && !isAdmin && (
+              <Link href="/messages" className="text-[#5a4a3a] text-sm font-medium hover:text-[#2b1a0e] transition-colors">
+                Messages
+              </Link>
+            )}
             {user && activeMode === "host" && !isAdmin && (
               <Link href="/dashboard" className="text-[#5a4a3a] text-sm font-medium hover:text-[#2b1a0e] transition-colors">
                 My Listings
@@ -203,15 +210,18 @@ export default function Navbar() {
                     className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-[#f4efe6] transition-colors"
                     aria-label="Account menu"
                   >
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0 ring-2 ${
-                      isAdmin
-                        ? "bg-[#1a0e02] ring-[#461e00]"
-                        : activeMode === "host"
-                          ? "bg-[#461e00] ring-[#8b5e38]"
-                          : "bg-[#8b5e38] ring-[#dddfe3]"
-                    }`}>
-                      {initials}
-                    </div>
+                    <UserAvatar
+                      src={avatarUrl}
+                      name={fullName}
+                      size={32}
+                      className={`ring-2 ${
+                        isAdmin
+                          ? "ring-[#461e00]"
+                          : activeMode === "host"
+                            ? "ring-[#8b5e38]"
+                            : "ring-[#dddfe3]"
+                      }`}
+                    />
                     <span className="text-sm font-semibold text-[#1a0e02]">{displayName}</span>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-[#8b94a4] transition-transform ${dropdownOpen ? "rotate-180" : ""}`}>
                       <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -242,6 +252,15 @@ export default function Navbar() {
                         </svg>
                         My Account
                       </Link>
+
+                      {!isAdmin && (
+                        <Link href="/messages" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-sm text-[#1a0e02] hover:bg-[#f4efe6] transition-colors">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-[#8b5e38]">
+                            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          Messages
+                        </Link>
+                      )}
 
                       {(activeMode === "host" || isAdmin) && (
                         <Link href="/dashboard" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-sm text-[#1a0e02] hover:bg-[#f4efe6] transition-colors">
@@ -300,7 +319,7 @@ export default function Navbar() {
                 <Link href="/login" className="px-4 py-2 text-sm font-semibold text-white bg-[#8b5e38] rounded-xl hover:bg-[#7a5030] transition-colors shadow-sm">
                   Login
                 </Link>
-                <button aria-label="Support" className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-[#f4efe6] transition-colors text-[#5a4a3a]">
+                <button aria-label="Support" suppressHydrationWarning className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-[#f4efe6] transition-colors text-[#5a4a3a]">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
                     <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
@@ -337,11 +356,7 @@ export default function Navbar() {
               {user ? (
                 <>
                   <div className="flex items-center gap-2.5 py-1">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 ${
-                      isAdmin ? "bg-[#1a0e02]" : activeMode === "host" ? "bg-[#461e00]" : "bg-[#8b5e38]"
-                    }`}>
-                      {initials}
-                    </div>
+                    <UserAvatar src={avatarUrl} name={fullName} size={28} />
                     <div>
                       <span className="text-sm font-semibold text-[#1a0e02]">{displayName}</span>
                       <span className={`ml-2 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full ${
@@ -353,6 +368,9 @@ export default function Navbar() {
                   </div>
 
                   <Link href="/account"  onClick={() => setOpen(false)} className="py-2 text-sm font-medium text-[#5a4a3a]">My Account</Link>
+                  {!isAdmin && (
+                    <Link href="/messages" onClick={() => setOpen(false)} className="py-2 text-sm font-medium text-[#5a4a3a]">Messages</Link>
+                  )}
 
                   {(activeMode === "host" || isAdmin) && (
                     <Link href="/dashboard" onClick={() => setOpen(false)} className="py-2 text-sm font-medium text-[#5a4a3a]">Host Dashboard</Link>

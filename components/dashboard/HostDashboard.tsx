@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import UserAvatar from "@/components/ui/UserAvatar";
 import {
   type DashboardListing,
   type DashboardBooking,
   type EarningsMonth,
 } from "@/lib/data/dashboard";
+import type { CoHostAssignment, CoHostInvitation } from "@/lib/types/cohost";
 import OverviewSection  from "./sections/OverviewSection";
 import ListingsSection  from "./sections/ListingsSection";
 import BookingsSection  from "./sections/BookingsSection";
@@ -75,8 +77,12 @@ export default function HostDashboard({
   bookings,
   hostName,
   hostAvatar,
+  cohostAssignments = [],
+  cohostInvitations = [],
 }: {
-  listings:   DashboardListing[];
+  listings:           DashboardListing[];
+  cohostAssignments?: CoHostAssignment[];
+  cohostInvitations?: CoHostInvitation[];
   bookings:   DashboardBooking[];
   hostName:   string;
   hostAvatar: string;
@@ -172,27 +178,13 @@ export default function HostDashboard({
               >
                 {tab.icon}
                 {tab.label}
-                {tab.id === "cohosts" && (
-                  <span className={[
-                    "text-[9px] font-bold px-1.5 py-0.5 rounded-full border uppercase tracking-wide leading-none",
-                    activeTab === "cohosts"
-                      ? "bg-white/20 text-white/80 border-white/30"
-                      : "bg-[#fdf8ee] text-[#8b6a1f] border-[#ead9a6]",
-                  ].join(" ")}>
-                    Soon
-                  </span>
-                )}
               </button>
             ))}
           </nav>
 
           {/* Host avatar */}
           <div className="flex items-center gap-3">
-            <img
-              src={hostAvatar}
-              alt={hostName}
-              className="w-9 h-9 rounded-full object-cover border-2 border-[#e8dfd4]"
-            />
+            <UserAvatar src={hostAvatar} name={hostName} size={36} className="border-2 border-[#e8dfd4]" />
             {/* Mobile menu toggle */}
             <button
               className="md:hidden p-2 rounded-lg hover:bg-[#f0e8de] transition-colors"
@@ -269,7 +261,12 @@ export default function HostDashboard({
         {activeTab === "listings"  && <ListingsSection  listings={listings} />}
         {activeTab === "bookings"  && <BookingsSection  bookings={bookings} />}
         {activeTab === "earnings"  && <EarningsSection  earningsHistory={kpis.earningsHistory} kpis={kpis} />}
-        {activeTab === "cohosts"   && <CoHostSection    />}
+        {activeTab === "cohosts"   && (
+          <CoHostSection
+            assignments={cohostAssignments}
+            invitations={cohostInvitations}
+          />
+        )}
 
       </main>
     </div>

@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import type { UserBooking } from "@/lib/types/user";
+import type { CohostAssignmentItem } from "@/lib/services/cohost";
+
 import { cancelBooking } from "@/lib/actions/booking";
 import BookingStatusBadge from "../shared/BookingStatusBadge";
 import UserEmptyState from "../shared/UserEmptyState";
@@ -140,6 +142,17 @@ function BookingCard({
               <p className="text-[10px] font-mono text-[#a09080]">{booking.reference}</p>
             </div>
             <div className="flex items-center gap-2">
+              {booking.hostId && (
+                <Link
+                  href={`/messages?with=${booking.hostId}`}
+                  className="px-3 py-1.5 border border-[#e8dfd4] rounded-xl text-xs font-semibold text-[#64707d] hover:border-[#8b5e38] hover:text-[#8b5e38] hover:bg-[#fdf5ee] transition-colors flex items-center gap-1"
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+                    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  Message
+                </Link>
+              )}
               {booking.status === "completed" && (
                 <button className="px-3 py-1.5 border border-[#e8dfd4] rounded-xl text-xs font-semibold text-[#8b5e38] hover:border-[#8b5e38] hover:bg-[#fdf5ee] transition-colors">
                   Leave a review
@@ -239,7 +252,116 @@ function BookingCard({
   );
 }
 
-export default function UserBookingsSection({ bookings: initialBookings }: { bookings: UserBooking[] }) {
+// ──────────────────────────────────────────────────────────────────────────────
+// CohostAssignmentCard — visually distinct from booking cards (green, no price)
+// ──────────────────────────────────────────────────────────────────────────────
+
+function CohostAssignmentCard({ assignment }: { assignment: CohostAssignmentItem }) {
+  const fmtDate = (iso: string) =>
+    new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+
+  return (
+    <div className="bg-white border border-[#9edcbb] rounded-2xl overflow-hidden">
+      {/* Green identity strip — immediately distinguishes this from a booking */}
+      <div className="bg-[#f0faf5] border-b border-[#9edcbb] px-5 py-2 flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full bg-[#049153] animate-pulse shrink-0" />
+        <span className="text-[10px] font-bold text-[#049153] uppercase tracking-widest">
+          Active Co-host Assignment
+        </span>
+      </div>
+
+      <div className="flex flex-col sm:flex-row">
+
+        {/* Listing image */}
+        <div className="relative sm:w-44 shrink-0">
+          {assignment.listingImage ? (
+            <img
+              src={assignment.listingImage}
+              alt={assignment.listingTitle}
+              className="w-full h-36 sm:h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-36 sm:h-full bg-[#e8dfd4]" />
+          )}
+        </div>
+
+        {/* Details */}
+        <div className="flex-1 p-5 flex flex-col gap-3 min-w-0">
+
+          {/* Title + host */}
+          <div>
+            <Link
+              href={`/listing/${assignment.listingId}`}
+              className="font-display font-semibold text-[#1a0e02] leading-snug hover:text-[#049153] transition-colors"
+            >
+              {assignment.listingTitle}
+            </Link>
+            <p className="text-xs text-[#64707d] mt-0.5">
+              Host:{" "}
+              <span className="font-semibold text-[#8b5e38]">{assignment.hostName}</span>
+            </p>
+          </div>
+
+          {/* Date strip */}
+          <div className="flex flex-wrap gap-x-5 gap-y-1.5">
+            <div>
+              <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">Assigned since</p>
+              <p className="text-xs font-semibold text-[#1a0e02]">{fmtDate(assignment.assignedAt)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">Role</p>
+              <p className="text-xs font-semibold text-[#1a0e02]">Co-host</p>
+            </div>
+          </div>
+
+          {/* Operational reminder */}
+          <div className="flex items-start gap-2 bg-[#f0faf5] border border-[#9edcbb] rounded-xl px-4 py-2.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-[#049153] shrink-0 mt-0.5">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+              <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            <p className="text-xs text-[#049153] font-medium leading-relaxed">
+              {assignment.checkInTime
+                ? `Guests check in at ${assignment.checkInTime} — please arrive at least 1 hour early to prepare.`
+                : "Coordinate with your host and plan to arrive before guests check in — typically 1 hour early."}
+            </p>
+          </div>
+
+          {/* Actions — no price, no cancel button */}
+          <div className="flex items-center gap-2 pt-3 border-t border-[#f0e8de] flex-wrap mt-auto">
+            <Link
+              href={`/messages?with=${assignment.hostId}`}
+              className="px-3 py-1.5 border border-[#9edcbb] rounded-xl text-xs font-semibold text-[#049153] hover:bg-[#f0faf5] transition-colors flex items-center gap-1"
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Message host
+            </Link>
+            <Link
+              href={`/listing/${assignment.listingId}`}
+              className="px-3 py-1.5 border border-[#e8dfd4] rounded-xl text-xs font-semibold text-[#64707d] hover:border-[#8b5e38] hover:text-[#8b5e38] hover:bg-[#fdf5ee] transition-colors"
+            >
+              View listing
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Main section
+// ──────────────────────────────────────────────────────────────────────────────
+
+export default function UserBookingsSection({
+  bookings: initialBookings,
+  cohostAssignments = [],
+}: {
+  bookings:           UserBooking[];
+  cohostAssignments?: CohostAssignmentItem[];
+}) {
   const [tab, setTab]       = useState<Tab>("upcoming");
   // Local state so cancellation reflects immediately without a page reload.
   const [bookings, setBookings] = useState<UserBooking[]>(initialBookings);
@@ -250,23 +372,35 @@ export default function UserBookingsSection({ bookings: initialBookings }: { boo
     );
   };
 
-  const upcoming = bookings.filter(
+  // Co-host assignment overrides guest booking — never show both for the same listing.
+  const cohostListingIds = new Set(cohostAssignments.map((a) => a.listingId));
+  const guestBookings = bookings.filter((b) => !cohostListingIds.has(b.listingId));
+
+  const upcoming = guestBookings.filter(
     (b) => b.status === "upcoming" || b.status === "confirmed" || b.status === "active"
   );
-  const past = bookings.filter(
+  const past = guestBookings.filter(
     (b) => b.status === "completed" || b.status === "cancelled"
   );
 
   const shown = tab === "upcoming" ? upcoming : past;
 
   return (
+    <div className="flex flex-col gap-10">
+
+    {/* ── Section 1: Guest Bookings ─────────────────────────────────────────── */}
     <div className="flex flex-col gap-6">
 
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="font-display font-semibold text-[#1a0e02] text-lg">My Bookings</h2>
-          <p className="text-xs text-[#64707d] mt-0.5">
+          <div className="flex items-center gap-2 mb-0.5">
+            <h2 className="font-display font-semibold text-[#1a0e02] text-lg">Guest Bookings</h2>
+            <span className="text-[10px] font-bold text-[#8b5e38] bg-[#fdf5ee] border border-[#e8c89a] px-2 py-0.5 rounded-full uppercase tracking-wide">
+              As a guest
+            </span>
+          </div>
+          <p className="text-xs text-[#64707d]">
             {upcoming.length} upcoming · {past.filter((b) => b.status === "completed").length} completed
           </p>
         </div>
@@ -334,6 +468,35 @@ export default function UserBookingsSection({ bookings: initialBookings }: { boo
           {shown.map((b) => <BookingCard key={b.id} booking={b} onCancelled={handleCancelled} />)}
         </div>
       )}
+    </div>
+
+    {/* ── Section 2: Co-host Assignments ───────────────────────────────────── */}
+    {cohostAssignments.length > 0 && (
+      <div className="flex flex-col gap-6">
+
+        {/* Divider + header */}
+        <div className="flex items-center gap-4">
+          <div className="flex-1 h-px bg-[#e8dfd4]" />
+        </div>
+        <div className="flex items-center gap-3">
+          <h2 className="font-display font-semibold text-[#1a0e02] text-lg">My Co-host Assignments</h2>
+          <span className="text-[10px] font-bold text-[#049153] bg-[#f0faf5] border border-[#9edcbb] px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#049153]" />
+            {cohostAssignments.length} active
+          </span>
+        </div>
+        <p className="text-xs text-[#64707d] -mt-4">
+          Listings you are actively co-hosting — this is not a guest booking.
+        </p>
+
+        <div className="flex flex-col gap-4">
+          {cohostAssignments.map((a) => (
+            <CohostAssignmentCard key={a.id} assignment={a} />
+          ))}
+        </div>
+      </div>
+    )}
+
     </div>
   );
 }

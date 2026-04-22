@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { useState } from "react";
 import { Review, RatingBreakdown } from "@/lib/data/listing-details";
+import UserAvatar from "@/components/ui/UserAvatar";
 
 interface ReviewsSectionProps {
   score: number;
@@ -89,18 +89,12 @@ export default function ReviewsSection({
           >
             {/* Reviewer */}
             <div className="flex items-center gap-3">
-              <div className="relative w-10 h-10 rounded-full overflow-hidden shrink-0">
-                <Image
-                  src={review.avatar}
-                  alt={review.reviewer}
-                  fill
-                  className="object-cover"
-                  sizes="40px"
-                />
-              </div>
+              <UserAvatar src={review.avatar} name={review.reviewer} size={40} />
               <div>
                 <p className="font-semibold text-[#1a0e02] text-sm leading-tight">{review.reviewer}</p>
-                <p className="text-[#64707d] text-xs">{review.country} · {review.date}</p>
+                <p className="text-[#64707d] text-xs">
+                  {review.country ? `${review.country} · ` : ""}{review.date}
+                </p>
               </div>
               <div className="ml-auto">
                 <StarIcons rating={review.rating} />

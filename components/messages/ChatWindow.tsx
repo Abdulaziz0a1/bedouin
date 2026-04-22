@@ -49,7 +49,7 @@ function ChatBubble({
     <div className={`flex items-end gap-2.5 ${isMine ? "flex-row-reverse" : "flex-row"}`}>
       {/* Avatar — only for received messages at the start of a group */}
       <div className="w-7 shrink-0">
-        {!isMine && showAvatar && (
+        {!isMine && showAvatar && avatar && (
           <img src={avatar} alt="" className="w-7 h-7 rounded-full object-cover border border-[#e8dfd4]" />
         )}
       </div>

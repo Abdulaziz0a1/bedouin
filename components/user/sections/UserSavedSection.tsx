@@ -24,7 +24,7 @@ function SavedCard({ listing, onRemove }: { listing: SavedListing; onRemove: (id
       {/* Image */}
       <Link href={`/listing/${listing.listingId}`} className="relative block w-full h-[190px] overflow-hidden">
         <Image
-          src={listing.imageUrl}
+          src={listing.imageUrl || "https://picsum.photos/seed/bedouin-placeholder/600/400"}
           alt={listing.title}
           fill
           className="object-cover transition-transform duration-500 group-hover:scale-105"
@@ -103,9 +103,8 @@ function SavedCard({ listing, onRemove }: { listing: SavedListing; onRemove: (id
   );
 }
 
-export default function UserSavedSection() {
-  // Wishlist is not yet backed by the database — start empty.
-  const [items, setItems]       = useState<SavedListing[]>([]);
+export default function UserSavedSection({ initialItems = [] }: { initialItems?: SavedListing[] }) {
+  const [items, setItems]       = useState<SavedListing[]>(initialItems);
   const [sort, setSort]         = useState<SortOrder>("recent");
 
   const sorted = [...items].sort((a, b) => {

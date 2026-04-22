@@ -87,9 +87,9 @@ export default function EarningsSection({
       {/* Summary KPI strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Total payout",   value: `SAR ${totalPayout.toLocaleString()}`,  sub: "6 months"           },
-          { label: "Guest payments", value: `SAR ${totalGross.toLocaleString()}`,   sub: "6 months"           },
-          { label: "Bedouin fee",    value: `SAR ${beduoinFee.toLocaleString()}`,   sub: "8% of listed price" },
+          { label: "Total payout",   value: `SAR ${totalPayout.toLocaleString("en-US")}`,  sub: "6 months"           },
+          { label: "Guest payments", value: `SAR ${totalGross.toLocaleString("en-US")}`,   sub: "6 months"           },
+          { label: "Bedouin fee",    value: `SAR ${beduoinFee.toLocaleString("en-US")}`,   sub: "8% of listed price" },
           { label: "Bookings",       value: String(totalBookings),                  sub: "6 months"           },
         ].map((kpi) => (
           <div key={kpi.label} className="bg-white border border-[#e8dfd4] rounded-2xl p-4">
@@ -105,7 +105,7 @@ export default function EarningsSection({
         <div className="flex items-center justify-between mb-5">
           <h3 className="font-display font-semibold text-[#1a0e02]">Monthly breakdown</h3>
           <p className="text-xs text-[#64707d]">
-            This month: <span className="font-bold text-[#8b5e38]">SAR {kpis.thisMonth.toLocaleString()}</span>
+            This month: <span className="font-bold text-[#8b5e38]">SAR {kpis.thisMonth.toLocaleString("en-US")}</span>
           </p>
         </div>
         <BarChart data={earningsHistory} />

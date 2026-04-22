@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import RatingBadge from "./RatingBadge";
+import { toggleWishlist } from "@/lib/actions/wishlist";
 
 export interface ProductCardProps {
   id: string;
@@ -21,14 +22,18 @@ export interface ProductCardProps {
   tags?: string[];
   /** Override the default fixed-width scroll-row sizing for fluid grid layouts */
   className?: string;
+  /** Server-provided initial saved state — avoids a client-side auth check on mount */
+  savedByCurrentUser?: boolean;
 }
 
 export default function ProductCard({
   id, image, title, location, price, originalPrice,
   priceUnit = "per person", score, reviewCount,
   badge, badgeColor = "#049153", href, tags, className,
+  savedByCurrentUser = false,
 }: ProductCardProps) {
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved]     = useState(savedByCurrentUser);
+  const [pending, startTransition] = useTransition();
 
   return (
     <Link
@@ -60,8 +65,21 @@ export default function ProductCard({
         <button
           aria-label={saved ? "Remove from wishlist" : "Save to wishlist"}
           type="button"
-          onClick={(e) => { e.preventDefault(); setSaved((v) => !v); }}
-          className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full w-8 h-8 flex items-center justify-center hover:scale-110 transition-transform shadow-sm"
+          disabled={pending}
+          onClick={(e) => {
+            e.preventDefault();
+            startTransition(async () => {
+              const result = await toggleWishlist(id);
+              if ("error" in result) {
+                if (result.error === "not_authenticated") {
+                  window.location.href = `/login?returnTo=${encodeURIComponent(window.location.pathname)}`;
+                }
+                return;
+              }
+              setSaved(result.saved);
+            });
+          }}
+          className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full w-8 h-8 flex items-center justify-center hover:scale-110 transition-transform shadow-sm disabled:opacity-60"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
             <path

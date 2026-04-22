@@ -9,8 +9,12 @@ import HostCard from "@/components/listing/HostCard";
 import AmenitiesGrid from "@/components/listing/AmenitiesGrid";
 import ReviewsSection from "@/components/listing/ReviewsSection";
 import RelatedListings from "@/components/listing/RelatedListings";
+import { createClient } from "@/lib/supabase-server";
 import { fetchListingDetail } from "@/lib/services/listing-detail";
 import { fetchRelatedListings } from "@/lib/services/listings";
+import { fetchWishlistSlugs } from "@/lib/services/wishlist";
+import { getListingReviews } from "@/lib/services/reviews";
+import WishlistButton from "@/components/listing/WishlistButton";
 
 // Deduplicated fetch: generateMetadata and the page share one DB call per request.
 const getCachedListingDetail = cache(fetchListingDetail);
@@ -34,7 +38,21 @@ export default async function ListingPage({ params }: Props) {
   const listing = await getCachedListingDetail(id);
   if (!listing) notFound();
 
-  const related = await fetchRelatedListings(id, listing.category, listing.region, 4);
+  // Resolve wishlist state server-side so the Save button renders with correct initial state.
+  // Parallelise independent fetches
+  const supabase = await createClient();
+  const [{ data: { user } }, related, realReviews] = await Promise.all([
+    supabase.auth.getUser(),
+    fetchRelatedListings(id, listing.category, listing.region, 4),
+    getListingReviews(id),
+  ]);
+  const wishlistSlugs = user ? await fetchWishlistSlugs(user.id) : new Set<string>();
+  const isSaved = wishlistSlugs.has(id);
+
+  // Use real DB reviews when they exist; fall back to nothing (no fake data shown)
+  const effectiveReviews = realReviews.count > 0 ? realReviews.reviews : [];
+  const effectiveScore   = realReviews.count > 0 ? (realReviews.avg ?? 0) : listing.score;
+  const effectiveCount   = realReviews.count > 0 ? realReviews.count     : listing.reviewCount;
 
   return (
     <div className="min-h-screen bg-[#f4efe6]">
@@ -73,8 +91,8 @@ export default async function ListingPage({ params }: Props) {
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="#c49a4f">
                     <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                   </svg>
-                  <span className="font-semibold text-[#1a0e02]">{listing.score.toFixed(1)}</span>
-                  <span>({listing.reviewCount} reviews)</span>
+                  <span className="font-semibold text-[#1a0e02]">{effectiveScore.toFixed(1)}</span>
+                  <span>({effectiveCount} reviews)</span>
                 </div>
                 <span>·</span>
                 <div className="flex items-center gap-1">
@@ -98,13 +116,7 @@ export default async function ListingPage({ params }: Props) {
                 </svg>
                 Share
               </button>
-              <button className="flex items-center gap-1.5 px-4 py-2 border border-[#e8dfd4] bg-white rounded-xl text-sm font-medium text-[#1a0e02] hover:border-[#8b5e38] transition-colors">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 21S3 14 3 8.5C3 5.42 5.42 3 8.5 3 10.24 3 11.91 3.81 13 5.09 14.09 3.81 15.76 3 17.5 3 20.58 3 23 5.42 23 8.5 23 14 12 21 12 21z"
-                    stroke="#8b5e38" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                Save
-              </button>
+              <WishlistButton listingSlug={id} initialSaved={isSaved} />
             </div>
           </div>
         </div>
@@ -257,18 +269,20 @@ export default async function ListingPage({ params }: Props) {
               {/* Divider */}
               <div className="h-px bg-[#e8dfd4]" />
 
-              {/* Reviews */}
-              <div>
-                <h2 className="font-display font-bold text-[#1a0e02] text-xl mb-6">
-                  Guest reviews
-                </h2>
-                <ReviewsSection
-                  score={listing.score}
-                  reviewCount={listing.reviewCount}
-                  reviews={listing.reviews}
-                  breakdown={listing.ratingBreakdown}
-                />
-              </div>
+              {/* Reviews — only render when real reviews exist */}
+              {effectiveReviews.length > 0 && (
+                <div>
+                  <h2 className="font-display font-bold text-[#1a0e02] text-xl mb-6">
+                    Guest reviews
+                  </h2>
+                  <ReviewsSection
+                    score={effectiveScore}
+                    reviewCount={effectiveCount}
+                    reviews={effectiveReviews}
+                    breakdown={null}
+                  />
+                </div>
+              )}
             </div>
 
             {/* ── Right column: Booking card ───────────────────────────────── */}
@@ -277,8 +291,8 @@ export default async function ListingPage({ params }: Props) {
                 price={listing.price}
                 originalPrice={listing.originalPrice}
                 priceUnit={listing.priceUnit}
-                score={listing.score}
-                reviewCount={listing.reviewCount}
+                score={effectiveScore}
+                reviewCount={effectiveCount}
                 minNights={listing.minNights}
                 maxGuests={listing.maxGuests}
                 listingId={listing.id}

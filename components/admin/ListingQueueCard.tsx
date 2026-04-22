@@ -2,6 +2,7 @@
 
 import type { AdminListing } from "@/lib/types/admin";
 import AdminStatusBadge from "./shared/AdminStatusBadge";
+import UserAvatar from "@/components/ui/UserAvatar";
 
 interface ListingQueueCardProps {
   listing: AdminListing;
@@ -36,6 +37,7 @@ export default function ListingQueueCard({
           src={listing.imageUrls[0]}
           alt={listing.title}
           className="w-full h-full object-cover"
+          onError={(e) => { e.currentTarget.style.display = "none"; }}
         />
         {listing.status === "pending_review" && (
           <div className="absolute inset-0 ring-2 ring-[#c49a4f] ring-inset rounded-xl" />
@@ -54,14 +56,14 @@ export default function ListingQueueCard({
           {listing.category} · {listing.region}
         </p>
         <div className="flex items-center justify-between mt-1.5">
-          <p className="text-[10px] text-[#a09080] flex items-center gap-1">
-            <img
+          <div className="text-[10px] text-[#a09080] flex items-center gap-1">
+            <UserAvatar
               src={listing.host.avatar}
-              alt={listing.host.name}
-              className="w-3.5 h-3.5 rounded-full object-cover"
+              name={listing.host.name}
+              size={14}
             />
-            {listing.host.name.split(" ")[0]}
-          </p>
+            <span>{listing.host.name.split(" ")[0]}</span>
+          </div>
           <p className="text-[10px] text-[#a09080]">{timeAgo(listing.submittedAt)}</p>
         </div>
       </div>

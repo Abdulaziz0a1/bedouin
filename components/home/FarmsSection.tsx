@@ -5,10 +5,10 @@ import { useRef } from "react";
 import ProductCard from "@/components/ui/ProductCard";
 
 const farms = [
-  { id: "strawberry-farm",  image: "https://picsum.photos/seed/strawberry/600/500",   title: "Strawberry Farm",       location: "Al Taif – Al Hada",    price: 70,  score: 5.0, reviewCount: 350 },
-  { id: "al-barr-farms",    image: "https://picsum.photos/seed/albarr/600/500",        title: "Al Barr Farms",         location: "Northern Al Namas",    price: 120, score: 5.0, reviewCount: 200 },
-  { id: "al-baha-fruit",    image: "https://picsum.photos/seed/albaha-fruit/600/500",  title: "Al Baha Fruit Farms",   location: "Al Baha",              price: 99,  score: 4.8, reviewCount: 160 },
-  { id: "date-palm-farm",   image: "https://picsum.photos/seed/datepalm/600/500",      title: "Date Palm Estate",      location: "Al Ahsa",              price: 85,  score: 4.6, reviewCount: 94  },
+  { id: "strawberry-farm",  image: "https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=600&h=500&fit=crop",  title: "Strawberry Farm",       location: "Al Taif – Al Hada",    price: 70,  score: 5.0, reviewCount: 350 },
+  { id: "al-barr-farms",    image: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&h=500&fit=crop",  title: "Al Barr Farms",         location: "Northern Al Namas",    price: 120, score: 5.0, reviewCount: 200 },
+  { id: "al-baha-fruit",    image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&h=500&fit=crop",  title: "Al Baha Fruit Farms",   location: "Al Baha",              price: 99,  score: 4.8, reviewCount: 160 },
+  { id: "date-palm-farm",   image: "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=600&h=500&fit=crop", title: "Date Palm Estate",      location: "Al Ahsa",              price: 85,  score: 4.6, reviewCount: 94  },
 ];
 
 export default function FarmsSection() {

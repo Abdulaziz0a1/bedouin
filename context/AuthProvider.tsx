@@ -121,15 +121,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await loadProfile(session.user.id);
-      }
-      setLoading(false);
-    });
-
+    // onAuthStateChange fires with INITIAL_SESSION on first subscription — no need
+    // to also call getSession(), which would cause loadProfile to run twice on mount.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {

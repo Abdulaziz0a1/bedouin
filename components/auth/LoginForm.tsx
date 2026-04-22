@@ -19,21 +19,16 @@ export default function LoginForm() {
     setLoading(true);
 
     const supabase = createClient();
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    setLoading(false);
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 
     if (signInError) {
       setError(signInError.message);
+      setLoading(false);   // only reset on error — keep spinner through redirect on success
       return;
     }
 
-    // Determine where to send the user based on their role and active mode.
-    // Admins → /admin. Host-mode users → /dashboard. Everyone else → /account.
-    const { data: { user } } = await supabase.auth.getUser();
+    // User is already in the sign-in response — no need for a second getUser() call.
+    const user = data.user;
     let destination = "/account";
 
     if (user) {
@@ -47,6 +42,7 @@ export default function LoginForm() {
       else if (profile?.active_mode === "host") destination = "/dashboard";
     }
 
+    // Loading stays true — spinner persists during page transition, then unmounts naturally.
     router.push(destination);
   };
 

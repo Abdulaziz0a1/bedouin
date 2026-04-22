@@ -38,7 +38,7 @@ export interface Listing {
 export const ALL_LISTINGS: Listing[] = [
   {
     id: "strawberry-hill",
-    image: "https://picsum.photos/seed/strawberry-farm/600/440",
+    image: "https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=600&h=440&fit=crop",
     title: "Strawberry Hill Farm",
     location: "Al Taif, Hada Al Sham",
     region: "Taif",
@@ -52,7 +52,7 @@ export const ALL_LISTINGS: Listing[] = [
   },
   {
     id: "alula-stargazing-dome",
-    image: "https://picsum.photos/seed/dome-night-sky/600/440",
+    image: "https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=600&h=440&fit=crop",
     title: "AlUla Stargazing Dome",
     location: "AlUla, Madain Saleh Area",
     region: "AlUla",
@@ -66,7 +66,7 @@ export const ALL_LISTINGS: Listing[] = [
   },
   {
     id: "asir-highland-cabin",
-    image: "https://picsum.photos/seed/mountain-cabin-1/600/440",
+    image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=440&fit=crop",
     title: "Asir Highland Cabin",
     location: "Abha, Al Soudah",
     region: "Abha",
@@ -81,7 +81,7 @@ export const ALL_LISTINGS: Listing[] = [
   },
   {
     id: "red-sand-glamping",
-    image: "https://picsum.photos/seed/red-desert-tent/600/440",
+    image: "https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=600&h=440&fit=crop",
     title: "Red Sand Glamping",
     location: "Riyadh, Al Kharj Road",
     region: "Riyadh",
@@ -95,7 +95,7 @@ export const ALL_LISTINGS: Listing[] = [
   },
   {
     id: "date-palm-estate",
-    image: "https://picsum.photos/seed/date-palm-oasis/600/440",
+    image: "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=600&h=440&fit=crop",
     title: "Date Palm Estate",
     location: "Al Ahsa, Hofuf",
     region: "AlAhsa",
@@ -107,7 +107,7 @@ export const ALL_LISTINGS: Listing[] = [
   },
   {
     id: "tabuk-cliff-house",
-    image: "https://picsum.photos/seed/cliff-house-tabuk/600/440",
+    image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&h=440&fit=crop",
     title: "Tabuk Cliff House",
     location: "Tabuk, Wadi Tayeb Al Ism",
     region: "Tabuk",
@@ -121,7 +121,7 @@ export const ALL_LISTINGS: Listing[] = [
   },
   {
     id: "albaha-fruit-farm",
-    image: "https://picsum.photos/seed/fruit-terraces/600/440",
+    image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&h=440&fit=crop",
     title: "Al Baha Terraced Farm",
     location: "Al Baha, Al Aqiq",
     region: "AlBaha",
@@ -133,7 +133,7 @@ export const ALL_LISTINGS: Listing[] = [
   },
   {
     id: "hegra-desert-camp",
-    image: "https://picsum.photos/seed/desert-camp-hegra/600/440",
+    image: "https://images.unsplash.com/photo-1548092372-0d1bd40894a3?w=600&h=440&fit=crop",
     title: "Hegra Desert Experience",
     location: "AlUla, Hegra Heritage Site",
     region: "AlUla",
@@ -148,7 +148,7 @@ export const ALL_LISTINGS: Listing[] = [
   },
   {
     id: "asir-guesthouse",
-    image: "https://picsum.photos/seed/asir-guesthouse/600/440",
+    image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&h=440&fit=crop",
     title: "Asir Heritage Guesthouse",
     location: "Abha, Old Town",
     region: "Abha",
@@ -160,7 +160,7 @@ export const ALL_LISTINGS: Listing[] = [
   },
   {
     id: "al-namas-orchard",
-    image: "https://picsum.photos/seed/orchard-namas/600/440",
+    image: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&h=440&fit=crop",
     title: "Al Namas Apple Orchard",
     location: "Abha, Al Namas",
     region: "Abha",
@@ -174,7 +174,7 @@ export const ALL_LISTINGS: Listing[] = [
   },
   {
     id: "jeddah-heritage-riad",
-    image: "https://picsum.photos/seed/jeddah-riad/600/440",
+    image: "https://images.unsplash.com/photo-1560969184-10fe8719e047?w=600&h=440&fit=crop",
     title: "Al-Balad Heritage Riad",
     location: "Jeddah, Historic District",
     region: "Jeddah",
@@ -188,7 +188,7 @@ export const ALL_LISTINGS: Listing[] = [
   },
   {
     id: "hail-rock-cabin",
-    image: "https://picsum.photos/seed/rock-formation-cabin/600/440",
+    image: "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600&h=440&fit=crop",
     title: "Hail Rock Formation Cabin",
     location: "Hail, Jubbah",
     region: "Hail",
@@ -200,7 +200,7 @@ export const ALL_LISTINGS: Listing[] = [
   },
   {
     id: "madinah-valley-lodge",
-    image: "https://picsum.photos/seed/valley-lodge-green/600/440",
+    image: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600&h=440&fit=crop",
     title: "Madinah Valley Lodge",
     location: "Madinah, Al Ula Road",
     region: "Madinah",
@@ -212,7 +212,7 @@ export const ALL_LISTINGS: Listing[] = [
   },
   {
     id: "alula-rock-dome",
-    image: "https://picsum.photos/seed/alula-rock-dome/600/440",
+    image: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=600&h=440&fit=crop",
     title: "AlUla Rock Dome Suite",
     location: "AlUla, Dadan Valley",
     region: "AlUla",
@@ -226,7 +226,7 @@ export const ALL_LISTINGS: Listing[] = [
   },
   {
     id: "taif-rose-farm",
-    image: "https://picsum.photos/seed/rose-garden-taif/600/440",
+    image: "https://images.unsplash.com/photo-1490750967868-88df5691cc06?w=600&h=440&fit=crop",
     title: "Taif Rose Garden Farm",
     location: "Taif, Al Shafa",
     region: "Taif",
@@ -238,7 +238,7 @@ export const ALL_LISTINGS: Listing[] = [
   },
   {
     id: "abha-sky-glamping",
-    image: "https://picsum.photos/seed/sky-tent-abha/600/440",
+    image: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&h=440&fit=crop",
     title: "Abha Sky Glamping",
     location: "Abha, Al Soudah Park",
     region: "Abha",
@@ -253,7 +253,7 @@ export const ALL_LISTINGS: Listing[] = [
   },
   {
     id: "alahsa-palm-grove",
-    image: "https://picsum.photos/seed/palm-grove-villa/600/440",
+    image: "https://images.unsplash.com/photo-1586348943529-beaae6c28db9?w=600&h=440&fit=crop",
     title: "Al Ahsa Palm Grove Villa",
     location: "Al Ahsa, Al Uqair",
     region: "AlAhsa",
@@ -265,15 +265,15 @@ export const ALL_LISTINGS: Listing[] = [
   },
   {
     id: "tabuk-desert-experience",
-    image: "https://picsum.photos/seed/tabuk-wadi-rum/600/440",
-    title: "Tabuk Wadi Rum Experience",
+    image: "https://images.unsplash.com/photo-1462275646964-a0e3386b89fa?w=600&h=440&fit=crop",
+    title: "Tabuk Coastal Glamping",
     location: "Tabuk, Sharma Beach Area",
     region: "Tabuk",
     category: "glamping",
     price: 360,
     score: 4.9,
     reviewCount: 122,
-    tags: ["Wadi", "Snorkeling", "Beach"],
+    tags: ["Red Sea", "Snorkeling", "Beach"],
   },
 ];
 

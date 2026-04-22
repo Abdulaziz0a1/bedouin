@@ -9,15 +9,15 @@
 export type AdminListingStatus = "pending_review" | "approved" | "rejected";
 
 export interface AdminHost {
-  id: string;               // Firestore uid
+  id: string;
   name: string;
-  avatar: string;
-  email: string;
-  phone: string;
-  joinedAt: string;         // ISO date
-  totalListings: number;    // all-time submitted
+  avatar:    string | null;
+  email:     string | null;   // not exposed from profiles; shown as "—"
+  phone:     string | null;
+  joinedAt:  string | null;   // ISO date from profiles.created_at
+  totalListings: number;
   approvedListings: number;
-  responseRate: number;     // 0–100
+  responseRate: number;       // 0–100
   superhost: boolean;
 }
 

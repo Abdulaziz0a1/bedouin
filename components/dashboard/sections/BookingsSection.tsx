@@ -52,7 +52,7 @@ function BookingRow({ booking }: { booking: DashboardBooking }) {
         </div>
         <div className="text-right shrink-0 flex flex-col items-end gap-1.5">
           <StatusChip status={booking.status} />
-          <p className="font-display font-bold text-[#1a0e02] text-sm">SAR {booking.hostPayout.toLocaleString()}</p>
+          <p className="font-display font-bold text-[#1a0e02] text-sm">SAR {booking.hostPayout.toLocaleString("en-US")}</p>
           <p className="text-[10px] text-[#a09080]">payout</p>
         </div>
         <svg
@@ -87,11 +87,11 @@ function BookingRow({ booking }: { booking: DashboardBooking }) {
                 </div>
                 <div>
                   <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">Total charged</p>
-                  <p className="text-xs font-semibold text-[#1a0e02]">SAR {booking.totalPrice.toLocaleString()}</p>
+                  <p className="text-xs font-semibold text-[#1a0e02]">SAR {booking.totalPrice.toLocaleString("en-US")}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">Your payout</p>
-                  <p className="text-xs font-semibold text-[#049153]">SAR {booking.hostPayout.toLocaleString()}</p>
+                  <p className="text-xs font-semibold text-[#049153]">SAR {booking.hostPayout.toLocaleString("en-US")}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">Payment</p>
@@ -129,7 +129,7 @@ export default function BookingsSection({ bookings }: { bookings: DashboardBooki
         <div>
           <h2 className="font-display font-semibold text-[#1a0e02] text-lg">Bookings</h2>
           <p className="text-xs text-[#64707d] mt-0.5">
-            {upcoming.length} upcoming · SAR {totalRevenue.toLocaleString()} earned to date
+            {upcoming.length} upcoming · SAR {totalRevenue.toLocaleString("en-US")} earned to date
           </p>
         </div>
       </div>
@@ -196,7 +196,7 @@ export default function BookingsSection({ bookings }: { bookings: DashboardBooki
             </div>
             <div>
               <p className="font-display font-extrabold text-[#8b5e38] text-xl">
-                SAR {totalRevenue.toLocaleString()}
+                SAR {totalRevenue.toLocaleString("en-US")}
               </p>
               <p className="text-xs text-[#64707d]">Total payout</p>
             </div>

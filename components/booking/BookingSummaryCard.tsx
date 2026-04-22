@@ -104,23 +104,23 @@ export default function BookingSummaryCard({
 
               <div className="flex justify-between text-sm">
                 <span className="text-[#64707d]">
-                  SAR {listing.price.toLocaleString()} × {nights} night{nights !== 1 ? "s" : ""}
+                  SAR {listing.price.toLocaleString("en-US")} × {nights} night{nights !== 1 ? "s" : ""}
                 </span>
-                <span className="text-[#1a0e02] font-medium">SAR {subtotal.toLocaleString()}</span>
+                <span className="text-[#1a0e02] font-medium">SAR {subtotal.toLocaleString("en-US")}</span>
               </div>
 
               {listing.originalPrice && (
                 <div className="flex justify-between text-sm">
                   <span className="text-[#049153] text-xs font-medium">Discount applied</span>
                   <span className="text-[#049153] text-xs font-medium">
-                    −SAR {((listing.originalPrice - listing.price) * nights).toLocaleString()}
+                    −SAR {((listing.originalPrice - listing.price) * nights).toLocaleString("en-US")}
                   </span>
                 </div>
               )}
 
               <div className="flex justify-between text-sm">
                 <span className="text-[#64707d]">Service fee (12%)</span>
-                <span className="text-[#1a0e02] font-medium">SAR {serviceFee.toLocaleString()}</span>
+                <span className="text-[#1a0e02] font-medium">SAR {serviceFee.toLocaleString("en-US")}</span>
               </div>
             </div>
 
@@ -129,7 +129,7 @@ export default function BookingSummaryCard({
             <div className="flex justify-between items-center">
               <span className="font-display font-bold text-[#1a0e02] text-base">Total</span>
               <span className="font-display font-bold text-[#1a0e02] text-xl">
-                SAR {total.toLocaleString()}
+                SAR {total.toLocaleString("en-US")}
               </span>
             </div>
           </>

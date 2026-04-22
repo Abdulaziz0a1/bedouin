@@ -91,7 +91,7 @@ function UpcomingRow({ booking }: { booking: DashboardBooking }) {
         <p className="text-xs text-[#a09080]">{fmtDate(checkIn)} – {fmtDate(checkOut)} · {booking.nights}n</p>
       </div>
       <div className="text-right shrink-0">
-        <p className="text-sm font-bold text-[#1a0e02]">SAR {booking.hostPayout.toLocaleString()}</p>
+        <p className="text-sm font-bold text-[#1a0e02]">SAR {booking.hostPayout.toLocaleString("en-US")}</p>
         <p className={`text-[10px] font-semibold mt-0.5 ${daysUntil <= 3 ? "text-[#c49a4f]" : "text-[#64707d]"}`}>
           {daysUntil === 0 ? "Today" : daysUntil === 1 ? "Tomorrow" : `in ${daysUntil}d`}
         </p>
@@ -169,7 +169,7 @@ export default function OverviewSection({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           label="Total Earnings"
-          value={`SAR ${kpis.totalEarnings.toLocaleString()}`}
+          value={`SAR ${kpis.totalEarnings.toLocaleString("en-US")}`}
           sub="All time payout"
           delta={kpis.earningsDelta}
           icon={
@@ -243,7 +243,7 @@ export default function OverviewSection({
             <div>
               <p className="text-[10px] text-[#64707d] uppercase tracking-widest font-bold">This month</p>
               <p className="font-display font-extrabold text-[#8b5e38] text-lg">
-                SAR {kpis.thisMonth.toLocaleString()}
+                SAR {kpis.thisMonth.toLocaleString("en-US")}
               </p>
             </div>
             <div className="text-right">

@@ -1,12 +1,23 @@
 import { createClient } from "@/lib/supabase-server";
+import { createAdminClient } from "@/lib/supabase-admin";
 import { getQueueStats } from "@/lib/data/admin";
 import type { AdminListing, AdminHost, QueueStats } from "@/lib/types/admin";
 
 /* ─── Helpers ──────────────────────────────────────────────────────────────── */
 
+type ProfileRow = {
+  id: string;
+  first_name:  string | null;
+  last_name:   string | null;
+  avatar_url:  string | null;
+  phone:       string | null;
+  created_at:  string;
+};
+
 function buildAdminHost(
   hostId: string,
-  profile: { id: string; first_name: string | null; last_name: string | null } | undefined
+  profile: ProfileRow | undefined,
+  email: string | null,
 ): AdminHost {
   const name = profile
     ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || "Unknown Host"
@@ -15,15 +26,32 @@ function buildAdminHost(
   return {
     id:               hostId,
     name,
-    avatar:           "",   // no avatar stored; admin panel renders initials
-    email:            "",
-    phone:            "",
-    joinedAt:         "",
+    avatar:           profile?.avatar_url  ?? null,
+    email,
+    phone:            profile?.phone       ?? null,
+    joinedAt:         profile?.created_at  ?? null,
     totalListings:    0,
     approvedListings: 0,
     responseRate:     0,
     superhost:        false,
   };
+}
+
+async function fetchEmailMap(userIds: string[]): Promise<Record<string, string>> {
+  if (userIds.length === 0) return {};
+  try {
+    const admin = createAdminClient();
+    const results = await Promise.all(
+      userIds.map((id) => admin.auth.admin.getUserById(id))
+    );
+    const map: Record<string, string> = {};
+    results.forEach(({ data }) => {
+      if (data.user?.email) map[data.user.id] = data.user.email;
+    });
+    return map;
+  } catch {
+    return {};
+  }
 }
 
 /* ─── Service ──────────────────────────────────────────────────────────────── */
@@ -51,16 +79,18 @@ export async function fetchSubmissionQueue(): Promise<AdminListing[]> {
       submissions.map((s) => s.host_id).filter((id): id is string => Boolean(id))
     )];
 
-    const profileMap: Record<string, { id: string; first_name: string | null; last_name: string | null }> = {};
+    const profileMap: Record<string, ProfileRow> = {};
 
     if (hostIds.length > 0) {
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, first_name, last_name")
+        .select("id, first_name, last_name, avatar_url, phone, created_at")
         .in("id", hostIds);
 
-      (profiles ?? []).forEach((p) => { profileMap[p.id] = p; });
+      (profiles ?? []).forEach((p) => { profileMap[p.id] = p as ProfileRow; });
     }
+
+    const emailMap = await fetchEmailMap(hostIds);
 
     return submissions.map((row): AdminListing => ({
       id:               row.id,
@@ -90,7 +120,7 @@ export async function fetchSubmissionQueue(): Promise<AdminListing[]> {
       reviewedBy:       row.reviewed_by   ?? undefined,
       rejectionReason:  row.rejection_reason ?? undefined,
       adminNotes:       row.admin_notes   ?? undefined,
-      host:             buildAdminHost(row.host_id, profileMap[row.host_id]),
+      host:             buildAdminHost(row.host_id, profileMap[row.host_id], emailMap[row.host_id] ?? null),
     }));
   } catch {
     return [];
@@ -140,6 +170,8 @@ export async function fetchHostApplicationQueue(): Promise<HostApplicationRow[]>
       (profiles ?? []).forEach((p) => { profileMap[p.id] = p; });
     }
 
+    const emailMap = await fetchEmailMap(userIds);
+
     return apps.map((row): HostApplicationRow => {
       const profile = profileMap[row.user_id];
       const userName = profile
@@ -149,7 +181,7 @@ export async function fetchHostApplicationQueue(): Promise<HostApplicationRow[]>
         id:              row.id,
         userId:          row.user_id,
         userName,
-        userEmail:       "",
+        userEmail:       emailMap[row.user_id] ?? "",
         bio:             row.bio ?? "",
         languages:       (row.languages as string[]) ?? [],
         experienceYears: row.experience_years ?? 0,

@@ -4,10 +4,10 @@ import { useRef } from "react";
 import ProductCard from "@/components/ui/ProductCard";
 
 const deals = [
-  { id: "sunrise-camel",  image: "https://picsum.photos/seed/camel1/600/500",  title: "Sunrise Camel Herding",  location: "Taif, Al Hada",   price: 220, originalPrice: 400, score: 4.7, reviewCount: 312, badge: "Weekend Deal" },
-  { id: "goat-milking",   image: "https://picsum.photos/seed/goat1/600/500",   title: "Goat Milking",           location: "Abha, Rijal Almaa",price: 120, originalPrice: 170, score: 3.8, reviewCount: 210, badge: "Weekend Deal" },
-  { id: "farm-visit",     image: "https://picsum.photos/seed/farm2/600/500",   title: "Traditional Farm Visit", location: "Al Ahsa",          price: 170, originalPrice: 230, score: 4.9, reviewCount: 185, badge: "Weekend Deal" },
-  { id: "night-stars",    image: "https://picsum.photos/seed/night1/600/500",  title: "Night Under the Stars",  location: "AlUla",            price: 300, originalPrice: 450, score: 4.6, reviewCount: 142, badge: "Weekend Deal" },
+  { id: "sunrise-camel",  image: "https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=600&h=500&fit=crop", title: "Sunrise Camel Herding",  location: "Taif, Al Hada",    price: 220, originalPrice: 400, score: 4.7, reviewCount: 312, badge: "Weekend Deal" },
+  { id: "goat-milking",   image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&h=500&fit=crop", title: "Goat Milking & Farm Day", location: "Abha, Rijal Almaa", price: 120, originalPrice: 170, score: 4.3, reviewCount: 210, badge: "Weekend Deal" },
+  { id: "farm-visit",     image: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&h=500&fit=crop", title: "Traditional Farm Visit", location: "Al Ahsa",           price: 170, originalPrice: 230, score: 4.9, reviewCount: 185, badge: "Weekend Deal" },
+  { id: "night-stars",    image: "https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=600&h=500&fit=crop", title: "Night Under the Stars",  location: "AlUla",             price: 300, originalPrice: 450, score: 4.6, reviewCount: 142, badge: "Weekend Deal" },
 ];
 
 export default function WeekendDeals() {

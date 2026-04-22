@@ -103,9 +103,10 @@ function ModeSwitchButton({
 
 export default function Navbar() {
   const { user, activeMode, isAdmin, hostStatus, signOut, switchMode } = useAuth();
-  const [open,         setOpen]         = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [switchError,  setSwitchErr]    = useState<string | null>(null);
+  const [open,          setOpen]          = useState(false);
+  const [dropdownOpen,  setDropdownOpen]  = useState(false);
+  const [switchError,   setSwitchErr]     = useState<string | null>(null);
+  const [isSigningOut,  setIsSigningOut]  = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -115,11 +116,12 @@ export default function Navbar() {
   };
   const handleBackdropClick = () => setDropdownOpen(false);
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
+    if (isSigningOut) return;
+    setIsSigningOut(true);
     setDropdownOpen(false);
-    await signOut();
-    router.push("/");
-    router.refresh();
+    router.push("/");        // navigate immediately — don't wait for network
+    signOut().catch(() => {}); // clear session in background
   };
 
   // ── Mode switch (only fires when hostStatus === 'approved') ────────────────
@@ -294,12 +296,22 @@ export default function Navbar() {
 
                       <div className="border-t border-[#f0e8de]" />
 
-                      <button onClick={handleLogout} className="flex items-center gap-2.5 w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-red-500">
-                          <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                          <path d="M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                        Log Out
+                      <button
+                        onClick={handleLogout}
+                        disabled={isSigningOut}
+                        className="flex items-center gap-2.5 w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isSigningOut ? (
+                          <svg className="animate-spin w-[15px] h-[15px] text-red-500 shrink-0" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4" strokeDashoffset="15" />
+                          </svg>
+                        ) : (
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-red-500 shrink-0">
+                            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                        {isSigningOut ? "Signing out…" : "Log Out"}
                       </button>
                     </div>
                   )}
@@ -421,8 +433,12 @@ export default function Navbar() {
                           )
                   )}
 
-                  <button onClick={() => { setOpen(false); handleLogout(); }} className="text-left py-2 text-sm font-semibold text-red-600">
-                    Log Out
+                  <button
+                    onClick={() => { setOpen(false); handleLogout(); }}
+                    disabled={isSigningOut}
+                    className="text-left py-2 text-sm font-semibold text-red-600 disabled:opacity-50"
+                  >
+                    {isSigningOut ? "Signing out…" : "Log Out"}
                   </button>
                 </>
               ) : (

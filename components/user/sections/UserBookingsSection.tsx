@@ -8,6 +8,7 @@ import type { CohostAssignmentItem } from "@/lib/services/cohost";
 import { cancelBooking } from "@/lib/actions/booking";
 import BookingStatusBadge from "../shared/BookingStatusBadge";
 import UserEmptyState from "../shared/UserEmptyState";
+import LeaveReviewModal from "@/components/reviews/LeaveReviewModal";
 
 type Tab = "upcoming" | "past";
 
@@ -20,9 +21,13 @@ const PAYMENT_LABELS: Record<string, string> = {
 function BookingCard({
   booking,
   onCancelled,
+  isReviewed,
+  onReviewClick,
 }: {
-  booking:     UserBooking;
-  onCancelled: (id: string) => void;
+  booking:       UserBooking;
+  onCancelled:   (id: string) => void;
+  isReviewed:    boolean;
+  onReviewClick: () => void;
 }) {
   const [expanded, setExpanded]     = useState(false);
   const [cancelError, setCancelErr] = useState<string | null>(null);
@@ -137,7 +142,7 @@ function BookingCard({
           <div className="flex items-center justify-between gap-3 mt-auto pt-3 border-t border-[#f0e8de] flex-wrap">
             <div>
               <p className="font-display font-extrabold text-[#1a0e02] text-lg">
-                SAR {booking.totalPrice.toLocaleString()}
+                SAR {booking.totalPrice.toLocaleString("en-US")}
               </p>
               <p className="text-[10px] font-mono text-[#a09080]">{booking.reference}</p>
             </div>
@@ -154,9 +159,21 @@ function BookingCard({
                 </Link>
               )}
               {booking.status === "completed" && (
-                <button className="px-3 py-1.5 border border-[#e8dfd4] rounded-xl text-xs font-semibold text-[#8b5e38] hover:border-[#8b5e38] hover:bg-[#fdf5ee] transition-colors">
-                  Leave a review
-                </button>
+                isReviewed ? (
+                  <span className="px-3 py-1.5 text-xs font-semibold text-[#049153] bg-[#f0faf5] border border-[#9edcbb] rounded-xl flex items-center gap-1">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+                      <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Reviewed
+                  </span>
+                ) : (
+                  <button
+                    onClick={onReviewClick}
+                    className="px-3 py-1.5 border border-[#c49a4f] rounded-xl text-xs font-semibold text-[#8b5e38] hover:bg-[#fdf5ee] transition-colors"
+                  >
+                    Leave a review
+                  </button>
+                )
               )}
               {booking.canCancel && (
                 <button
@@ -198,15 +215,15 @@ function BookingCard({
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-[#64707d]">SAR {booking.subtotal / booking.nights} × {booking.nights} nights</span>
-                  <span className="font-medium text-[#1a0e02]">SAR {booking.subtotal.toLocaleString()}</span>
+                  <span className="font-medium text-[#1a0e02]">SAR {booking.subtotal.toLocaleString("en-US")}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-[#64707d]">Service fee (12%)</span>
-                  <span className="font-medium text-[#1a0e02]">SAR {booking.serviceFee.toLocaleString()}</span>
+                  <span className="font-medium text-[#1a0e02]">SAR {booking.serviceFee.toLocaleString("en-US")}</span>
                 </div>
                 <div className="flex justify-between text-sm font-bold border-t border-[#e8dfd4] pt-2 mt-1">
                   <span className="text-[#1a0e02]">Total</span>
-                  <span className="text-[#1a0e02]">SAR {booking.totalPrice.toLocaleString()}</span>
+                  <span className="text-[#1a0e02]">SAR {booking.totalPrice.toLocaleString("en-US")}</span>
                 </div>
               </div>
             </div>
@@ -358,13 +375,20 @@ function CohostAssignmentCard({ assignment }: { assignment: CohostAssignmentItem
 export default function UserBookingsSection({
   bookings: initialBookings,
   cohostAssignments = [],
+  reviewedBookingIds = [],
 }: {
-  bookings:           UserBooking[];
-  cohostAssignments?: CohostAssignmentItem[];
+  bookings:            UserBooking[];
+  cohostAssignments?:  CohostAssignmentItem[];
+  reviewedBookingIds?: string[];
 }) {
   const [tab, setTab]       = useState<Tab>("upcoming");
   // Local state so cancellation reflects immediately without a page reload.
   const [bookings, setBookings] = useState<UserBooking[]>(initialBookings);
+
+  // Track which bookings have been reviewed (server-seeded + client additions)
+  const [reviewedIds, setReviewedIds] = useState<string[]>(reviewedBookingIds);
+  // Which booking the review modal is open for
+  const [reviewingBooking, setReviewingBooking] = useState<{ id: string; title: string } | null>(null);
 
   const handleCancelled = (id: string) => {
     setBookings((prev) =>
@@ -465,10 +489,30 @@ export default function UserBookingsSection({
         />
       ) : (
         <div className="flex flex-col gap-4">
-          {shown.map((b) => <BookingCard key={b.id} booking={b} onCancelled={handleCancelled} />)}
+          {shown.map((b) => (
+            <BookingCard
+              key={b.id}
+              booking={b}
+              onCancelled={handleCancelled}
+              isReviewed={reviewedIds.includes(b.id)}
+              onReviewClick={() => setReviewingBooking({ id: b.id, title: b.listingTitle })}
+            />
+          ))}
         </div>
       )}
     </div>
+
+    {reviewingBooking && (
+      <LeaveReviewModal
+        bookingId={reviewingBooking.id}
+        listingTitle={reviewingBooking.title}
+        onClose={() => setReviewingBooking(null)}
+        onSuccess={() => {
+          setReviewedIds((prev) => [...prev, reviewingBooking.id]);
+          setReviewingBooking(null);
+        }}
+      />
+    )}
 
     {/* ── Section 2: Co-host Assignments ───────────────────────────────────── */}
     {cohostAssignments.length > 0 && (

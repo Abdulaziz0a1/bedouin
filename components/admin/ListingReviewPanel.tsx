@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { AdminListing } from "@/lib/types/admin";
 import AdminStatusBadge from "./shared/AdminStatusBadge";
 import RejectModal from "./RejectModal";
+import UserAvatar from "@/components/ui/UserAvatar";
 
 interface ListingReviewPanelProps {
   listing: AdminListing;
@@ -40,6 +41,7 @@ function GalleryStrip({ urls }: { urls: string[] }) {
           src={urls[main]}
           alt="Listing photo"
           className="w-full h-full object-cover"
+          onError={(e) => { e.currentTarget.style.display = "none"; }}
         />
       </div>
       {/* Thumbnail strip */}
@@ -54,7 +56,7 @@ function GalleryStrip({ urls }: { urls: string[] }) {
                 i === main ? "border-[#8b5e38]" : "border-[#e8dfd4] hover:border-[#c49a4f]",
               ].join(" ")}
             >
-              <img src={url} alt="" className="w-full h-full object-cover" />
+              <img src={url} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
             </button>
           ))}
           <div className="shrink-0 w-16 h-12 rounded-xl bg-[#f0e8de] flex items-center justify-center text-[11px] font-bold text-[#64707d]">
@@ -363,10 +365,11 @@ export default function ListingReviewPanel({
             <div className="bg-white border border-[#e8dfd4] rounded-2xl p-5">
               <SectionHeading>Host profile</SectionHeading>
               <div className="flex items-start gap-4">
-                <img
+                <UserAvatar
                   src={listing.host.avatar}
-                  alt={listing.host.name}
-                  className="w-14 h-14 rounded-full object-cover border-2 border-[#e8dfd4] shrink-0"
+                  name={listing.host.name}
+                  size={56}
+                  className="border-2 border-[#e8dfd4]"
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -382,9 +385,11 @@ export default function ListingReviewPanel({
                   </div>
                   <div className="grid grid-cols-2 gap-x-6 gap-y-1">
                     {[
-                      { label: "Email",             value: listing.host.email },
-                      { label: "Phone",             value: listing.host.phone },
-                      { label: "Joined",            value: new Date(listing.host.joinedAt).toLocaleDateString("en-GB", { month: "long", year: "numeric" }) },
+                      { label: "Email",             value: listing.host.email    || "—" },
+                      { label: "Phone",             value: listing.host.phone    || "—" },
+                      { label: "Joined",            value: listing.host.joinedAt
+                                                      ? new Date(listing.host.joinedAt).toLocaleDateString("en-GB", { month: "long", year: "numeric" })
+                                                      : "—" },
                       { label: "Response rate",     value: `${listing.host.responseRate}%` },
                       { label: "Total listings",    value: String(listing.host.totalListings) },
                       { label: "Approved listings", value: String(listing.host.approvedListings) },

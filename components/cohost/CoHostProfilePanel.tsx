@@ -45,8 +45,7 @@ function ReviewCard({ review }: { review: CoHost["reviews"][0] }) {
     <div className="bg-[#faf7f4] border border-[#f0e8de] rounded-xl p-3.5">
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
-          <img src={review.hostAvatar} alt={review.hostName}
-            className="w-7 h-7 rounded-full object-cover border border-[#e8dfd4]" />
+          <UserAvatar src={review.hostAvatar} name={review.hostName} size={28} className="border border-[#e8dfd4]" />
           <div>
             <p className="text-xs font-semibold text-[#1a0e02]">{review.hostName}</p>
             <p className="text-[10px] text-[#a09080]">{review.listingTitle}</p>
@@ -90,7 +89,7 @@ export default function CoHostProfilePanel({
     if (cohost.feeModel === "percentage" && cohost.feeValue)
       return `${cohost.feeValue}% of booking revenue`;
     if (cohost.feeModel === "fixed" && cohost.feeValue)
-      return `SAR ${cohost.feeValue.toLocaleString()} / month`;
+      return `SAR ${cohost.feeValue.toLocaleString("en-US")} / month`;
     return "Negotiable — discuss directly";
   })();
 

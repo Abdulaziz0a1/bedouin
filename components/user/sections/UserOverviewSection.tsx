@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { UserBooking } from "@/lib/types/user";
 import type { CohostAssignmentItem } from "@/lib/services/cohost";
 import BookingStatusBadge from "../shared/BookingStatusBadge";
+import UserAvatar from "@/components/ui/UserAvatar";
 
 function KPITile({
   icon,
@@ -185,10 +186,11 @@ export default function UserOverviewSection({
           </p>
         </div>
 
-        <img
+        <UserAvatar
           src={userAvatar}
-          alt={userName}
-          className="relative w-14 h-14 rounded-full object-cover border-2 border-[#c49a4f] shrink-0"
+          name={userName}
+          size={56}
+          className="relative border-2 border-[#c49a4f]"
         />
       </div>
 
@@ -352,7 +354,7 @@ export default function UserOverviewSection({
                   </div>
                   <div className="flex flex-col items-end gap-1.5 shrink-0">
                     <BookingStatusBadge status={b.status} size="sm" />
-                    <p className="text-xs font-bold text-[#1a0e02]">SAR {b.totalPrice.toLocaleString()}</p>
+                    <p className="text-xs font-bold text-[#1a0e02]">SAR {b.totalPrice.toLocaleString("en-US")}</p>
                   </div>
                 </div>
               );

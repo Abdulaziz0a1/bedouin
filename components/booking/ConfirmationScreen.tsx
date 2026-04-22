@@ -109,7 +109,7 @@ export default function ConfirmationScreen({ booking }: ConfirmationScreenProps)
                 Total paid
               </p>
               <p className="font-display font-extrabold text-[#1a0e02] text-xl">
-                SAR {booking.totalPrice.toLocaleString()}
+                SAR {booking.totalPrice.toLocaleString("en-US")}
               </p>
             </div>
             <div className="flex items-center gap-1.5 bg-[#f0faf5] border border-[#c3e6d5] text-[#049153] text-xs font-semibold px-3 py-1.5 rounded-xl">

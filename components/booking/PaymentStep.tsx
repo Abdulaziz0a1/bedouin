@@ -271,20 +271,20 @@ export default function PaymentStep({
         </h2>
         <div className="flex justify-between text-sm">
           <span className="text-[#64707d]">
-            SAR {listingPrice.toLocaleString()} × {nights} night{nights !== 1 ? "s" : ""}
+            SAR {listingPrice.toLocaleString("en-US")} × {nights} night{nights !== 1 ? "s" : ""}
           </span>
           <span className="text-[#1a0e02] font-medium">
-            SAR {(listingPrice * nights).toLocaleString()}
+            SAR {(listingPrice * nights).toLocaleString("en-US")}
           </span>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-[#64707d]">Service fee (12%)</span>
-          <span className="text-[#1a0e02] font-medium">SAR {serviceFee.toLocaleString()}</span>
+          <span className="text-[#1a0e02] font-medium">SAR {serviceFee.toLocaleString("en-US")}</span>
         </div>
         <div className="h-px bg-[#f0e8de] mt-1" />
         <div className="flex justify-between font-bold text-[#1a0e02] text-base">
           <span>Total due today</span>
-          <span>SAR {total.toLocaleString()}</span>
+          <span>SAR {total.toLocaleString("en-US")}</span>
         </div>
       </div>
 
@@ -335,7 +335,7 @@ export default function PaymentStep({
               Processing payment…
             </>
           ) : (
-            `Confirm & Pay SAR ${total.toLocaleString()}`
+            `Confirm & Pay SAR ${total.toLocaleString("en-US")}`
           )}
         </button>
       </div>

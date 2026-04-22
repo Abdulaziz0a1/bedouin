@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { UserBooking } from "@/lib/types/user";
+import type { UserBooking, SavedListing } from "@/lib/types/user";
 import type { CohostAssignmentItem } from "@/lib/services/cohost";
 import UserAvatar from "@/components/ui/UserAvatar";
 import UserOverviewSection  from "./sections/UserOverviewSection";
@@ -96,6 +96,8 @@ export default function UserDashboard({
   cohostStatus          = null,
   cohostRejectionReason = null,
   cohostAssignments     = [],
+  savedListings         = [],
+  reviewedBookingIds    = [],
 }: {
   bookings:               UserBooking[];
   userName:               string;
@@ -111,6 +113,8 @@ export default function UserDashboard({
   cohostStatus?:          ApplicationStatus;
   cohostRejectionReason?: string | null;
   cohostAssignments?:     CohostAssignmentItem[];
+  savedListings?:         SavedListing[];
+  reviewedBookingIds?:    string[];
 }) {
   const [activeTab, setActiveTab]     = useState<Tab>("overview");
   const [mobileNavOpen, setMobileNav] = useState(false);
@@ -125,7 +129,7 @@ export default function UserDashboard({
   const kpis = {
     upcomingCount:  upcomingBookings.length,
     completedCount: guestBookings.filter((b) => b.status === "completed").length,
-    savedCount:     0, // Wishlist not yet backed by DB — honest zero
+    savedCount:     savedListings.length,
     totalSpent:     guestBookings
       .filter((b) => b.status !== "cancelled")
       .reduce((s, b) => s + b.totalPrice, 0),
@@ -330,8 +334,8 @@ export default function UserDashboard({
 
         {/* Section content */}
         {activeTab === "overview"  && <UserOverviewSection  bookings={guestBookings} kpis={kpis} userName={userName} userAvatar={userAvatar} cohostAssignments={cohostAssignments} onViewAssignments={() => setActiveTab("bookings")} />}
-        {activeTab === "bookings"  && <UserBookingsSection  bookings={guestBookings} cohostAssignments={cohostAssignments} />}
-        {activeTab === "saved"     && <UserSavedSection     />}
+        {activeTab === "bookings"  && <UserBookingsSection  bookings={guestBookings} cohostAssignments={cohostAssignments} reviewedBookingIds={reviewedBookingIds} />}
+        {activeTab === "saved"     && <UserSavedSection     initialItems={savedListings} />}
         {activeTab === "activity"  && <UserActivitySection  />}
         {activeTab === "account"   && (
           <UserAccountSection

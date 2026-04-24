@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import FadeInSection from "@/components/ui/FadeInSection";
 
 const categories = [
   { key: "explore",   label: "Explore"    },
@@ -41,46 +42,95 @@ export default function TopThingsToDo() {
   const [active, setActive] = useState("explore");
 
   return (
-    <section className="bg-white py-14 border-y border-[#e8dfd4]">
-      <div className="max-w-[1232px] mx-auto px-6 lg:px-0 flex flex-col gap-7">
+    <section className="py-16 relative overflow-hidden"
+      style={{ background: "linear-gradient(180deg, #fef9f3 0%, white 100%)" }}
+    >
+      <div className="absolute top-0 left-0 right-0 h-px"
+        style={{ background: "linear-gradient(90deg, transparent, #e8dfd4 30%, #e8dfd4 70%, transparent)" }}
+      />
+      <div className="absolute bottom-0 left-0 right-0 h-px"
+        style={{ background: "linear-gradient(90deg, transparent, #e8dfd4 30%, #e8dfd4 70%, transparent)" }}
+      />
+
+      <div className="max-w-[1232px] mx-auto px-6 lg:px-0 flex flex-col gap-8">
 
         {/* Header */}
-        <div className="flex flex-col gap-1">
-          <p className="text-[#c49a4f] text-xs font-bold uppercase tracking-[0.16em]">Things to do</p>
-          <h2 className="font-display font-bold text-[#1a0e02] text-4xl leading-tight">
-            Top Things to Do in Abha
-          </h2>
-        </div>
+        <FadeInSection direction="up" delay={0}>
+          <div className="flex flex-col gap-1.5">
+            <p className="text-[#c49a4f] text-xs font-bold uppercase tracking-[0.20em]">Things to do</p>
+            <h2 className="font-display font-extrabold text-[#1a0e02] text-4xl leading-tight tracking-tight">
+              Top Things to Do in Abha
+            </h2>
+          </div>
+        </FadeInSection>
 
         {/* Category chips */}
-        <div className="flex flex-wrap gap-2.5">
-          {categories.map(({ key, label }) => (
-            <button key={key} onClick={() => setActive(key)}
-              className={`px-5 py-2.5 rounded-3xl text-sm font-semibold transition-all duration-200 ${
-                active === key
-                  ? "bg-[#1a0e02] text-white shadow-sm"
-                  : "bg-[#f4efe6] border border-[#e8dfd4] text-[#2b3037] hover:border-[#1a0e02] hover:text-[#1a0e02]"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <FadeInSection direction="up" delay={60}>
+          <div className="flex flex-wrap gap-2.5">
+            {categories.map(({ key, label }) => {
+              const isActive = active === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setActive(key)}
+                  className="px-5 py-2.5 rounded-3xl text-sm font-semibold transition-all duration-200"
+                  style={{
+                    background: isActive
+                      ? "linear-gradient(135deg, #1a0e02 0%, #2d1a08 100%)"
+                      : "#f4efe6",
+                    color: isActive ? "white" : "#2b3037",
+                    border: isActive ? "1.5px solid transparent" : "1.5px solid #e8dfd4",
+                    boxShadow: isActive ? "0 4px 14px rgba(26,14,2,0.25)" : "none",
+                    transform: isActive ? "translateY(-1px)" : "none",
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </FadeInSection>
 
         {/* Activity grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          {activities[active].map(({ name, image }) => (
-            <Link key={name} href="/explore" className="flex flex-col gap-2 group">
-              <div className="relative h-[156px] rounded-2xl overflow-hidden">
-                <Image src={image} alt={name} fill
-                  className="object-cover group-hover:scale-110 transition-transform duration-500"
-                  sizes="200px" />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
-              </div>
-              <p className="text-[#1a0e02] text-sm font-semibold truncate">{name}</p>
-            </Link>
-          ))}
-        </div>
+        <FadeInSection direction="up" delay={100}>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            {activities[active].map(({ name, image }, i) => (
+              <Link
+                key={name}
+                href="/explore"
+                className="flex flex-col gap-2.5 group"
+                style={{
+                  animation: `fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) ${i * 55}ms both`,
+                }}
+              >
+                <div
+                  className="relative h-[156px] rounded-2xl overflow-hidden"
+                  style={{
+                    boxShadow: "0 4px 16px rgba(70,30,0,0.10)",
+                    transition: "box-shadow 0.3s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLDivElement).style.boxShadow = "0 10px 32px rgba(70,30,0,0.22)";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 16px rgba(70,30,0,0.10)";
+                  }}
+                >
+                  <Image
+                    src={image} alt={name} fill
+                    className="object-cover group-hover:scale-110 transition-transform duration-500"
+                    sizes="200px"
+                  />
+                  {/* Dark overlay on hover */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                </div>
+                <p className="text-[#1a0e02] text-sm font-semibold truncate group-hover:text-[#8b5e38] transition-colors duration-200">
+                  {name}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </FadeInSection>
       </div>
     </section>
   );

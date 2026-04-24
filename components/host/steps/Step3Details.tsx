@@ -2,19 +2,7 @@
 
 import { useState } from "react";
 import { ListingDraft, DraftRegion } from "@/lib/types/host";
-
-const REGIONS: { id: DraftRegion; label: string }[] = [
-  { id: "AlUla",   label: "AlUla"   },
-  { id: "Abha",    label: "Abha"    },
-  { id: "Taif",    label: "Taif"    },
-  { id: "AlBaha",  label: "Al Baha" },
-  { id: "AlAhsa",  label: "Al Ahsa" },
-  { id: "Tabuk",   label: "Tabuk"   },
-  { id: "Riyadh",  label: "Riyadh"  },
-  { id: "Jeddah",  label: "Jeddah"  },
-  { id: "Hail",    label: "Hail"    },
-  { id: "Madinah", label: "Madinah" },
-];
+import { SAUDI_REGIONS } from "@/lib/data/listings";
 
 const CHECK_IN_TIMES  = ["12:00 PM","1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM"];
 const CHECK_OUT_TIMES = ["9:00 AM","10:00 AM","11:00 AM","12:00 PM","1:00 PM"];
@@ -103,8 +91,8 @@ export default function Step3Details({ draft, onChange, onNext, onBack }: Step3D
             className={`${selectCls} ${errors.region ? "border-red-400" : ""}`}
           >
             <option value="">Select a region</option>
-            {REGIONS.map(({ id, label }) => (
-              <option key={id} value={id}>{label}</option>
+            {SAUDI_REGIONS.map((r) => (
+              <option key={r} value={r}>{r}</option>
             ))}
           </select>
           {errors.region && <p className="text-xs text-red-600 mt-1">{errors.region}</p>}

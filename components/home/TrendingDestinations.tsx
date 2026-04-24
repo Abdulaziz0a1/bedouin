@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import DestinationCard from "@/components/ui/DestinationCard";
+import FadeInSection from "@/components/ui/FadeInSection";
 
 const seasons = [
-  { key: "spring", label: "🌸 Spring Picks"    },
-  { key: "summer", label: "☀️ Summer Hotspot"  },
-  { key: "autumn", label: "🍂 Autumn Escape"   },
-  { key: "winter", label: "❄️ Winter Getaway"  },
+  { key: "spring", label: "Spring Picks",    emoji: "🌸" },
+  { key: "summer", label: "Summer Hotspot",  emoji: "☀️" },
+  { key: "autumn", label: "Autumn Escape",   emoji: "🍂" },
+  { key: "winter", label: "Winter Getaway",  emoji: "❄️" },
 ];
 
 const destinations: Record<string, {
@@ -32,10 +33,10 @@ const destinations: Record<string, {
     { city: "Yanbu",    fromPrice: 140, description: "Diving and coastal calm.",                     image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&h=900&fit=crop" },
   ],
   winter: [
-    { city: "AlUla",        fromPrice: 320, description: "Golden dunes under winter stars.",          image: "https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=600&h=900&fit=crop" },
-    { city: "Empty Quarter", fromPrice: 260, description: "The Rub al Khali — breathtaking.",        image: "https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=600&h=900&fit=crop" },
-    { city: "Riyadh",       fromPrice: 170, description: "Warm city life in cool months.",            image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&h=900&fit=crop" },
-    { city: "Dammam",       fromPrice: 105, description: "Mild sea air and open skies.",              image: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&h=900&fit=crop" },
+    { city: "AlUla",         fromPrice: 320, description: "Golden dunes under winter stars.",          image: "https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=600&h=900&fit=crop" },
+    { city: "Empty Quarter", fromPrice: 260, description: "The Rub al Khali — breathtaking.",          image: "https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=600&h=900&fit=crop" },
+    { city: "Riyadh",        fromPrice: 170, description: "Warm city life in cool months.",            image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&h=900&fit=crop" },
+    { city: "Dammam",        fromPrice: 105, description: "Mild sea air and open skies.",              image: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&h=900&fit=crop" },
   ],
 };
 
@@ -43,36 +44,70 @@ export default function TrendingDestinations() {
   const [active, setActive] = useState("spring");
 
   return (
-    <section className="bg-[#f4efe6] py-14">
-      <div className="max-w-[1232px] mx-auto px-6 lg:px-0 flex flex-col gap-7">
+    <section className="bg-[#f4efe6] py-16">
+      <div className="max-w-[1232px] mx-auto px-6 lg:px-0 flex flex-col gap-8">
 
         {/* Header */}
-        <div className="flex flex-col gap-1">
-          <p className="text-[#c49a4f] text-xs font-bold uppercase tracking-[0.16em]">Discover Saudi Arabia</p>
-          <h2 className="font-display font-bold text-[#1a0e02] text-4xl leading-tight">
-            Trending Destinations
-          </h2>
-        </div>
+        <FadeInSection direction="up" delay={0}>
+          <div className="flex flex-col gap-1.5">
+            <p className="text-[#c49a4f] text-xs font-bold uppercase tracking-[0.20em]">
+              Discover Saudi Arabia
+            </p>
+            <h2 className="font-display font-extrabold text-[#1a0e02] text-4xl leading-tight tracking-tight">
+              Trending Destinations
+            </h2>
+            <p className="text-[#64707d] text-sm mt-0.5 max-w-md">
+              Handpicked escapes across the Kingdom, updated by season.
+            </p>
+          </div>
+        </FadeInSection>
 
         {/* Season chips */}
-        <div className="flex flex-wrap gap-2.5">
-          {seasons.map(({ key, label }) => (
-            <button key={key} onClick={() => setActive(key)}
-              className={`px-4 py-2.5 rounded-3xl text-sm font-semibold transition-all duration-200 ${
-                active === key
-                  ? "bg-[#461e00] text-white shadow-sm"
-                  : "bg-white border border-[#e8dfd4] text-[#2b3037] hover:border-[#461e00] hover:text-[#461e00]"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <FadeInSection direction="up" delay={80}>
+          <div className="flex flex-wrap gap-2.5">
+            {seasons.map(({ key, label, emoji }) => {
+              const isActive = active === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setActive(key)}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-3xl text-sm font-semibold transition-all duration-200"
+                  style={{
+                    background: isActive
+                      ? "linear-gradient(135deg, #461e00 0%, #5a2a00 100%)"
+                      : "white",
+                    color: isActive ? "white" : "#2b3037",
+                    border: isActive
+                      ? "1.5px solid transparent"
+                      : "1.5px solid #e8dfd4",
+                    boxShadow: isActive
+                      ? "0 4px 16px rgba(70,30,0,0.28)"
+                      : "none",
+                    transform: isActive ? "translateY(-1px)" : "none",
+                  }}
+                >
+                  <span style={{ fontSize: "0.9rem" }}>{emoji}</span>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </FadeInSection>
 
-        {/* Cards */}
-        <div className="scroll-row -mx-6 px-6 lg:mx-0 lg:px-0">
-          {destinations[active].map((d) => (
-            <DestinationCard key={d.city} {...d} />
+        {/* Cards row */}
+        <div
+          className="scroll-row -mx-6 px-6 lg:mx-0 lg:px-0 pb-3"
+          style={{ gap: "1.25rem" }}
+        >
+          {destinations[active].map((d, i) => (
+            <div
+              key={d.city}
+              style={{
+                animation: `fadeUp 0.55s cubic-bezier(0.16,1,0.3,1) ${i * 70}ms both`,
+              }}
+            >
+              <DestinationCard {...d} />
+            </div>
           ))}
         </div>
       </div>

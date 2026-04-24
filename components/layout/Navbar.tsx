@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useRef, useTransition } from "react";
+import { useState, useRef, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthProvider";
 import UserAvatar from "@/components/ui/UserAvatar";
@@ -107,9 +107,16 @@ export default function Navbar() {
   const [dropdownOpen,  setDropdownOpen]  = useState(false);
   const [switchError,   setSwitchErr]     = useState<string | null>(null);
   const [isSigningOut,  setIsSigningOut]  = useState(false);
+  const [scrolled,      setScrolled]      = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 12);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const handleDropdownRef = (el: HTMLDivElement | null) => {
     (dropdownRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
@@ -157,7 +164,22 @@ export default function Navbar() {
         <div className="fixed inset-0 z-40" onClick={handleBackdropClick} />
       )}
 
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-[#e8dfd4]">
+      <nav
+        className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
+        style={{
+          background: scrolled
+            ? "rgba(255,255,255,0.97)"
+            : "rgba(255,255,255,0.88)",
+          backdropFilter: "blur(20px) saturate(1.8)",
+          WebkitBackdropFilter: "blur(20px) saturate(1.8)",
+          borderBottom: scrolled
+            ? "1px solid rgba(232,223,212,0.9)"
+            : "1px solid rgba(232,223,212,0.55)",
+          boxShadow: scrolled
+            ? "0 4px 24px rgba(70,30,0,0.10), 0 1px 0 rgba(255,255,255,0.8)"
+            : "none",
+        }}
+      >
         <div className="max-w-[1440px] mx-auto px-6 lg:px-10 h-[72px] flex items-center justify-between gap-4">
 
           {/* Logo */}
@@ -173,7 +195,7 @@ export default function Navbar() {
           {/* Desktop nav links */}
           <div className="hidden md:flex items-center gap-6 flex-1">
             {PUBLIC_LINKS.map(({ href, label }) => (
-              <Link key={label} href={href} className="text-[#5a4a3a] text-sm font-medium hover:text-[#2b1a0e] transition-colors">
+              <Link key={label} href={href} className="relative text-[#5a4a3a] text-sm font-medium hover:text-[#2b1a0e] transition-colors after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#c49a4f] after:transition-all after:duration-200 hover:after:w-full">
                 {label}
               </Link>
             ))}
@@ -325,10 +347,24 @@ export default function Navbar() {
               </>
             ) : (
               <>
-                <Link href="/host" className="px-4 py-2 text-sm font-semibold text-white bg-[#8b5e38] rounded-xl hover:bg-[#7a5030] transition-colors shadow-sm">
+                <Link
+                  href="/host"
+                  className="px-4 py-2 text-sm font-semibold text-[#1a0e02] rounded-xl transition-all duration-200 hover:-translate-y-px shadow-sm"
+                  style={{
+                    background: "linear-gradient(135deg, #c49a4f 0%, #d4aa5f 100%)",
+                    boxShadow: "0 2px 10px rgba(196,154,79,0.30)",
+                  }}
+                >
                   Become A Bedouin
                 </Link>
-                <Link href="/login" className="px-4 py-2 text-sm font-semibold text-white bg-[#8b5e38] rounded-xl hover:bg-[#7a5030] transition-colors shadow-sm">
+                <Link
+                  href="/login"
+                  className="px-4 py-2 text-sm font-semibold text-white rounded-xl transition-all duration-200 hover:-translate-y-px shadow-sm"
+                  style={{
+                    background: "linear-gradient(135deg, #9b6a42 0%, #7a4e2c 100%)",
+                    boxShadow: "0 2px 10px rgba(139,94,56,0.30)",
+                  }}
+                >
                   Login
                 </Link>
                 <button aria-label="Support" suppressHydrationWarning className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-[#f4efe6] transition-colors text-[#5a4a3a]">

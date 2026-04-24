@@ -6,12 +6,13 @@
      - status field drives Admin Approval workflow
 ───────────────────────────────────────────────────────────────────────────── */
 
+import { SAUDI_REGIONS } from "@/lib/data/listings";
+
 export type DraftCategory =
   | "farms" | "house" | "guesthouse" | "cabins" | "glamping" | "doms" | "";
 
-export type DraftRegion =
-  | "AlUla" | "Abha" | "Taif" | "AlBaha" | "AlAhsa"
-  | "Tabuk" | "Riyadh" | "Jeddah" | "Hail" | "Madinah" | "";
+// Derived from the canonical SAUDI_REGIONS list — never needs manual updates.
+export type DraftRegion = typeof SAUDI_REGIONS[number] | "";
 
 /** Lifecycle:  draft → pending_review → approved | rejected */
 export type DraftStatus = "draft" | "pending_review" | "approved" | "rejected";

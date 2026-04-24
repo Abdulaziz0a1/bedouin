@@ -20,12 +20,13 @@ export default function Home() {
       <div className="pt-[72px]">
         <HeroSection />
       </div>
-      {/* SearchSection overlaps hero bottom via negative margin */}
-      <div className="relative z-20 -mt-24 px-6 pb-10">
+
+      {/* SearchSection floats above the hero bottom */}
+      <div className="relative z-20 -mt-28 px-6 pb-12">
         <SearchSection />
       </div>
 
-      <main className="flex flex-col gap-4 py-6">
+      <main className="flex flex-col">
         <TrustSection />
         <TrendingDestinations />
         <WeekendDeals />

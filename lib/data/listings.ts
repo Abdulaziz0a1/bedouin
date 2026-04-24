@@ -6,17 +6,42 @@ export type Category =
   | "glamping"
   | "doms";
 
-export type Region =
-  | "AlUla"
-  | "Abha"
-  | "Taif"
-  | "AlBaha"
-  | "AlAhsa"
-  | "Tabuk"
-  | "Riyadh"
-  | "Jeddah"
-  | "Hail"
-  | "Madinah";
+// ─── Official 13 Saudi administrative regions ─────────────────────────────────
+
+export const SAUDI_REGIONS = [
+  "Riyadh",
+  "Makkah",
+  "Madinah",
+  "Eastern Province",
+  "Asir",
+  "Tabuk",
+  "Hail",
+  "Al Qassim",
+  "Jazan",
+  "Najran",
+  "Al Baha",
+  "Al Jouf",
+  "Northern Borders",
+] as const;
+
+export type Region = typeof SAUDI_REGIONS[number];
+
+// Region → cities map — extend this as the platform grows.
+export const REGION_CITIES: Record<Region, string[]> = {
+  "Riyadh":           ["Riyadh City", "Al Kharj", "Al Dawadmi", "Shaqra", "Al Zulfi"],
+  "Makkah":           ["Jeddah", "Makkah City", "Taif", "Rabigh", "Al Qunfudhah"],
+  "Madinah":          ["Madinah City", "AlUla", "Yanbu", "Al Ula", "Badr"],
+  "Eastern Province": ["Al Ahsa", "Dammam", "Al Khobar", "Jubail", "Qatif"],
+  "Asir":             ["Abha", "Khamis Mushait", "Al Namas", "Bisha", "Sarat Abidah"],
+  "Tabuk":            ["Tabuk City", "AlWajh", "Tayma", "Umluj", "Sharma"],
+  "Hail":             ["Hail City", "Jubbah", "Baqaa", "Al Ghazalah"],
+  "Al Qassim":        ["Buraydah", "Unaizah", "Al Rass", "Ar Rass"],
+  "Jazan":            ["Jazan City", "Sabya", "Abu Arish", "Farasan Islands"],
+  "Najran":           ["Najran City", "Sharurah", "Hubuna"],
+  "Al Baha":          ["Al Baha City", "Al Aqiq", "Baljurashi", "Qilwah"],
+  "Al Jouf":          ["Sakaka", "Domat Al Jandal", "Tabarjal", "Qurayat"],
+  "Northern Borders": ["Arar", "Rafha", "Turaif", "Al Uwayqilah"],
+};
 
 export interface Listing {
   id: string;
@@ -41,7 +66,7 @@ export const ALL_LISTINGS: Listing[] = [
     image: "https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=600&h=440&fit=crop",
     title: "Strawberry Hill Farm",
     location: "Al Taif, Hada Al Sham",
-    region: "Taif",
+    region: "Makkah",
     category: "farms",
     price: 75,
     score: 5.0,
@@ -55,7 +80,7 @@ export const ALL_LISTINGS: Listing[] = [
     image: "https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=600&h=440&fit=crop",
     title: "AlUla Stargazing Dome",
     location: "AlUla, Madain Saleh Area",
-    region: "AlUla",
+    region: "Madinah",
     category: "doms",
     price: 480,
     score: 5.0,
@@ -69,7 +94,7 @@ export const ALL_LISTINGS: Listing[] = [
     image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=440&fit=crop",
     title: "Asir Highland Cabin",
     location: "Abha, Al Soudah",
-    region: "Abha",
+    region: "Asir",
     category: "cabins",
     price: 220,
     originalPrice: 290,
@@ -98,7 +123,7 @@ export const ALL_LISTINGS: Listing[] = [
     image: "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=600&h=440&fit=crop",
     title: "Date Palm Estate",
     location: "Al Ahsa, Hofuf",
-    region: "AlAhsa",
+    region: "Eastern Province",
     category: "farms",
     price: 85,
     score: 4.7,
@@ -124,7 +149,7 @@ export const ALL_LISTINGS: Listing[] = [
     image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&h=440&fit=crop",
     title: "Al Baha Terraced Farm",
     location: "Al Baha, Al Aqiq",
-    region: "AlBaha",
+    region: "Al Baha",
     category: "farms",
     price: 99,
     score: 4.8,
@@ -136,7 +161,7 @@ export const ALL_LISTINGS: Listing[] = [
     image: "https://images.unsplash.com/photo-1548092372-0d1bd40894a3?w=600&h=440&fit=crop",
     title: "Hegra Desert Experience",
     location: "AlUla, Hegra Heritage Site",
-    region: "AlUla",
+    region: "Madinah",
     category: "glamping",
     price: 390,
     originalPrice: 450,
@@ -151,7 +176,7 @@ export const ALL_LISTINGS: Listing[] = [
     image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&h=440&fit=crop",
     title: "Asir Heritage Guesthouse",
     location: "Abha, Old Town",
-    region: "Abha",
+    region: "Asir",
     category: "guesthouse",
     price: 160,
     score: 4.6,
@@ -163,7 +188,7 @@ export const ALL_LISTINGS: Listing[] = [
     image: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&h=440&fit=crop",
     title: "Al Namas Apple Orchard",
     location: "Abha, Al Namas",
-    region: "Abha",
+    region: "Asir",
     category: "farms",
     price: 120,
     score: 5.0,
@@ -177,7 +202,7 @@ export const ALL_LISTINGS: Listing[] = [
     image: "https://images.unsplash.com/photo-1560969184-10fe8719e047?w=600&h=440&fit=crop",
     title: "Al-Balad Heritage Riad",
     location: "Jeddah, Historic District",
-    region: "Jeddah",
+    region: "Makkah",
     category: "house",
     price: 680,
     score: 4.9,
@@ -215,7 +240,7 @@ export const ALL_LISTINGS: Listing[] = [
     image: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=600&h=440&fit=crop",
     title: "AlUla Rock Dome Suite",
     location: "AlUla, Dadan Valley",
-    region: "AlUla",
+    region: "Madinah",
     category: "doms",
     price: 520,
     score: 5.0,
@@ -229,7 +254,7 @@ export const ALL_LISTINGS: Listing[] = [
     image: "https://images.unsplash.com/photo-1490750967868-88df5691cc06?w=600&h=440&fit=crop",
     title: "Taif Rose Garden Farm",
     location: "Taif, Al Shafa",
-    region: "Taif",
+    region: "Makkah",
     category: "farms",
     price: 65,
     score: 4.8,
@@ -241,7 +266,7 @@ export const ALL_LISTINGS: Listing[] = [
     image: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&h=440&fit=crop",
     title: "Abha Sky Glamping",
     location: "Abha, Al Soudah Park",
-    region: "Abha",
+    region: "Asir",
     category: "glamping",
     price: 280,
     originalPrice: 340,
@@ -256,7 +281,7 @@ export const ALL_LISTINGS: Listing[] = [
     image: "https://images.unsplash.com/photo-1586348943529-beaae6c28db9?w=600&h=440&fit=crop",
     title: "Al Ahsa Palm Grove Villa",
     location: "Al Ahsa, Al Uqair",
-    region: "AlAhsa",
+    region: "Eastern Province",
     category: "house",
     price: 310,
     score: 4.6,
@@ -287,9 +312,7 @@ export const CATEGORIES: { id: Category | "all"; label: string }[] = [
   { id: "doms",        label: "Doms"        },
 ];
 
-export const REGIONS: (Region | "All")[] = [
-  "All", "AlUla", "Abha", "Taif", "AlBaha", "AlAhsa", "Tabuk", "Riyadh", "Jeddah", "Hail", "Madinah",
-];
+export const REGIONS: (Region | "All")[] = ["All", ...SAUDI_REGIONS];
 
 export const PRICE_RANGES = [
   { id: "all",    label: "Any price"       },

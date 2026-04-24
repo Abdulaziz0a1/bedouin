@@ -238,14 +238,16 @@ function EmptyState({ onClear }: { onClear: () => void }) {
 
 export default function ExploreClient({
   initialQuery = "",
+  initialRegion = "",
   initialListings,
 }: {
   initialQuery?: string;
+  initialRegion?: string;
   initialListings: Listing[];
 }) {
   const [query,      setQuery]      = useState(initialQuery);
   const [category,   setCategory]   = useState("all");
-  const [region,     setRegion]     = useState("All");
+  const [region,     setRegion]     = useState(initialRegion || "All");
   const [priceRange, setPriceRange] = useState("all");
   const [sortBy,     setSortBy]     = useState("popular");
   const [viewMode,   setViewMode]   = useState<"grid" | "list">("grid");

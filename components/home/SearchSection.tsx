@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { SAUDI_REGIONS } from "@/lib/data/listings";
 
 /* ─── Constants ─────────────────────────────────────────────────────────────── */
 
@@ -78,6 +79,49 @@ const CATEGORIES = [
   { id: "glamping",   label: "Glamping",    icon: <GlampingIcon /> },
   { id: "doms",       label: "Doms",        icon: <DomsIcon /> },
 ];
+
+/* ─── Location (region) popup ────────────────────────────────────────────────── */
+
+function LocationPopover({
+  value,
+  onChange,
+  onClose,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="absolute top-full mt-2 left-0 z-[100] bg-white border border-[#e8dfd4] rounded-2xl shadow-2xl py-2 w-[220px] max-h-[360px] overflow-y-auto">
+      <button
+        type="button"
+        onClick={() => { onChange(""); onClose(); }}
+        className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+          !value
+            ? "font-semibold text-[#8b5e38] bg-[#fdf8f0]"
+            : "text-[#64707d] hover:bg-[#f8f4f0]"
+        }`}
+      >
+        All regions
+      </button>
+      <div className="h-px bg-[#f0e8de] mx-3 my-1" />
+      {SAUDI_REGIONS.map((r) => (
+        <button
+          key={r}
+          type="button"
+          onClick={() => { onChange(r); onClose(); }}
+          className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+            value === r
+              ? "font-semibold text-[#8b5e38] bg-[#fdf8f0]"
+              : "text-[#1a0e02] hover:bg-[#f8f4f0]"
+          }`}
+        >
+          {r}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 /* ─── Calendar popup ─────────────────────────────────────────────────────────── */
 
@@ -264,7 +308,7 @@ function GuestsPopover({
 
 /* ─── Main SearchSection ─────────────────────────────────────────────────────── */
 
-type Picker = "checkin" | "checkout" | "guests" | null;
+type Picker = "location" | "checkin" | "checkout" | "guests" | null;
 
 export default function SearchSection() {
   const router = useRouter();
@@ -301,7 +345,7 @@ export default function SearchSection() {
 
   const handleSearch = () => {
     const p = new URLSearchParams({ category });
-    if (location)  p.set("location", location);
+    if (location)  p.set("region",  location);
     if (checkIn)   p.set("checkIn",  checkIn.toISOString().split("T")[0]);
     if (checkOut)  p.set("checkOut", checkOut.toISOString().split("T")[0]);
     p.set("rooms",    String(rooms));
@@ -318,7 +362,16 @@ export default function SearchSection() {
 
   return (
     <div ref={containerRef} className="max-w-[960px] mx-auto w-full">
-      <div className="bg-white rounded-2xl shadow-[0_8px_40px_rgba(26,14,2,0.18)] overflow-visible">
+      <div
+        className="rounded-3xl overflow-visible"
+        style={{
+          background: "rgba(255,255,255,0.96)",
+          backdropFilter: "blur(24px) saturate(1.8)",
+          WebkitBackdropFilter: "blur(24px) saturate(1.8)",
+          boxShadow: "0 20px 80px rgba(26,14,2,0.22), 0 4px 20px rgba(26,14,2,0.10), inset 0 1px 0 rgba(255,255,255,0.9)",
+          border: "1px solid rgba(255,255,255,0.85)",
+        }}
+      >
 
         {/* ── Category tabs ──────────────────────────────────────────────── */}
         <div className="px-4 pt-4 pb-3">
@@ -331,13 +384,17 @@ export default function SearchSection() {
                   type="button"
                   onClick={() => setCategory(cat.id)}
                   className={[
-                    "flex items-center gap-1.5 px-4 py-2 rounded-xl whitespace-nowrap text-sm font-medium transition-all shrink-0",
+                    "flex items-center gap-1.5 px-4 py-2 rounded-xl whitespace-nowrap text-sm font-medium transition-all duration-200 shrink-0 relative",
                     active
-                      ? "bg-[#1c1510] text-white shadow-sm"
-                      : "text-[#64707d] hover:text-[#1a0e02] hover:bg-white/60",
+                      ? "text-white shadow-md"
+                      : "text-[#64707d] hover:text-[#1a0e02] hover:bg-white/80",
                   ].join(" ")}
+                  style={active ? {
+                    background: "linear-gradient(135deg, #2d1a08 0%, #1c1510 100%)",
+                    boxShadow: "0 2px 12px rgba(26,14,2,0.30), inset 0 1px 0 rgba(255,255,255,0.08)",
+                  } : undefined}
                 >
-                  <span className={active ? "text-white" : "text-[#9b7355]"}>
+                  <span className={active ? "text-[#c49a4f]" : "text-[#9b7355]"}>
                     {cat.icon}
                   </span>
                   {cat.label}
@@ -353,17 +410,22 @@ export default function SearchSection() {
         {/* ── Search fields ───────────────────────────────────────────────── */}
         <div className="flex flex-col md:flex-row items-stretch rounded-b-2xl overflow-visible">
 
-          {/* Location */}
-          <div className={`flex-[1.4] ${fieldBase} md:rounded-bl-2xl`}>
-            <label className={labelCls}>Location</label>
-            <input
-              type="text"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              placeholder="Where are you going?"
-              className="bg-transparent text-sm font-medium text-[#1a0e02] placeholder:text-[#a09080] outline-none"
-            />
+          {/* Location — region dropdown */}
+          <div
+            className={`relative flex-[1.4] ${fieldBase} md:rounded-bl-2xl select-none`}
+            onClick={() => toggle("location")}
+          >
+            <label className={`${labelCls} pointer-events-none`}>Location</label>
+            <span className={valueCls(!!location)}>
+              {location || "Where are you going?"}
+            </span>
+            {open === "location" && (
+              <LocationPopover
+                value={location}
+                onChange={setLocation}
+                onClose={() => setOpen(null)}
+              />
+            )}
           </div>
 
           {/* Check In */}
@@ -435,9 +497,24 @@ export default function SearchSection() {
           <button
             type="button"
             onClick={handleSearch}
-            className="flex items-center justify-center gap-2 px-7 py-4 bg-[#8b5e38] text-white font-semibold text-sm hover:bg-[#7a5030] active:bg-[#6a4228] transition-colors shrink-0 md:rounded-br-2xl"
+            className="flex items-center justify-center gap-2 px-8 py-4 text-white font-bold text-sm shrink-0 md:rounded-br-2xl transition-all duration-200 hover:-translate-y-px active:translate-y-0 group"
+            style={{
+              background: "linear-gradient(135deg, #9b6a42 0%, #7a4e2c 100%)",
+              boxShadow: "0 4px 16px rgba(139,94,56,0.40), inset 0 1px 0 rgba(255,255,255,0.15)",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                "0 8px 28px rgba(139,94,56,0.55), inset 0 1px 0 rgba(255,255,255,0.15)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                "0 4px 16px rgba(139,94,56,0.40), inset 0 1px 0 rgba(255,255,255,0.15)";
+            }}
           >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <svg
+              width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"
+              className="transition-transform duration-200 group-hover:scale-110"
+            >
               <circle cx="11" cy="11" r="8" stroke="white" strokeWidth="2.2" />
               <path d="M21 21l-4.35-4.35" stroke="white" strokeWidth="2.2" strokeLinecap="round" />
             </svg>

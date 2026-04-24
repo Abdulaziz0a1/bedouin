@@ -42,6 +42,74 @@ export async function fetchHostListings(hostId: string): Promise<DashboardListin
       (listings ?? []).forEach((l) => { slugMap[l.id] = l.slug; });
     }
 
+    // ── Booking stats per listing (single batch query) ────────────────────────
+    //
+    // Fetches all non-cancelled bookings for every approved listing in one query,
+    // then groups in JS. No N+1 — two extra queries total regardless of how many
+    // listings the host has.
+    //
+    // totalBookings: all non-cancelled bookings received.
+    // totalEarned:   SUM(hostPayout) for bookings whose checkout is in the past
+    //                (i.e. stay is complete). hostPayout = subtotal * 0.92.
+
+    type BookingStat = { totalBookings: number; totalEarned: number };
+    const bookingStatsMap: Record<string, BookingStat> = {};
+
+    const slugList = Object.values(slugMap);
+    if (slugList.length > 0) {
+      const todayIso = new Date().toISOString().split("T")[0]; // "YYYY-MM-DD"
+
+      const { data: bkRows } = await supabase
+        .from("bookings")
+        .select("listing_slug, total_price, subtotal, status, check_out")
+        .eq("host_id", hostId)
+        .in("listing_slug", slugList)
+        .neq("status", "cancelled");
+
+      (bkRows ?? []).forEach((row) => {
+        const slug = row.listing_slug as string;
+        if (!bookingStatsMap[slug]) {
+          bookingStatsMap[slug] = { totalBookings: 0, totalEarned: 0 };
+        }
+        bookingStatsMap[slug].totalBookings += 1;
+        // A booking is "completed" once checkout has passed
+        if ((row.check_out as string) < todayIso) {
+          const payout = Math.round(((row.subtotal ?? row.total_price) as number) * 0.92);
+          bookingStatsMap[slug].totalEarned += payout;
+        }
+      });
+    }
+
+    // ── Review stats per listing UUID (single batch query) ────────────────────
+    //
+    // Fetches all reviews for the host's approved listings in one query,
+    // then groups in JS to compute avg rating and review count per listing.
+
+    type ReviewStat = { avgRating: number; reviewCount: number };
+    const reviewStatsMap: Record<string, ReviewStat> = {};
+
+    if (approvedListingIds.length > 0) {
+      const { data: rvRows } = await supabase
+        .from("reviews")
+        .select("listing_id, rating")
+        .in("listing_id", approvedListingIds);
+
+      const ratingGroups: Record<string, number[]> = {};
+      (rvRows ?? []).forEach((row) => {
+        const lid = row.listing_id as string;
+        if (!ratingGroups[lid]) ratingGroups[lid] = [];
+        ratingGroups[lid].push(row.rating as number);
+      });
+
+      Object.entries(ratingGroups).forEach(([lid, ratings]) => {
+        const avg = ratings.reduce((s, r) => s + r, 0) / ratings.length;
+        reviewStatsMap[lid] = {
+          avgRating:   Math.round(avg * 10) / 10,
+          reviewCount: ratings.length,
+        };
+      });
+    }
+
     return data
       .filter((row) => {
         // If a submission is marked approved but listing_id is NULL, the live listing
@@ -50,29 +118,38 @@ export async function fetchHostListings(hostId: string): Promise<DashboardListin
         if (row.status === "approved" && !row.listing_id) return false;
         return true;
       })
-      .map((row): DashboardListing => ({
-        id:               row.id,
-        listingSlug:      row.listing_id ? slugMap[row.listing_id as string] : undefined,
-        title:            row.title,
-        category:         row.category,
-        region:           row.region,
-        location:         row.location ?? "",
-        price:            row.price,
-        priceUnit:        row.price_unit,
-        originalPrice:    row.original_price ?? undefined,
-        imageUrl:         (row.image_urls as string[])?.[0] ?? "",
-        status:           row.status as DashboardListing["status"],
-        submittedAt:      row.submitted_at?.slice(0, 10) ?? "",
-        approvedAt:       row.reviewed_at && row.status === "approved"
-                            ? row.reviewed_at.slice(0, 10)
-                            : undefined,
-        rejectionReason:  row.rejection_reason ?? undefined,
-        // Booking stats are not stored on the submission — default to 0.
-        totalBookings:    0,
-        totalEarned:      0,
-        avgRating:        0,
-        reviewCount:      0,
-      }));
+      .map((row): DashboardListing => {
+        const slug    = row.listing_id ? slugMap[row.listing_id as string] : undefined;
+        const bkStats = slug
+          ? (bookingStatsMap[slug] ?? { totalBookings: 0, totalEarned: 0 })
+          : { totalBookings: 0, totalEarned: 0 };
+        const rvStats = row.listing_id
+          ? (reviewStatsMap[row.listing_id as string] ?? { avgRating: 0, reviewCount: 0 })
+          : { avgRating: 0, reviewCount: 0 };
+
+        return {
+          id:               row.id,
+          listingSlug:      slug,
+          title:            row.title,
+          category:         row.category,
+          region:           row.region,
+          location:         row.location ?? "",
+          price:            row.price,
+          priceUnit:        row.price_unit,
+          originalPrice:    row.original_price ?? undefined,
+          imageUrl:         (row.image_urls as string[])?.[0] ?? "",
+          status:           row.status as DashboardListing["status"],
+          submittedAt:      row.submitted_at?.slice(0, 10) ?? "",
+          approvedAt:       row.reviewed_at && row.status === "approved"
+                              ? row.reviewed_at.slice(0, 10)
+                              : undefined,
+          rejectionReason:  row.rejection_reason ?? undefined,
+          totalBookings:    bkStats.totalBookings,
+          totalEarned:      bkStats.totalEarned,
+          avgRating:        rvStats.avgRating,
+          reviewCount:      rvStats.reviewCount,
+        };
+      });
   } catch {
     return [];
   }

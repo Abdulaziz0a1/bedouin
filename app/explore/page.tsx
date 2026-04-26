@@ -1,4 +1,3 @@
-import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import ExploreClient from "@/components/explore/ExploreClient";
 import { fetchListings } from "@/lib/services/listings";
@@ -28,7 +27,6 @@ export default async function ExplorePage({
 
   return (
     <div className="min-h-screen bg-[#f4efe6]">
-      <Navbar />
 
       {/* ── Page header ──────────────────────────────────────────────────── */}
       <div

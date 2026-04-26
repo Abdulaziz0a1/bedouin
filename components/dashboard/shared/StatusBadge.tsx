@@ -33,6 +33,13 @@ const CONFIG: Record<Status, { label: string; dot: string; bg: string; text: str
     text:  "text-[#64707d]",
     border:"border-[#dddfe3]",
   },
+  cancelled: {
+    label: "Cancelled",
+    dot:   "bg-[#8b94a4]",
+    bg:    "bg-[#f4f6f8]",
+    text:  "text-[#64707d]",
+    border:"border-[#dddfe3]",
+  },
 };
 
 export default function StatusBadge({ status }: { status: Status }) {

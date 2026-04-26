@@ -18,7 +18,7 @@ export async function fetchListings(): Promise<Listing[]> {
     const { data, error } = await supabase
       .from("listings")
       .select("*")
-      .order("score", { ascending: false });
+      .order("created_at", { ascending: false });
 
     if (error || !data || data.length === 0) {
       // INTENTIONAL FALLBACK: no Supabase data available — using mock data.

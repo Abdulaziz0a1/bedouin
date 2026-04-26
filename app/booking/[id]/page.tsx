@@ -1,6 +1,5 @@
 import { cache } from "react";
 import { notFound } from "next/navigation";
-import Navbar from "@/components/layout/Navbar";
 import { fetchListingDetail } from "@/lib/services/listing-detail";
 import BookingFlow from "@/components/booking/BookingFlow";
 
@@ -35,7 +34,6 @@ export default async function BookingPage({ params, searchParams }: Props) {
 
   return (
     <div className="min-h-screen bg-[#f4efe6]">
-      <Navbar />
       <main className="pt-[72px]">
         <BookingFlow
           listing={listing}

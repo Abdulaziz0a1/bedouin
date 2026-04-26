@@ -47,6 +47,10 @@ export interface UserBooking {
   status: "upcoming" | "confirmed" | "active" | "completed" | "cancelled";
   canCancel: boolean;
   createdAt: string;
+  // Cancellation metadata (populated when status = 'cancelled')
+  cancellationType?: string;   // e.g. 'by_tourist'
+  cancellationReason?: string;
+  cancelledAt?: string;
 }
 
 /** A listing the user has saved / wishlisted */

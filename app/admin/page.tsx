@@ -6,6 +6,8 @@ import {
   fetchHostApplicationQueue,
   fetchCohostApplicationQueue,
 } from "@/lib/services/admin";
+import { fetchListingCancellationRequests } from "@/lib/services/cancellation";
+import { fetchAllSupportTickets } from "@/lib/services/support";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 
 export const metadata: Metadata = {
@@ -28,10 +30,12 @@ export default async function AdminPage() {
     redirect("/");
   }
 
-  const [listings, hostApplications, cohostApplications, profileResult] = await Promise.all([
+  const [listings, hostApplications, cohostApplications, cancellationRequests, supportTickets, profileResult] = await Promise.all([
     fetchSubmissionQueue().catch(() => []),
     fetchHostApplicationQueue().catch(() => []),
     fetchCohostApplicationQueue().catch(() => []),
+    fetchListingCancellationRequests().catch(() => []),
+    fetchAllSupportTickets().catch(() => []),
     supabase.from("profiles").select("first_name, last_name").eq("id", user!.id).single(),
   ]);
 
@@ -45,6 +49,8 @@ export default async function AdminPage() {
       initialListings={listings}
       initialHostApplications={hostApplications}
       initialCohostApplications={cohostApplications}
+      initialCancellationRequests={cancellationRequests}
+      initialSupportTickets={supportTickets}
       adminName={adminName}
     />
   );

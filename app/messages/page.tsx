@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import Navbar from "@/components/layout/Navbar";
 import MessagesPage from "@/components/messages/MessagesPage";
 import { createClient } from "@/lib/supabase-server";
 import { fetchConversations, fetchProfileName } from "@/lib/services/messages";
@@ -32,7 +31,6 @@ export default async function Page({ searchParams }: Props) {
 
   return (
     <div className="min-h-screen">
-      <Navbar />
       <div className="pt-[72px]">
         <MessagesPage
           myId={user.id}

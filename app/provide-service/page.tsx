@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
-import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import CohostApplicationForm from "@/components/cohost/CohostApplicationForm";
 
@@ -37,7 +36,6 @@ export default async function ProvideServicePage() {
 
   return (
     <div className="min-h-screen bg-[#f4efe6]">
-      <Navbar />
 
       <main className="pt-[72px] pb-20">
         <div className="max-w-[1232px] mx-auto px-6 lg:px-0 py-12">

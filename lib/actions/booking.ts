@@ -155,9 +155,12 @@ export type CancelBookingResult =
  *   2. The booking must belong to the caller (user_id = auth.uid()).
  *   3. The booking must be in "confirmed" status (i.e. not already cancelled).
  *   4. check_in must be in the future — past/active stays cannot be cancelled here.
+ *
+ * @param reason  Optional cancellation reason supplied by the guest.
  */
 export async function cancelBooking(
-  bookingId: string
+  bookingId: string,
+  reason?: string,
 ): Promise<CancelBookingResult> {
   try {
     const supabase = await createClient();
@@ -199,7 +202,13 @@ export async function cancelBooking(
 
     const { error: updateErr } = await supabase
       .from("bookings")
-      .update({ status: "cancelled" })
+      .update({
+        status:              "cancelled",
+        cancellation_type:   "by_tourist",
+        cancellation_reason: reason?.trim() || null,
+        cancelled_at:        new Date().toISOString(),
+        cancelled_by:        user.id,
+      })
       .eq("id", bookingId)
       .eq("user_id", user.id); // double-check at DB layer
 

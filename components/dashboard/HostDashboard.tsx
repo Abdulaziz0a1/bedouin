@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import UserAvatar from "@/components/ui/UserAvatar";
 import {
   type DashboardListing,
   type DashboardBooking,
@@ -153,18 +152,14 @@ export default function HostDashboard({
   }, [listings, bookings]);
 
   return (
-    <div className="min-h-screen bg-[#f4efe6]">
+    <div className="min-h-screen bg-[#f4efe6] pt-[72px]">
 
-      {/* Top bar */}
-      <header className="bg-white border-b border-[#e8dfd4] sticky top-0 z-40">
+      {/* Tab bar (sticks below global Navbar) */}
+      <header className="bg-white border-b border-[#e8dfd4] sticky top-[72px] z-[39]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
-          {/* Logo */}
-          <a href="/" className="font-display font-extrabold text-[#1a0e02] text-xl tracking-tight">
-            Bedouin
-          </a>
 
           {/* Desktop tabs */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden md:flex items-center gap-1 flex-1 justify-center">
             {TABS.map((tab) => (
               <button
                 key={tab.id}
@@ -182,12 +177,10 @@ export default function HostDashboard({
             ))}
           </nav>
 
-          {/* Host avatar */}
-          <div className="flex items-center gap-3">
-            <UserAvatar src={hostAvatar} name={hostName} size={36} className="border-2 border-[#e8dfd4]" />
-            {/* Mobile menu toggle */}
+          {/* Mobile menu toggle */}
+          <div className="md:hidden shrink-0">
             <button
-              className="md:hidden p-2 rounded-lg hover:bg-[#f0e8de] transition-colors"
+              className="p-2 rounded-lg hover:bg-[#f0e8de] transition-colors"
               onClick={() => setMobileNavOpen(!mobileNavOpen)}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">

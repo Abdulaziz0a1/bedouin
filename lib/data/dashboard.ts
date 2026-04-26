@@ -12,7 +12,7 @@ export interface DashboardListing {
   priceUnit: string;
   originalPrice?: number;
   imageUrl: string;
-  status: "approved" | "pending_review" | "rejected" | "draft";
+  status: "approved" | "pending_review" | "rejected" | "draft" | "cancelled";
   submittedAt: string; // ISO date
   approvedAt?: string;
   rejectionReason?: string;
@@ -20,6 +20,10 @@ export interface DashboardListing {
   totalEarned: number;
   avgRating: number;
   reviewCount: number;
+  // Cancellation request state (present when status = 'approved')
+  cancellationRequestId?: string;
+  cancellationRequestStatus?: "pending" | "approved" | "rejected";
+  cancellationRequestAdminNote?: string;
 }
 
 export interface DashboardBooking {
@@ -41,6 +45,10 @@ export interface DashboardBooking {
   status: "upcoming" | "active" | "completed" | "cancelled";
   paymentMethod: "card" | "mada" | "apple_pay";
   createdAt: string;
+  // Cancellation metadata (populated when status = 'cancelled')
+  cancellationType?: string;   // 'by_tourist'
+  cancellationReason?: string;
+  cancelledAt?: string;
 }
 
 export interface EarningsMonth {

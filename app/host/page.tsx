@@ -1,6 +1,5 @@
 import Link from "next/link";
 import Image from "next/image";
-import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 
 export const metadata = {
@@ -118,7 +117,6 @@ const PERKS = [
 export default function HostPage() {
   return (
     <div className="min-h-screen bg-[#f4efe6]">
-      <Navbar />
 
       <main className="pt-[72px]">
 

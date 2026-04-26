@@ -1,6 +1,15 @@
 "use client";
 
 import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import {
   type DashboardBooking,
   type DashboardListing,
   type EarningsMonth,
@@ -47,27 +56,75 @@ function KPICard({
   );
 }
 
-function MiniBarChart({ data }: { data: { month: string; payout: number }[] }) {
-  const max = Math.max(...data.map((d) => d.payout));
+// Always returns exactly 6 calendar months ending at the current month.
+// Real data is merged in by month name; any missing month gets payout 0.
+function buildSixMonthChart(data: { month: string; payout: number }[]) {
+  const now = new Date();
+  const byMonth = new Map(data.map((d) => [d.month, d.payout]));
+  return Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+    const month = d.toLocaleDateString("en-GB", { month: "short" });
+    return { month, payout: byMonth.get(month) ?? 0 };
+  });
+}
+
+function EarningsTooltip({ active, payload, label }: {
+  active?: boolean;
+  payload?: { value: number }[];
+  label?: string;
+}) {
+  if (!active || !payload?.length) return null;
   return (
-    <div className="flex items-end gap-1.5 h-16">
-      {data.map((d, i) => {
-        const pct = max > 0 ? (d.payout / max) * 100 : 0;
-        const isLast = i === data.length - 1;
-        return (
-          <div key={d.month} className="flex flex-col items-center flex-1 gap-1">
-            <div
-              className={`w-full rounded-t-md transition-all ${
-                isLast ? "bg-[#8b5e38]" : "bg-[#e8dfd4]"
-              }`}
-              style={{ height: `${Math.max(pct, 8)}%` }}
-            />
-            <span className={`text-[9px] font-medium ${isLast ? "text-[#8b5e38]" : "text-[#a09080]"}`}>
-              {d.month}
-            </span>
-          </div>
-        );
-      })}
+    <div className="bg-white border border-[#e8dfd4] rounded-xl px-3.5 py-2.5 shadow-lg text-xs">
+      <p className="text-[#a09080] font-medium mb-1">{label}</p>
+      <p className="text-[#8b5e38] font-bold text-sm">SAR {payload[0].value.toLocaleString("en-US")}</p>
+    </div>
+  );
+}
+
+function MiniBarChart({ data }: {
+  data: { month: string; payout: number }[];
+}) {
+  const chartData = buildSixMonthChart(data);
+
+  return (
+    <div style={{ height: 180 }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={chartData} margin={{ top: 12, right: 8, left: 8, bottom: 0 }}>
+          <defs>
+            <linearGradient id="earningsGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"  stopColor="#8b5e38" stopOpacity={0.22} />
+              <stop offset="100%" stopColor="#8b5e38" stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="4 4" stroke="#f0e8de" vertical={false} />
+          <XAxis
+            dataKey="month"
+            tick={{ fontSize: 11, fill: "#8b8078", fontWeight: 600 }}
+            tickLine={false}
+            axisLine={false}
+            dy={4}
+          />
+          <YAxis
+            tick={{ fontSize: 11, fill: "#8b8078" }}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)}
+            width={44}
+            tickCount={4}
+          />
+          <Tooltip content={<EarningsTooltip />} cursor={{ stroke: "#e8dfd4", strokeWidth: 1.5 }} />
+          <Area
+            type="monotone"
+            dataKey="payout"
+            stroke="#8b5e38"
+            strokeWidth={2.5}
+            fill="url(#earningsGrad)"
+            dot={{ r: 4, fill: "#fff", stroke: "#8b5e38", strokeWidth: 2 }}
+            activeDot={{ r: 6, fill: "#8b5e38", stroke: "#fff", strokeWidth: 2 }}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
     </div>
   );
 }
@@ -233,22 +290,33 @@ export default function OverviewSection({
         </div>
 
         {/* Earnings mini chart */}
-        <div className="lg:col-span-2 bg-white border border-[#e8dfd4] rounded-2xl p-5 flex flex-col gap-4">
-          <div>
-            <h2 className="font-display font-semibold text-[#1a0e02]">Earnings trend</h2>
-            <p className="text-xs text-[#64707d] mt-0.5">Last 6 months payout (SAR)</p>
+        <div className="lg:col-span-2 bg-white border border-[#e8dfd4] rounded-2xl px-5 pt-5 pb-4 flex flex-col gap-3">
+          <div className="flex items-start justify-between">
+            <div>
+              <h2 className="font-display font-semibold text-[#1a0e02]">Earnings trend</h2>
+              <p className="text-xs text-[#a09080] mt-0.5">Last 6 months · SAR payout</p>
+            </div>
+            {kpis.earningsDelta !== 0 && (
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full mt-0.5 ${
+                kpis.earningsDelta >= 0
+                  ? "bg-[#f0faf5] text-[#049153]"
+                  : "bg-red-50 text-red-600"
+              }`}>
+                {kpis.earningsDelta >= 0 ? "↑" : "↓"} {Math.abs(kpis.earningsDelta)}%
+              </span>
+            )}
           </div>
           <MiniBarChart data={chartData} />
-          <div className="flex items-center justify-between pt-2 border-t border-[#f0e8de]">
+          <div className="flex items-center justify-between pt-3 border-t border-[#f0e8de]">
             <div>
-              <p className="text-[10px] text-[#64707d] uppercase tracking-widest font-bold">This month</p>
-              <p className="font-display font-extrabold text-[#8b5e38] text-lg">
+              <p className="text-[10px] text-[#a09080] uppercase tracking-widest font-bold mb-0.5">This month</p>
+              <p className="font-display font-extrabold text-[#8b5e38] text-xl leading-none">
                 SAR {kpis.thisMonth.toLocaleString("en-US")}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-[10px] text-[#64707d] uppercase tracking-widest font-bold">vs last month</p>
-              <p className={`font-semibold text-sm ${kpis.earningsDelta >= 0 ? "text-[#049153]" : "text-red-500"}`}>
+              <p className="text-[10px] text-[#a09080] uppercase tracking-widest font-bold mb-0.5">vs last month</p>
+              <p className={`font-bold text-base leading-none ${kpis.earningsDelta >= 0 ? "text-[#049153]" : "text-red-500"}`}>
                 {kpis.earningsDelta >= 0 ? "+" : ""}{kpis.earningsDelta}%
               </p>
             </div>

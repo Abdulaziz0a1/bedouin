@@ -110,6 +110,39 @@ export async function fetchHostListings(hostId: string): Promise<DashboardListin
       });
     }
 
+    // ── Cancellation requests per submission (single batch query) ─────────────
+    //
+    // Fetches the most-recent cancellation request per submission so the host
+    // card can show a "Cancellation requested" badge or rejection feedback.
+
+    type CancelReqInfo = {
+      requestId: string;
+      status: "pending" | "approved" | "rejected";
+      adminNote?: string;
+    };
+    const cancelReqMap: Record<string, CancelReqInfo> = {};
+
+    const allSubmissionIds = data.map((row) => row.id as string);
+    if (allSubmissionIds.length > 0) {
+      const { data: crRows } = await supabase
+        .from("listing_cancellation_requests")
+        .select("id, listing_submission_id, status, admin_note")
+        .in("listing_submission_id", allSubmissionIds)
+        .order("created_at", { ascending: false });
+
+      // Keep only the most-recent request per submission
+      (crRows ?? []).forEach((row) => {
+        const sid = row.listing_submission_id as string;
+        if (!cancelReqMap[sid]) {
+          cancelReqMap[sid] = {
+            requestId: row.id as string,
+            status:    row.status as CancelReqInfo["status"],
+            adminNote: row.admin_note ?? undefined,
+          };
+        }
+      });
+    }
+
     return data
       .filter((row) => {
         // If a submission is marked approved but listing_id is NULL, the live listing
@@ -126,6 +159,7 @@ export async function fetchHostListings(hostId: string): Promise<DashboardListin
         const rvStats = row.listing_id
           ? (reviewStatsMap[row.listing_id as string] ?? { avgRating: 0, reviewCount: 0 })
           : { avgRating: 0, reviewCount: 0 };
+        const crInfo  = cancelReqMap[row.id as string];
 
         return {
           id:               row.id,
@@ -148,6 +182,9 @@ export async function fetchHostListings(hostId: string): Promise<DashboardListin
           totalEarned:      bkStats.totalEarned,
           avgRating:        rvStats.avgRating,
           reviewCount:      rvStats.reviewCount,
+          cancellationRequestId:         crInfo?.requestId,
+          cancellationRequestStatus:     crInfo?.status,
+          cancellationRequestAdminNote:  crInfo?.adminNote,
         };
       });
   } catch {
@@ -212,6 +249,9 @@ export async function fetchHostBookings(hostId: string): Promise<DashboardBookin
       status:           deriveBookingStatus(row.status, row.check_in, row.check_out),
       paymentMethod:    row.payment_method as DashboardBooking["paymentMethod"],
       createdAt:        row.created_at?.slice(0, 10) ?? "",
+      cancellationType:   row.cancellation_type   ?? undefined,
+      cancellationReason: row.cancellation_reason ?? undefined,
+      cancelledAt:        row.cancelled_at        ?? undefined,
     }));
   } catch {
     return [];

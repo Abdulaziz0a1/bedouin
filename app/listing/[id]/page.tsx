@@ -1,7 +1,6 @@
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import GalleryGrid from "@/components/listing/GalleryGrid";
 import BookingCard from "@/components/listing/BookingCard";
@@ -56,7 +55,6 @@ export default async function ListingPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-[#f4efe6]">
-      <Navbar />
 
       <main className="pt-[72px]">
         {/* ── Breadcrumb ──────────────────────────────────────────────────── */}

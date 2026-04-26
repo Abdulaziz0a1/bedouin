@@ -161,7 +161,7 @@ export default function Navbar() {
   return (
     <>
       {dropdownOpen && (
-        <div className="fixed inset-0 z-40" onClick={handleBackdropClick} />
+        <div className="fixed inset-0 z-[49]" onClick={handleBackdropClick} />
       )}
 
       <nav

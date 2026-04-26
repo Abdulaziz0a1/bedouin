@@ -16,7 +16,7 @@ const destinations: Record<string, {
 }[]> = {
   spring: [
     { city: "Dammam",    fromPrice: 128, description: "Coastal vibes and calm nights.",             image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&h=900&fit=crop" },
-    { city: "Taif",      fromPrice: 225, description: "Mountain breeze and rose-scented sunsets.",  image: "https://images.unsplash.com/photo-1490750967868-88df5691cc06?w=600&h=900&fit=crop" },
+    { city: "Taif",      fromPrice: 225, description: "Mountain breeze and rose-scented sunsets.",  image: "https://images.unsplash.com/photo-1444930694458-01babf71870c?w=600&h=900&fit=crop" },
     { city: "Al Madinah",fromPrice: 160, description: "Spiritual calm and peaceful moments.",       image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=900&fit=crop" },
     { city: "Riyadh",    fromPrice: 190, description: "Modern skyline and vibrant desert energy.",  image: "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600&h=900&fit=crop" },
   ],

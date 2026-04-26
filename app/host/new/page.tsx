@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
-import Navbar from "@/components/layout/Navbar";
 import HostListingFlow from "@/components/host/HostListingFlow";
 
 export const metadata = {
@@ -40,7 +39,6 @@ export default async function HostNewPage() {
 
   return (
     <div className="min-h-screen bg-[#f4efe6]">
-      <Navbar />
       <main className="pt-[72px]">
         <HostListingFlow userId={user.id} />
       </main>

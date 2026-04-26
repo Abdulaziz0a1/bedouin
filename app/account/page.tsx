@@ -5,6 +5,7 @@ import { fetchUserBookings } from "@/lib/services/bookings";
 import { fetchCohostAssignments } from "@/lib/services/cohost";
 import { fetchUserWishlist } from "@/lib/services/wishlist";
 import { getReviewedBookingIds } from "@/lib/services/reviews";
+import { fetchUserTickets } from "@/lib/services/support";
 import UserDashboard from "@/components/user/UserDashboard";
 
 export const metadata: Metadata = {
@@ -20,7 +21,7 @@ export default async function AccountPage() {
     redirect("/login?returnTo=/account");
   }
 
-  const [bookings, profileResult, savedListings, reviewedBookingIds] = await Promise.all([
+  const [bookings, profileResult, savedListings, reviewedBookingIds, initialTickets] = await Promise.all([
     fetchUserBookings(user.id),
     supabase
       .from("profiles")
@@ -29,6 +30,7 @@ export default async function AccountPage() {
       .single(),
     fetchUserWishlist(user.id),
     getReviewedBookingIds(user.id),
+    fetchUserTickets(user.id),
   ]);
 
   const cohostStatusValue = (profileResult.data?.cohost_status ?? null) as "pending" | "approved" | "rejected" | null;
@@ -61,6 +63,7 @@ export default async function AccountPage() {
       cohostRejectionReason={profile?.cohost_rejection_reason ?? null}
       cohostAssignments={cohostAssignments}
       savedListings={savedListings}
+      initialTickets={initialTickets}
     />
   );
 }

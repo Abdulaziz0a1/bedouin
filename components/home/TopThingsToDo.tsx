@@ -5,6 +5,22 @@ import Image from "next/image";
 import Link from "next/link";
 import FadeInSection from "@/components/ui/FadeInSection";
 
+const FALLBACK_IMG = "https://picsum.photos/seed/bedouin-activity/400/300";
+
+function ActivityImage({ src, alt }: { src: string; alt: string }) {
+  const [imgSrc, setImgSrc] = useState(src);
+  return (
+    <Image
+      src={imgSrc}
+      alt={alt}
+      fill
+      onError={() => setImgSrc(FALLBACK_IMG)}
+      className="object-cover group-hover:scale-110 transition-transform duration-500"
+      sizes="200px"
+    />
+  );
+}
+
 const categories = [
   { key: "explore",   label: "Explore"    },
   { key: "shows",     label: "Shows"      },
@@ -21,7 +37,7 @@ const activities: Record<string, { name: string; image: string }[]> = {
     { name: "Scenic Lookout",  image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&h=300&fit=crop" },
   ],
   shows: [
-    { name: "Folk Festival",   image: "https://images.unsplash.com/photo-1490750967868-88df5691cc06?w=400&h=300&fit=crop" },
+    { name: "Folk Festival",   image: "https://images.unsplash.com/photo-1444930694458-01babf71870c?w=400&h=300&fit=crop" },
     { name: "Heritage Show",   image: "https://images.unsplash.com/photo-1548092372-0d1bd40894a3?w=400&h=300&fit=crop"   },
     { name: "Desert Theatre",  image: "https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=400&h=300&fit=crop" },
     { name: "Cultural Night",  image: "https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=400&h=300&fit=crop" },
@@ -116,11 +132,7 @@ export default function TopThingsToDo() {
                     (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 16px rgba(70,30,0,0.10)";
                   }}
                 >
-                  <Image
-                    src={image} alt={name} fill
-                    className="object-cover group-hover:scale-110 transition-transform duration-500"
-                    sizes="200px"
-                  />
+                  <ActivityImage src={image} alt={name} />
                   {/* Dark overlay on hover */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 </div>

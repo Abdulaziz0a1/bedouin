@@ -251,7 +251,7 @@ export const ALL_LISTINGS: Listing[] = [
   },
   {
     id: "taif-rose-farm",
-    image: "https://images.unsplash.com/photo-1490750967868-88df5691cc06?w=600&h=440&fit=crop",
+    image: "https://images.unsplash.com/photo-1444930694458-01babf71870c?w=600&h=440&fit=crop",
     title: "Taif Rose Garden Farm",
     location: "Taif, Al Shafa",
     region: "Makkah",
@@ -348,9 +348,11 @@ export function filterListings(
     return true;
   });
 
+  if (sortBy === "popular")    result = [...result].sort((a, b) => b.score - a.score || b.reviewCount - a.reviewCount);
   if (sortBy === "price-asc")  result = [...result].sort((a, b) => a.price - b.price);
   if (sortBy === "price-desc") result = [...result].sort((a, b) => b.price - a.price);
   if (sortBy === "rating")     result = [...result].sort((a, b) => b.score - a.score || b.reviewCount - a.reviewCount);
+  // "newest" preserves the input order — fetchListings already returns created_at DESC
 
   return result;
 }

@@ -3,15 +3,16 @@
 import { useState } from "react";
 import type { UserBooking, SavedListing } from "@/lib/types/user";
 import type { CohostAssignmentItem } from "@/lib/services/cohost";
-import UserAvatar from "@/components/ui/UserAvatar";
+import type { SupportTicket } from "@/lib/types/support";
 import UserOverviewSection  from "./sections/UserOverviewSection";
 import UserBookingsSection  from "./sections/UserBookingsSection";
 import UserSavedSection     from "./sections/UserSavedSection";
 import UserActivitySection  from "./sections/UserActivitySection";
 import UserAccountSection   from "./sections/UserAccountSection";
 import UserCohostSection    from "./sections/UserCohostSection";
+import UserSupportSection   from "./sections/UserSupportSection";
 
-type Tab = "overview" | "bookings" | "saved" | "activity" | "account" | "cohost";
+type Tab = "overview" | "bookings" | "saved" | "activity" | "account" | "cohost" | "support";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   {
@@ -77,6 +78,16 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
       </svg>
     ),
   },
+  {
+    id: "support",
+    label: "Support",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <path d="M8 10h8M8 14h5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+        <path d="M20 2H4a2 2 0 00-2 2v18l4-4h14a2 2 0 002-2V4a2 2 0 00-2-2z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
 ];
 
 type ApplicationStatus = "pending" | "approved" | "rejected" | null;
@@ -98,6 +109,7 @@ export default function UserDashboard({
   cohostAssignments     = [],
   savedListings         = [],
   reviewedBookingIds    = [],
+  initialTickets        = [],
 }: {
   bookings:               UserBooking[];
   userName:               string;
@@ -115,6 +127,7 @@ export default function UserDashboard({
   cohostAssignments?:     CohostAssignmentItem[];
   savedListings?:         SavedListing[];
   reviewedBookingIds?:    string[];
+  initialTickets?:        SupportTicket[];
 }) {
   const [activeTab, setActiveTab]     = useState<Tab>("overview");
   const [mobileNavOpen, setMobileNav] = useState(false);
@@ -139,16 +152,11 @@ export default function UserDashboard({
   };
 
   return (
-    <div className="min-h-screen bg-[#f4efe6]">
+    <div className="min-h-screen bg-[#f4efe6] pt-[72px]">
 
-      {/* ─── Top navbar ─── */}
-      <header className="bg-white border-b border-[#e8dfd4] sticky top-0 z-40">
+      {/* ─── Tab bar (sticks below global Navbar) ─── */}
+      <header className="bg-white border-b border-[#e8dfd4] sticky top-[72px] z-[39]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16 gap-4">
-
-          {/* Logo */}
-          <a href="/" className="font-display font-extrabold text-[#1a0e02] text-xl tracking-tight shrink-0">
-            Bedouin
-          </a>
 
           {/* Desktop tabs */}
           <nav className="hidden md:flex items-center gap-1 flex-1 justify-center">
@@ -195,22 +203,10 @@ export default function UserDashboard({
             })}
           </nav>
 
-          {/* Right: avatar + explore + mobile toggle */}
-          <div className="flex items-center gap-3 shrink-0">
-            <a
-              href="/explore"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-2 border border-[#e8dfd4] rounded-xl text-sm font-semibold text-[#64707d] hover:border-[#8b5e38] hover:text-[#8b5e38] transition-colors"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-                <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="1.8" />
-                <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              </svg>
-              Explore
-            </a>
-            <UserAvatar src={userAvatar} name={userName} size={36} className="border-2 border-[#e8dfd4]" />
-            {/* Mobile burger */}
+          {/* Mobile burger */}
+          <div className="md:hidden shrink-0">
             <button
-              className="md:hidden p-2 rounded-lg hover:bg-[#f0e8de] transition-colors"
+              className="p-2 rounded-lg hover:bg-[#f0e8de] transition-colors"
               onClick={() => setMobileNav(!mobileNavOpen)}
               aria-label="Toggle menu"
             >
@@ -355,11 +351,14 @@ export default function UserDashboard({
             assignments={cohostAssignments}
           />
         )}
+        {activeTab === "support" && (
+          <UserSupportSection initialTickets={initialTickets} />
+        )}
 
       </main>
 
       {/* ─── Mobile bottom nav ─── */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-[#e8dfd4] z-40 flex">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-[#e8dfd4] z-[39] flex">
         {TABS.map((tab) => {
           const isActive = activeTab === tab.id;
           return (

@@ -1,4 +1,3 @@
-import Navbar from "@/components/layout/Navbar";
 import SignupForm from "@/components/auth/SignupForm";
 
 export const metadata = {
@@ -13,7 +12,6 @@ export default function SignupPage() {
         background: "linear-gradient(135deg, #f4efe6 0%, #fef9f3 50%, #ede4d6 100%)",
       }}
     >
-      <Navbar />
 
       <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
         <div

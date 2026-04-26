@@ -26,6 +26,8 @@ export interface ProductCardProps {
   savedByCurrentUser?: boolean;
 }
 
+const FALLBACK_IMG = "https://picsum.photos/seed/bedouin-listing/600/440";
+
 export default function ProductCard({
   id, image, title, location, price, originalPrice,
   priceUnit = "per person", score, reviewCount,
@@ -34,6 +36,7 @@ export default function ProductCard({
 }: ProductCardProps) {
   const [saved, setSaved]           = useState(savedByCurrentUser);
   const [pending, startTransition]  = useTransition();
+  const [imgSrc, setImgSrc]         = useState(image || FALLBACK_IMG);
 
   return (
     <Link
@@ -66,9 +69,10 @@ export default function ProductCard({
         {/* Image */}
         <div className="relative w-full h-[210px] overflow-hidden">
           <Image
-            src={image || "https://picsum.photos/seed/listing-placeholder/600/440"}
+            src={imgSrc}
             alt={title}
             fill
+            onError={() => setImgSrc(FALLBACK_IMG)}
             className="object-cover transition-transform duration-700 group-hover:scale-108"
             style={{ transitionTimingFunction: "cubic-bezier(0.16,1,0.3,1)" }}
             sizes="(min-width: 1280px) 296px, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"

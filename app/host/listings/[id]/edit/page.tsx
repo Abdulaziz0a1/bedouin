@@ -1,6 +1,5 @@
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
-import Navbar from "@/components/layout/Navbar";
 import EditListingFlow from "@/components/host/EditListingFlow";
 import type { ListingDraft, DraftCategory, DraftRegion } from "@/lib/types/host";
 
@@ -81,7 +80,6 @@ export default async function EditListingPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-[#f4efe6]">
-      <Navbar />
       <main className="pt-[72px]">
         <EditListingFlow
           submissionId={id}

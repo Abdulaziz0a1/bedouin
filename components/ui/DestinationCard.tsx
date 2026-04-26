@@ -1,5 +1,10 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+
+const FALLBACK_IMG = "https://picsum.photos/seed/bedouin-destination/600/900";
 
 interface DestinationCardProps {
   city: string;
@@ -12,6 +17,7 @@ interface DestinationCardProps {
 export default function DestinationCard({
   city, fromPrice, description, image, href = "/explore",
 }: DestinationCardProps) {
+  const [imgSrc, setImgSrc] = useState(image || FALLBACK_IMG);
   return (
     <Link
       href={href}
@@ -33,9 +39,10 @@ export default function DestinationCard({
       }}
     >
       <Image
-        src={image}
+        src={imgSrc}
         alt={city}
         fill
+        onError={() => setImgSrc(FALLBACK_IMG)}
         className="object-cover group-hover:scale-[1.08] transition-transform duration-700"
         style={{ transitionTimingFunction: "cubic-bezier(0.16,1,0.3,1)" }}
         sizes="280px"

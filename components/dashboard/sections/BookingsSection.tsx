@@ -13,16 +13,36 @@ const PAYMENT_LABELS: Record<string, string> = {
   apple_pay: "Apple Pay",
 };
 
-function StatusChip({ status }: { status: DashboardBooking["status"] }) {
-  const cfg = {
-    upcoming:  { label: "Upcoming",  cls: "bg-[#fdf8ee] text-[#8b6a1f] border-[#ead9a6]"  },
-    active:    { label: "Active",    cls: "bg-[#f0faf5] text-[#049153] border-[#c3e8d6]"  },
-    completed: { label: "Completed", cls: "bg-[#f4f6f8] text-[#64707d] border-[#dddfe3]"  },
-    cancelled: { label: "Cancelled", cls: "bg-red-50    text-red-600   border-red-200"    },
-  }[status];
+function StatusChip({
+  status,
+  cancellationType,
+}: {
+  status: DashboardBooking["status"];
+  cancellationType?: string;
+}) {
+  const label =
+    status === "cancelled" && cancellationType === "by_tourist"
+      ? "Cancelled by guest"
+      : status === "cancelled"
+      ? "Cancelled"
+      : status === "upcoming"
+      ? "Upcoming"
+      : status === "active"
+      ? "Active"
+      : "Completed";
+
+  const cls =
+    status === "cancelled"
+      ? "bg-red-50 text-red-600 border-red-200"
+      : status === "upcoming"
+      ? "bg-[#fdf8ee] text-[#8b6a1f] border-[#ead9a6]"
+      : status === "active"
+      ? "bg-[#f0faf5] text-[#049153] border-[#c3e8d6]"
+      : "bg-[#f4f6f8] text-[#64707d] border-[#dddfe3]";
+
   return (
-    <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${cfg.cls}`}>
-      {cfg.label}
+    <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${cls}`}>
+      {label}
     </span>
   );
 }
@@ -51,7 +71,7 @@ function BookingRow({ booking }: { booking: DashboardBooking }) {
           </p>
         </div>
         <div className="text-right shrink-0 flex flex-col items-end gap-1.5">
-          <StatusChip status={booking.status} />
+          <StatusChip status={booking.status} cancellationType={booking.cancellationType} />
           <p className="font-display font-bold text-[#1a0e02] text-sm">SAR {booking.hostPayout.toLocaleString("en-US")}</p>
           <p className="text-[10px] text-[#a09080]">payout</p>
         </div>
@@ -65,7 +85,7 @@ function BookingRow({ booking }: { booking: DashboardBooking }) {
 
       {/* Expanded details */}
       {expanded && (
-        <div className="border-t border-[#f0e8de] px-5 pb-5 pt-4">
+        <div className="border-t border-[#f0e8de] px-5 pb-5 pt-4 flex flex-col gap-4">
           <div className="flex items-start gap-4">
             <img
               src={booking.listingImage}
@@ -104,6 +124,34 @@ function BookingRow({ booking }: { booking: DashboardBooking }) {
               </div>
             </div>
           </div>
+
+          {/* Cancellation details — only when cancelled by guest */}
+          {booking.status === "cancelled" && (
+            <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="text-red-500 shrink-0">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+                  <path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+                <p className="text-[10px] font-bold text-red-600 uppercase tracking-widest">
+                  {booking.cancellationType === "by_tourist" ? "Cancelled by guest" : "Booking cancelled"}
+                </p>
+              </div>
+              {booking.cancelledAt && (
+                <p className="text-xs text-red-700 mb-1">
+                  Cancelled on {fmtDate(booking.cancelledAt.slice(0, 10))}
+                </p>
+              )}
+              {booking.cancellationReason ? (
+                <>
+                  <p className="text-[10px] text-red-500 font-bold uppercase tracking-widest mb-0.5 mt-2">Guest&apos;s reason</p>
+                  <p className="text-xs text-red-700 leading-relaxed">{booking.cancellationReason}</p>
+                </>
+              ) : (
+                <p className="text-xs text-red-500 italic">No reason provided by the guest.</p>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

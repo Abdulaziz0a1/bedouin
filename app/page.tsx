@@ -1,4 +1,3 @@
-import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import HeroSection from "@/components/home/HeroSection";
 import TrustSection from "@/components/home/TrustSection";
@@ -14,7 +13,6 @@ import SearchSection from "@/components/home/SearchSection";
 export default function Home() {
   return (
     <div className="min-h-screen bg-[#f4efe6]">
-      <Navbar />
 
       {/* Hero + search card overlap */}
       <div className="pt-[72px]">

@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import type { UserBooking } from "@/lib/types/user";
 import type { CohostAssignmentItem } from "@/lib/services/cohost";
 
-import { cancelBooking } from "@/lib/actions/booking";
 import BookingStatusBadge from "../shared/BookingStatusBadge";
 import UserEmptyState from "../shared/UserEmptyState";
 import LeaveReviewModal from "@/components/reviews/LeaveReviewModal";
+import CancelBookingModal from "../shared/CancelBookingModal";
 
 type Tab = "upcoming" | "past";
 
@@ -29,21 +29,8 @@ function BookingCard({
   isReviewed:    boolean;
   onReviewClick: () => void;
 }) {
-  const [expanded, setExpanded]     = useState(false);
-  const [cancelError, setCancelErr] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-
-  const handleCancel = () => {
-    setCancelErr(null);
-    startTransition(async () => {
-      const result = await cancelBooking(booking.id);
-      if (result.success) {
-        onCancelled(booking.id);
-      } else {
-        setCancelErr(result.error);
-      }
-    });
-  };
+  const [expanded, setExpanded]           = useState(false);
+  const [showCancelModal, setShowCancel]  = useState(false);
 
   const checkIn  = new Date(booking.checkIn);
   const checkOut = new Date(booking.checkOut);
@@ -177,15 +164,11 @@ function BookingCard({
               )}
               {booking.canCancel && (
                 <button
-                  onClick={handleCancel}
-                  disabled={isPending}
-                  className="px-3 py-1.5 border border-red-200 rounded-xl text-xs font-semibold text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => setShowCancel(true)}
+                  className="px-3 py-1.5 border border-red-200 rounded-xl text-xs font-semibold text-red-500 hover:bg-red-50 transition-colors"
                 >
-                  {isPending ? "Cancelling…" : "Cancel"}
+                  Cancel
                 </button>
-              )}
-              {cancelError && (
-                <p className="w-full text-[10px] text-red-500 mt-1">{cancelError}</p>
               )}
               <button
                 onClick={() => setExpanded(!expanded)}
@@ -203,6 +186,32 @@ function BookingCard({
           </div>
         </div>
       </div>
+
+      {/* Cancellation reason banner — visible to the guest on cancelled bookings */}
+      {booking.status === "cancelled" && booking.cancellationReason && (
+        <div className="border-t border-red-100 bg-red-50 px-5 py-3 flex items-start gap-2">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" className="text-red-400 shrink-0 mt-0.5">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+            <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          <div>
+            <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest mb-0.5">Your cancellation reason</p>
+            <p className="text-xs text-red-700 leading-relaxed">{booking.cancellationReason}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel modal */}
+      {showCancelModal && (
+        <CancelBookingModal
+          bookingId={booking.id}
+          listingTitle={booking.listingTitle}
+          checkIn={booking.checkIn}
+          checkOut={booking.checkOut}
+          onClose={() => setShowCancel(false)}
+          onCancelled={(id) => { onCancelled(id); setShowCancel(false); }}
+        />
+      )}
 
       {/* Expanded detail panel */}
       {expanded && (

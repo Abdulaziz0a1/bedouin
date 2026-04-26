@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Roboto, Poppins } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthProvider";
+import Navbar from "@/components/layout/Navbar";
 
 const roboto = Roboto({
   variable: "--font-roboto",
@@ -32,6 +33,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${roboto.variable} ${poppins.variable} antialiased`}>
         <AuthProvider>
+          <Navbar />
           {children}
         </AuthProvider>
       </body>

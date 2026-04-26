@@ -1,4 +1,3 @@
-import Navbar from "@/components/layout/Navbar";
 import LoginForm from "@/components/auth/LoginForm";
 
 export const metadata = {
@@ -13,7 +12,6 @@ export default function LoginPage() {
         background: "linear-gradient(135deg, #f4efe6 0%, #fef9f3 50%, #ede4d6 100%)",
       }}
     >
-      <Navbar />
 
       {/* Background orbs for depth */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden="true">

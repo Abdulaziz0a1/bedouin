@@ -1,5 +1,5 @@
-import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import SupportTicketSubmitSection from "@/components/user/shared/SupportTicketSubmitSection";
 
 export const metadata = {
   title: "Help & FAQ – Bedouin",
@@ -35,7 +35,6 @@ const faqs = [
 export default function FaqPage() {
   return (
     <div className="min-h-screen bg-[#f4efe6]">
-      <Navbar />
       <main className="pt-[72px]">
         <div className="max-w-[720px] mx-auto px-6 lg:px-0 py-16 flex flex-col gap-10">
           <div className="flex flex-col gap-2">
@@ -64,6 +63,17 @@ export default function FaqPage() {
               </div>
             ))}
           </div>
+
+          {/* Still need help? — Support ticket form */}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-[1px] bg-[#e8dfd4]" />
+              <p className="text-xs text-[#8b94a4] font-semibold uppercase tracking-wide shrink-0">Still need help?</p>
+              <div className="flex-1 h-[1px] bg-[#e8dfd4]" />
+            </div>
+            <SupportTicketSubmitSection />
+          </div>
+
         </div>
       </main>
       <Footer />

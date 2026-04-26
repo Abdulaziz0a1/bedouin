@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
-import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import HostOnboardingForm from "@/components/host/HostOnboardingForm";
 
@@ -40,7 +39,6 @@ export default async function HostOnboardingPage() {
 
   return (
     <div className="min-h-screen bg-[#f4efe6]">
-      <Navbar />
 
       <main className="pt-[72px] pb-20">
         <div className="max-w-[1232px] mx-auto px-6 lg:px-0 py-12">

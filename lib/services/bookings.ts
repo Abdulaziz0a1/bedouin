@@ -72,6 +72,9 @@ export async function fetchUserBookings(userId: string): Promise<UserBooking[]> 
         status,
         canCancel,
         createdAt:       row.created_at,
+        cancellationType:   row.cancellation_type   ?? undefined,
+        cancellationReason: row.cancellation_reason ?? undefined,
+        cancelledAt:        row.cancelled_at        ?? undefined,
       };
     });
   } catch {

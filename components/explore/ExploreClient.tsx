@@ -53,6 +53,7 @@ const PinIcon = () => (
 /* ─── Sort options ───────────────────────────────────────────────────────── */
 
 const SORT_OPTIONS = [
+  { id: "newest",     label: "Newest First"   },
   { id: "popular",    label: "Most Popular"   },
   { id: "rating",     label: "Top Rated"      },
   { id: "price-asc",  label: "Price: Low–High" },
@@ -249,7 +250,7 @@ export default function ExploreClient({
   const [category,   setCategory]   = useState("all");
   const [region,     setRegion]     = useState(initialRegion || "All");
   const [priceRange, setPriceRange] = useState("all");
-  const [sortBy,     setSortBy]     = useState("popular");
+  const [sortBy,     setSortBy]     = useState("newest");
   const [viewMode,   setViewMode]   = useState<"grid" | "list">("grid");
 
   const results = useMemo(
@@ -262,7 +263,7 @@ export default function ExploreClient({
     setCategory("all");
     setRegion("All");
     setPriceRange("all");
-    setSortBy("popular");
+    setSortBy("newest");
   }, []);
 
   const activeFilters: { label: string; clear: () => void }[] = [];

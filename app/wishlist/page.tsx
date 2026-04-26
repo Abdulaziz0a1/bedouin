@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import WishlistClient from "@/components/wishlist/WishlistClient";
 
@@ -11,7 +10,6 @@ export const metadata: Metadata = {
 export default function WishlistPage() {
   return (
     <>
-      <Navbar />
       <div className="pt-[72px]">
         <WishlistClient />
       </div>

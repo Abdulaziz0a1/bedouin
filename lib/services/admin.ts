@@ -69,6 +69,8 @@ export async function fetchSubmissionQueue(): Promise<AdminListing[]> {
     const { data: submissions, error } = await supabase
       .from("listing_submissions")
       .select("*")
+      .eq("status", "pending_review")
+      .is("removed_at", null)
       .order("submitted_at", { ascending: false });
 
     if (error || !submissions) return [];

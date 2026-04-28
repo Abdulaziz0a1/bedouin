@@ -3,13 +3,13 @@
 import { useState } from "react";
 import type { AdminListing } from "@/lib/types/admin";
 import AdminStatusBadge from "./shared/AdminStatusBadge";
-import RejectModal from "./RejectModal";
+import RejectModal, { type RejectPayload } from "./RejectModal";
 import UserAvatar from "@/components/ui/UserAvatar";
 
 interface ListingReviewPanelProps {
   listing: AdminListing;
   onApprove:  (id: string) => Promise<void>;
-  onReject:   (id: string, reason: string) => Promise<void>;
+  onReject:   (id: string, reason: string, step: string | null) => Promise<void>;
   onClose?:   () => void;
 }
 
@@ -98,9 +98,9 @@ export default function ListingReviewPanel({
     setDecision("approved");
   };
 
-  const handleReject = async (reason: string) => {
+  const handleReject = async (payload: RejectPayload) => {
     setIsRejecting(true);
-    await onReject(listing.id, reason);
+    await onReject(listing.id, payload.reason, payload.step);
     setIsRejecting(false);
     setShowReject(false);
     setDecision("rejected");

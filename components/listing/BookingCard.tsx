@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import CalendarPopup from "@/components/ui/CalendarPopup";
+import { checkAvailability } from "@/lib/actions/availability";
 
 const SHORT_MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -32,6 +33,13 @@ interface BookingCardProps {
 
 type ActiveField = "checkin" | "checkout" | "guests" | null;
 
+type AvailabilityState =
+  | { status: "idle" }
+  | { status: "checking" }
+  | { status: "available";   remaining: number; unchecked?: boolean }
+  | { status: "unavailable"; remaining: number; message: string }
+  | { status: "error";       message: string };
+
 export default function BookingCard({
   price,
   originalPrice,
@@ -47,6 +55,7 @@ export default function BookingCard({
   const [adults, setAdults]     = useState(1);
   const [children, setChildren] = useState(0);
   const [active, setActive]     = useState<ActiveField>(null);
+  const [avail,  setAvail]      = useState<AvailabilityState>({ status: "idle" });
 
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -66,6 +75,43 @@ export default function BookingCard({
   const subtotal = nights * price;
   const serviceFee = Math.round(subtotal * 0.12);
   const total = subtotal + serviceFee;
+
+  const totalGuests = adults + children;
+
+  // Run availability check whenever both dates and guest count are set
+  useEffect(() => {
+    if (!checkIn || !checkOut || totalGuests < 1) {
+      setAvail({ status: "idle" });
+      return;
+    }
+
+    const checkInStr  = checkIn.toISOString().split("T")[0];
+    const checkOutStr = checkOut.toISOString().split("T")[0];
+
+    setAvail({ status: "checking" });
+
+    checkAvailability(listingId, checkInStr, checkOutStr, totalGuests).then((res) => {
+      if (!res.success) {
+        setAvail({ status: "error", message: res.error });
+        return;
+      }
+      const d = res.data;
+      if (d.available) {
+        setAvail({ status: "available", remaining: d.remaining, unchecked: d.unchecked });
+      } else {
+        const message =
+          d.remaining <= 0
+            ? "Not available for these dates."
+            : `Only ${d.remaining} spot${d.remaining === 1 ? "" : "s"} left — you requested ${totalGuests}.`;
+        setAvail({ status: "unavailable", remaining: d.remaining, message });
+      }
+    });
+  }, [checkIn, checkOut, totalGuests, listingId]);
+
+  const isUnavailable = avail.status === "unavailable";
+  const isChecking    = avail.status === "checking";
+
+  const canReserve = !!checkIn && !!checkOut && nights >= minNights && !isUnavailable && !isChecking;
 
   const fieldCls =
     "flex-1 flex flex-col px-4 py-3 cursor-pointer select-none hover:bg-[#faf7f4] transition-colors";
@@ -209,8 +255,56 @@ export default function BookingCard({
       {/* Min nights notice */}
       {minNights > 1 && (
         <p className="text-xs text-[#64707d] -mt-2">
-          Minimum stay: {minNights} nights
+          Minimum stay: {minNights} night{minNights !== 1 ? "s" : ""}
         </p>
+      )}
+
+      {/* Availability status banner */}
+      {checkIn && checkOut && (
+        <div className="-mt-2">
+          {isChecking && (
+            <div className="flex items-center gap-2 text-xs text-[#64707d] bg-[#faf7f4] border border-[#e8dfd4] rounded-xl px-3 py-2">
+              <svg className="animate-spin w-3.5 h-3.5 text-[#8b5e38]" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4" strokeDashoffset="15" />
+              </svg>
+              Checking availability…
+            </div>
+          )}
+          {avail.status === "available" && !avail.unchecked && (
+            <div className="flex items-center gap-2 text-xs text-[#049153] bg-[#f0faf5] border border-[#c3e8d6] rounded-xl px-3 py-2">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" />
+              </svg>
+              {avail.remaining <= 3
+                ? `Only ${avail.remaining} spot${avail.remaining === 1 ? "" : "s"} left for these dates`
+                : "Available for selected dates"}
+            </div>
+          )}
+          {avail.status === "unavailable" && (
+            <div className="flex items-center gap-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+                <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              {avail.message}
+            </div>
+          )}
+          {avail.status === "error" && (
+            <p className="text-xs text-[#a09080] px-1">Could not check availability — try again.</p>
+          )}
+        </div>
+      )}
+
+      {/* Min nights validation warning */}
+      {checkIn && checkOut && nights > 0 && nights < minNights && (
+        <div className="-mt-2 flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+            <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          Minimum stay is {minNights} night{minNights !== 1 ? "s" : ""}
+        </div>
       )}
 
       {/* Price breakdown */}
@@ -232,14 +326,29 @@ export default function BookingCard({
       )}
 
       {/* CTA */}
-      <a
-        href={nights > 0 ? `/booking/${listingId}?checkIn=${checkIn?.toISOString().split("T")[0]}&checkOut=${checkOut?.toISOString().split("T")[0]}&adults=${adults}&children=${children}` : "#"}
-        onClick={(e) => { if (!checkIn || !checkOut) { e.preventDefault(); setActive("checkin"); } }}
-        className="w-full py-4 bg-[#8b5e38] text-white font-bold text-base rounded-2xl text-center hover:bg-[#7a5030] active:bg-[#6a4228] transition-colors shadow-sm"
-        style={{ color: "#fff" }}
-      >
-        {checkIn && checkOut ? "Reserve Now" : "Check Availability"}
-      </a>
+      {canReserve ? (
+        <a
+          href={`/booking/${listingId}?checkIn=${checkIn?.toISOString().split("T")[0]}&checkOut=${checkOut?.toISOString().split("T")[0]}&adults=${adults}&children=${children}`}
+          className="w-full py-4 bg-[#8b5e38] text-white font-bold text-base rounded-2xl text-center hover:bg-[#7a5030] active:bg-[#6a4228] transition-colors shadow-sm"
+          style={{ color: "#fff" }}
+        >
+          Reserve Now
+        </a>
+      ) : (
+        <button
+          type="button"
+          disabled={isUnavailable}
+          onClick={() => { if (!checkIn || !checkOut) setActive("checkin"); }}
+          className={[
+            "w-full py-4 font-bold text-base rounded-2xl text-center transition-colors shadow-sm",
+            isUnavailable
+              ? "bg-[#e8dfd4] text-[#a09080] cursor-not-allowed"
+              : "bg-[#8b5e38] text-white hover:bg-[#7a5030] active:bg-[#6a4228] cursor-pointer",
+          ].join(" ")}
+        >
+          {isUnavailable ? "Not Available" : "Check Availability"}
+        </button>
+      )}
 
       <p className="text-xs text-[#64707d] text-center -mt-2">
         No charge until you confirm your booking

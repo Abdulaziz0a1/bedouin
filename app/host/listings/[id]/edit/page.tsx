@@ -8,11 +8,19 @@ export const metadata = {
 };
 
 interface Props {
-  params: Promise<{ id: string }>;
+  params:      Promise<{ id: string }>;
+  searchParams: Promise<{ step?: string; fromTemplate?: string }>;
 }
 
-export default async function EditListingPage({ params }: Props) {
-  const { id } = await params;
+export default async function EditListingPage({ params, searchParams }: Props) {
+  const { id }           = await params;
+  const { step, fromTemplate } = await searchParams;
+
+  // Parse the step query param — must be 1–6, otherwise start at 1
+  const stepNum = step ? parseInt(step, 10) : NaN;
+  const initialStep = (stepNum >= 1 && stepNum <= 6)
+    ? (stepNum as 1 | 2 | 3 | 4 | 5 | 6)
+    : undefined;
   const supabase = await createClient();
 
   const { data: { user } } = await supabase.auth.getUser();
@@ -48,7 +56,7 @@ export default async function EditListingPage({ params }: Props) {
   }
 
   // Approved listings are live — editing them is not supported here.
-  // (Admin would need to un-approve first.)
+  // Draft listings (template copies) and pending/rejected submissions are all editable.
   if (row.status === "approved") {
     redirect("/dashboard");
   }
@@ -84,10 +92,12 @@ export default async function EditListingPage({ params }: Props) {
         <EditListingFlow
           submissionId={id}
           initialDraft={initialDraft}
-          currentStatus={row.status as "pending_review" | "rejected"}
+          currentStatus={row.status as "pending_review" | "rejected" | "draft"}
           rejectionReason={row.rejection_reason ?? undefined}
           listingTitle={row.title ?? "Untitled Listing"}
           userId={user.id}
+          initialStep={initialStep}
+          fromTemplate={fromTemplate === "true"}
         />
       </main>
     </div>

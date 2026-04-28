@@ -16,6 +16,7 @@ export interface DashboardListing {
   submittedAt: string; // ISO date
   approvedAt?: string;
   rejectionReason?: string;
+  rejectedStep?: string;    // one of: category|description|location|capacity_rules|amenities|pricing|media
   totalBookings: number;
   totalEarned: number;
   avgRating: number;

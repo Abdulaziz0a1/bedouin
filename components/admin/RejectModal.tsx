@@ -1,6 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import type { RejectionStep } from "@/lib/actions/admin";
+
+/* ─── Category → step mapping ────────────────────────────────────────────── */
+
+const REJECTION_CATEGORIES: {
+  id:    RejectionStep;
+  label: string;
+  step:  number;
+  hint:  string;
+}[] = [
+  { id: "media",          label: "Photos / Media",          step: 6, hint: "Images are missing, low quality, or inappropriate." },
+  { id: "description",    label: "Title / Description",      step: 2, hint: "Title or description is unclear, too short, or misleading." },
+  { id: "location",       label: "Location",                 step: 3, hint: "Location or Google Maps link is missing or inaccurate." },
+  { id: "pricing",        label: "Pricing",                  step: 5, hint: "Price is missing, inconsistent, or not aligned with quality." },
+  { id: "capacity_rules", label: "Capacity / House Rules",   step: 3, hint: "Capacity, min nights, or house rules are incomplete." },
+  { id: "amenities",      label: "Amenities",                step: 4, hint: "Too few amenities or inaccurate amenity selections." },
+  { id: "category",       label: "Property Type",            step: 1, hint: "Property type doesn't match Bedouin's platform focus." },
+];
 
 const QUICK_REASONS = [
   "Photos do not meet quality standards (min. 4 high-resolution images required).",
@@ -11,24 +29,34 @@ const QUICK_REASONS = [
   "House rules are missing or insufficient.",
 ];
 
+export interface RejectPayload {
+  reason: string;
+  step:   RejectionStep | null;
+}
+
 interface RejectModalProps {
   listingTitle: string;
-  onConfirm: (reason: string) => void;
-  onCancel: () => void;
+  onConfirm:    (payload: RejectPayload) => void;
+  onCancel:     () => void;
   isSubmitting: boolean;
 }
 
 export default function RejectModal({
   listingTitle, onConfirm, onCancel, isSubmitting,
 }: RejectModalProps) {
-  const [reason, setReason] = useState("");
+  const [reason,       setReason]       = useState("");
+  const [selectedStep, setSelectedStep] = useState<RejectionStep | null>(null);
 
   const handleQuickReason = (r: string) => {
     setReason((prev) => prev ? `${prev.trimEnd()} ${r}` : r);
   };
 
+  const handleConfirm = () => {
+    if (!reason.trim()) return;
+    onConfirm({ reason: reason.trim(), step: selectedStep });
+  };
+
   return (
-    /* Backdrop */
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-[#1a0e02]/40 backdrop-blur-sm"
@@ -36,10 +64,10 @@ export default function RejectModal({
       />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
 
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-[#f0e8de]">
+        <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-[#f0e8de] shrink-0">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center">
@@ -63,8 +91,38 @@ export default function RejectModal({
           </button>
         </div>
 
-        {/* Body */}
-        <div className="px-6 py-5 flex flex-col gap-4">
+        {/* Body — scrollable */}
+        <div className="px-6 py-5 flex flex-col gap-5 overflow-y-auto">
+
+          {/* Step category — host will be routed here when they click "Fix & resubmit" */}
+          <div>
+            <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest mb-2">
+              Which step needs fixing? <span className="text-[#a09080] normal-case font-normal">(host is taken directly there)</span>
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {REJECTION_CATEGORIES.map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setSelectedStep(cat.id === selectedStep ? null : cat.id)}
+                  className={[
+                    "text-left px-3 py-2.5 rounded-xl border text-xs transition-all",
+                    selectedStep === cat.id
+                      ? "border-red-400 bg-red-50 text-red-700 font-semibold"
+                      : "border-[#e8dfd4] bg-[#faf7f4] text-[#64707d] hover:border-[#8b5e38]",
+                  ].join(" ")}
+                >
+                  <span className="font-semibold text-[10px] text-[#a09080] block">Step {cat.step}</span>
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+            {selectedStep && (
+              <p className="text-[10px] text-[#64707d] mt-1.5 px-1">
+                {REJECTION_CATEGORIES.find((c) => c.id === selectedStep)?.hint}
+              </p>
+            )}
+          </div>
 
           {/* Quick reason chips */}
           <div>
@@ -104,7 +162,7 @@ export default function RejectModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center gap-3 px-6 pb-5">
+        <div className="flex items-center gap-3 px-6 pb-5 shrink-0">
           <button
             type="button"
             onClick={onCancel}
@@ -114,7 +172,7 @@ export default function RejectModal({
           </button>
           <button
             type="button"
-            onClick={() => reason.trim() && onConfirm(reason.trim())}
+            onClick={handleConfirm}
             disabled={!reason.trim() || isSubmitting}
             className="flex-[2] py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
           >

@@ -18,10 +18,34 @@ type EditStep = 1 | 2 | 3 | 4 | 5 | 6 | "saved";
 interface EditListingFlowProps {
   submissionId:    string;
   initialDraft:    ListingDraft;
-  currentStatus:   "pending_review" | "rejected";
+  currentStatus:   "pending_review" | "rejected" | "draft";
   rejectionReason?: string;
   listingTitle:    string;
   userId:          string;
+  /** If provided, the form opens directly at this step (1–6).
+   *  Used when the host clicks "Fix & resubmit" from a rejection notice. */
+  initialStep?:    1 | 2 | 3 | 4 | 5 | 6;
+  /** True when this listing was created via "Use as template". */
+  fromTemplate?:   boolean;
+}
+
+/* ─── Template Notice Banner ────────────────────────────────────────────────── */
+
+function TemplateBanner() {
+  return (
+    <div className="flex items-start gap-3 bg-[#fdf8ee] border border-[#ead9a6] rounded-2xl px-5 py-4 mb-8">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-[#8b6a1f] shrink-0 mt-0.5">
+        <path d="M8 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M14 2v6h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <div>
+        <p className="text-sm font-semibold text-[#8b6a1f] mb-1">You are using a previous listing as a template</p>
+        <p className="text-xs text-[#8b6a1f] leading-relaxed">
+          The fields below are pre-filled from your original listing. Review and update the title, location, photos, price, and capacity before submitting for admin review.
+        </p>
+      </div>
+    </div>
+  );
 }
 
 /* ─── Rejection Banner ──────────────────────────────────────────────────────── */
@@ -55,7 +79,7 @@ function RejectionBanner({ reason, onDismiss }: { reason: string; onDismiss: () 
 
 /* ─── Save Confirmation ─────────────────────────────────────────────────────── */
 
-function SaveConfirmation({ title }: { title: string }) {
+function SaveConfirmation({ title, isTemplate }: { title: string; isTemplate?: boolean }) {
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-4">
       <div className="bg-white border border-[#e8dfd4] rounded-3xl p-10 max-w-md w-full text-center shadow-sm">
@@ -65,12 +89,15 @@ function SaveConfirmation({ title }: { title: string }) {
             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" />
           </svg>
         </div>
-        <h2 className="font-display font-extrabold text-[#1a0e02] text-2xl mb-2">Changes saved</h2>
+        <h2 className="font-display font-extrabold text-[#1a0e02] text-2xl mb-2">
+          {isTemplate ? "Submitted for review" : "Changes saved"}
+        </h2>
         <p className="text-[#64707d] text-sm mb-1">
-          <span className="font-semibold text-[#1a0e02]">{title}</span> has been resubmitted for review.
+          <span className="font-semibold text-[#1a0e02]">{title}</span>{" "}
+          {isTemplate ? "has been submitted for admin review." : "has been resubmitted for review."}
         </p>
         <p className="text-xs text-[#a09080] mb-8">
-          Our team will review your updated listing and notify you within 48 hours.
+          Our team will review your listing and notify you within 48 hours.
         </p>
         <a
           href="/dashboard"
@@ -92,10 +119,12 @@ export default function EditListingFlow({
   rejectionReason,
   listingTitle,
   userId,
+  initialStep,
+  fromTemplate,
 }: EditListingFlowProps) {
   const router = useRouter();
 
-  const [step,          setStep]          = useState<EditStep>(1);
+  const [step,          setStep]          = useState<EditStep>(initialStep ?? 1);
   const [draft,         setDraft]         = useState<ListingDraft>(initialDraft);
   const [saving,        setSaving]        = useState(false);
   const [saveError,     setSaveError]     = useState<string | null>(null);
@@ -165,7 +194,7 @@ export default function EditListingFlow({
 
   /* ─── Confirmation ── */
   if (step === "saved") {
-    return <SaveConfirmation title={draft.title || listingTitle} />;
+    return <SaveConfirmation title={draft.title || listingTitle} isTemplate={fromTemplate} />;
   }
 
   const currentStep = step as 1 | 2 | 3 | 4 | 5 | 6;
@@ -196,17 +225,20 @@ export default function EditListingFlow({
           Back to Dashboard
         </a>
 
-        {/* Edit mode label */}
+        {/* Mode label */}
         <div className="flex items-center gap-3 mb-6">
           <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-[#8b5e38] bg-[#fdf5ee] border border-[#e8dfd4] px-3 py-1 rounded-full">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
               <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            Editing listing
+            {fromTemplate ? "New listing from template" : "Editing listing"}
           </span>
           <h1 className="font-display font-bold text-[#1a0e02] text-lg truncate">{listingTitle}</h1>
         </div>
+
+        {/* Template notice */}
+        {fromTemplate && <TemplateBanner />}
 
         {/* Rejection banner */}
         {showRejection && rejectionReason && (
@@ -286,7 +318,7 @@ export default function EditListingFlow({
                   onSubmit={handleSave}
                   onBack={() => setStep(5)}
                   isSubmitting={saving}
-                  submitLabel="Save & resubmit"
+                  submitLabel={fromTemplate ? "Submit for review" : "Save & resubmit"}
                   userId={userId}
                 />
               </>

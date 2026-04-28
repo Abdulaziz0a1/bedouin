@@ -21,7 +21,8 @@ export async function fetchHostListings(hostId: string): Promise<DashboardListin
       .from("listing_submissions")
       .select("*")
       .eq("host_id", hostId)
-      .order("submitted_at", { ascending: false });
+      .is("removed_at", null)
+      .order("submitted_at", { ascending: false, nullsFirst: false });
 
     if (error || !data) return [];
     if (data.length === 0) return [];
@@ -178,6 +179,7 @@ export async function fetchHostListings(hostId: string): Promise<DashboardListin
                               ? row.reviewed_at.slice(0, 10)
                               : undefined,
           rejectionReason:  row.rejection_reason ?? undefined,
+          rejectedStep:     row.rejected_step    ?? undefined,
           totalBookings:    bkStats.totalBookings,
           totalEarned:      bkStats.totalEarned,
           avgRating:        rvStats.avgRating,

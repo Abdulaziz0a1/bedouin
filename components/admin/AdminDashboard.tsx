@@ -10,6 +10,7 @@ import {
   approveSubmission, rejectSubmission,
   approveHostApplication, rejectHostApplication,
   approveCohostApplication, rejectCohostApplication,
+  type RejectionStep,
 } from "@/lib/actions/admin";
 import {
   approveListingCancellationRequest,
@@ -398,8 +399,8 @@ export default function AdminDashboard({
     setListings((prev) => prev.map((l) => l.id === id ? { ...l, status: "approved" as AdminListingStatus, reviewedAt: new Date().toISOString() } : l));
   };
 
-  const handleReject = async (id: string, reason: string) => {
-    const result = await rejectSubmission(id, reason);
+  const handleReject = async (id: string, reason: string, step: string | null) => {
+    const result = await rejectSubmission(id, reason, (step ?? undefined) as RejectionStep | undefined);
     if (!result.success) { console.error("Reject failed:", result.error); return; }
     setListings((prev) => prev.map((l) => l.id === id ? { ...l, status: "rejected" as AdminListingStatus, rejectionReason: reason, reviewedAt: new Date().toISOString() } : l));
   };

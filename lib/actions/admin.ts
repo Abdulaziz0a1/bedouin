@@ -191,14 +191,25 @@ export async function approveSubmission(
 
 /* ─── Reject ─────────────────────────────────────────────────────────────── */
 
+export type RejectionStep =
+  | "category"
+  | "description"
+  | "location"
+  | "capacity_rules"
+  | "amenities"
+  | "pricing"
+  | "media";
+
 /**
  * Rejects a listing submission:
  *   1. Verifies admin role.
- *   2. UPDATEs `listing_submissions` with rejected status + reason.
+ *   2. UPDATEs `listing_submissions` with rejected status, reason, and optional
+ *      rejectedStep so the host is routed directly to the relevant form step.
  */
 export async function rejectSubmission(
   submissionId: string,
-  reason: string
+  reason: string,
+  rejectedStep?: RejectionStep
 ): Promise<AdminActionResult> {
   try {
     const supabase = await createClient();
@@ -214,6 +225,7 @@ export async function rejectSubmission(
         reviewed_at:      new Date().toISOString(),
         reviewed_by:      adminId,
         rejection_reason: reason,
+        rejected_step:    rejectedStep ?? null,
       })
       .eq("id", submissionId);
 

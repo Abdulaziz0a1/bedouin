@@ -71,6 +71,21 @@ async function resolveHostForListing(
 
 /* ─── Server Action ──────────────────────────────────────────────────────── */
 
+/**
+ * Creates a booking using the create_booking_safe() Postgres RPC.
+ *
+ * The RPC runs inside a single transaction and:
+ *   1. Verifies auth.uid() == p_user_id (security)
+ *   2. Validates check-in/out dates are not in the past
+ *   3. Acquires a row-level lock on the listings row (FOR UPDATE) to prevent
+ *      concurrent double-booking race conditions
+ *   4. Sums confirmed guests for overlapping date ranges
+ *   5. Rejects if remaining capacity < requested guests
+ *   6. Inserts the confirmed booking
+ *
+ * Capacity is enforced atomically at the database level — client-side checks
+ * alone are not trusted.
+ */
 export async function createBooking(
   input: CreateBookingInput
 ): Promise<CreateBookingResult> {
@@ -90,47 +105,55 @@ export async function createBooking(
     }
 
     // Resolve host identity server-side from the listings table.
-    // host_id and host_name will be null for manually seeded listings.
     const { hostId, hostName } = await resolveHostForListing(
       supabase,
       input.listingSlug
     );
 
     // Generate UUID + human-readable reference entirely on the server.
-    // Format: BDN-XXXXXXXX (first 8 hex chars of the UUID, uppercased).
     const id        = crypto.randomUUID();
     const reference = `BDN-${id.replace(/-/g, "").slice(0, 8).toUpperCase()}`;
 
-    const { error } = await supabase.from("bookings").insert({
-      id,
-      reference,
-      user_id:           user.id,
-      listing_slug:      input.listingSlug,
-      listing_category:  input.listingCategory,
-      listing_title:     input.listingTitle,
-      location:          input.location,
-      image:             input.image,
-      check_in:          input.checkIn,
-      check_out:         input.checkOut,
-      nights:            input.nights,
-      adults:            input.adults,
-      children:          input.children,
-      subtotal:          input.subtotal,
-      service_fee:       input.serviceFee,
-      total_price:       input.totalPrice,
-      guest_name:        input.guestName,
-      guest_email:       input.guestEmail,
-      guest_phone:       input.guestPhone       || null,
-      guest_nationality: input.guestNationality || null,
-      special_requests:  input.specialRequests  || null,
-      payment_method:    input.paymentMethod,
-      host_id:           hostId,
-      host_name:         hostName,
-      status:            "confirmed",
-    });
+    // Call the atomic RPC. It handles the capacity check, row-lock, and insert
+    // in one Postgres transaction — race-condition-safe.
+    const { data: rpcResult, error: rpcError } = await supabase.rpc(
+      "create_booking_safe",
+      {
+        p_id:               id,
+        p_reference:        reference,
+        p_user_id:          user.id,
+        p_listing_slug:     input.listingSlug,
+        p_listing_category: input.listingCategory,
+        p_listing_title:    input.listingTitle,
+        p_location:         input.location,
+        p_image:            input.image,
+        p_check_in:         input.checkIn,
+        p_check_out:        input.checkOut,
+        p_nights:           input.nights,
+        p_adults:           input.adults,
+        p_children:         input.children,
+        p_subtotal:         input.subtotal,
+        p_service_fee:      input.serviceFee,
+        p_total_price:      input.totalPrice,
+        p_guest_name:       input.guestName,
+        p_guest_email:      input.guestEmail,
+        p_guest_phone:      input.guestPhone       || null,
+        p_guest_nationality: input.guestNationality || null,
+        p_special_requests: input.specialRequests  || null,
+        p_payment_method:   input.paymentMethod,
+        p_host_id:          hostId,
+        p_host_name:        hostName,
+      }
+    );
 
-    if (error) {
-      return { success: false, error: error.message };
+    if (rpcError) {
+      return { success: false, error: rpcError.message };
+    }
+
+    const result = rpcResult as { success: boolean; error?: string; remaining?: number };
+
+    if (!result.success) {
+      return { success: false, error: result.error ?? "Booking could not be completed." };
     }
 
     return { success: true, reference };

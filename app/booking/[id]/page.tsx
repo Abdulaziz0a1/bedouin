@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import { fetchListingDetail } from "@/lib/services/listing-detail";
+import { createClient } from "@/lib/supabase-server";
 import BookingFlow from "@/components/booking/BookingFlow";
 
 // Deduplicated fetch: generateMetadata and the page share one DB call per request.
@@ -32,6 +33,22 @@ export default async function BookingPage({ params, searchParams }: Props) {
   const adults      = Math.max(1, parseInt(sp?.adults   ?? "1",  10));
   const children    = Math.max(0, parseInt(sp?.children ?? "0", 10));
 
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  let prefill = { firstName: "", lastName: "", email: "" };
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("first_name, last_name")
+      .eq("id", user.id)
+      .single();
+    prefill = {
+      firstName: profile?.first_name ?? "",
+      lastName:  profile?.last_name  ?? "",
+      email:     user.email          ?? "",
+    };
+  }
+
   return (
     <div className="min-h-screen bg-[#f4efe6]">
       <main className="pt-[72px]">
@@ -41,6 +58,7 @@ export default async function BookingPage({ params, searchParams }: Props) {
           checkOutStr={checkOutStr}
           initialAdults={adults}
           initialChildren={children}
+          prefill={prefill}
         />
       </main>
     </div>

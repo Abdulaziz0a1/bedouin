@@ -4,10 +4,11 @@ import { useState } from "react";
 import { GuestDetails } from "@/lib/types/booking";
 
 const NATIONALITIES = [
-  "Saudi Arabian","Emirati","Kuwaiti","Bahraini","Omani","Qatari",
-  "Egyptian","Jordanian","Lebanese","Syrian","Yemeni","Moroccan","Tunisian",
-  "American","British","French","German","Australian","Canadian",
-  "Indian","Pakistani","Filipino","Other",
+  "American","Australian","Bahraini","British","Canadian",
+  "Egyptian","Emirati","Filipino","French","German",
+  "Indian","Jordanian","Kuwaiti","Lebanese","Moroccan",
+  "Omani","Pakistani","Qatari","Saudi Arabian","Syrian",
+  "Tunisian","Yemeni","Other",
 ];
 
 interface GuestDetailsStepProps {

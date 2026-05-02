@@ -31,9 +31,17 @@ ALTER TABLE public.listing_submissions
 -- Called by the BookingCard (client component) and the booking server action
 -- to show live remaining capacity for a listing + date range.
 --
+-- SECURITY DEFINER is required: RLS on bookings only lets users see their own
+-- bookings, so SECURITY INVOKER would cause User B to miss User A's booking
+-- and wrongly report the slot as available.
+--
+-- Availability model: each listing is a single unit (tent, dome, farm, villa).
+-- A confirmed booking for ANY overlapping date range blocks the listing fully.
+-- max_guests is a per-booking guest cap, not a cumulative slot counter.
+--
 -- Returns JSONB:
 --   { available: bool, remaining: int, max_guests: int, booked_guests: int }
---   { available: true, remaining: guests, unchecked: true }   ← seeded listings
+--   { available: true, remaining: guests, unchecked: true }   ← unlisted slugs
 --
 -- Date overlap logic (standard half-open interval):
 --   existing booking overlaps requested range when:
@@ -49,18 +57,18 @@ CREATE OR REPLACE FUNCTION public.check_listing_availability(
 RETURNS JSONB
 LANGUAGE plpgsql
 STABLE
-SECURITY INVOKER
+SECURITY DEFINER
+SET search_path = public, auth
 AS $$
 DECLARE
-  v_max_guests   INTEGER;
-  v_booked       INTEGER;
-  v_remaining    INTEGER;
+  v_max_guests  INTEGER;
+  v_has_booking BOOLEAN;
 BEGIN
   SELECT max_guests INTO v_max_guests
   FROM public.listings
   WHERE slug = p_slug;
 
-  -- Listing not found (manually-seeded demo data) — skip capacity enforcement
+  -- Listing not found in listings table — skip enforcement (unlisted/demo slug)
   IF v_max_guests IS NULL THEN
     RETURN jsonb_build_object(
       'available',  true,
@@ -69,20 +77,20 @@ BEGIN
     );
   END IF;
 
-  SELECT COALESCE(SUM(adults + children), 0) INTO v_booked
-  FROM public.bookings
-  WHERE listing_slug = p_slug
-    AND status       = 'confirmed'
-    AND check_in     < p_check_out
-    AND check_out    > p_check_in;
-
-  v_remaining := v_max_guests - v_booked;
+  -- A single confirmed booking for overlapping dates makes the listing unavailable.
+  SELECT EXISTS (
+    SELECT 1 FROM public.bookings
+    WHERE listing_slug = p_slug
+      AND status       = 'confirmed'
+      AND check_in     < p_check_out
+      AND check_out    > p_check_in
+  ) INTO v_has_booking;
 
   RETURN jsonb_build_object(
-    'available',     v_remaining >= p_requested_guests,
-    'remaining',     v_remaining,
+    'available',     NOT v_has_booking,
+    'remaining',     CASE WHEN v_has_booking THEN 0 ELSE v_max_guests END,
     'max_guests',    v_max_guests,
-    'booked_guests', v_booked
+    'booked_guests', CASE WHEN v_has_booking THEN v_max_guests ELSE 0 END
   );
 END;
 $$;
@@ -138,10 +146,7 @@ SECURITY DEFINER
 SET search_path = public, auth
 AS $$
 DECLARE
-  v_max_guests       INTEGER;
-  v_booked           INTEGER;
-  v_remaining        INTEGER;
-  v_requested_guests INTEGER;
+  v_max_guests INTEGER;
 BEGIN
   -- ── Security: only the authenticated user can book as themselves ──────────
   IF auth.uid() IS NULL OR auth.uid() != p_user_id THEN
@@ -162,31 +167,21 @@ BEGIN
   WHERE slug = p_listing_slug
   FOR UPDATE;
 
-  -- ── Capacity check (skipped for manually-seeded listings with no row) ─────
+  -- ── Availability check (skipped for unlisted/demo slugs with no row) ──────
+  -- Each listing is a single unit. Any confirmed booking for overlapping dates
+  -- makes it unavailable — we do not allow concurrent bookings for the same slot.
   IF v_max_guests IS NOT NULL THEN
-    v_requested_guests := p_adults + p_children;
-
-    SELECT COALESCE(SUM(adults + children), 0) INTO v_booked
-    FROM public.bookings
-    WHERE listing_slug = p_listing_slug
-      AND status       = 'confirmed'
-      AND check_in     < p_check_out
-      AND check_out    > p_check_in;
-
-    v_remaining := v_max_guests - v_booked;
-
-    IF v_remaining < v_requested_guests THEN
+    IF EXISTS (
+      SELECT 1 FROM public.bookings
+      WHERE listing_slug = p_listing_slug
+        AND status       = 'confirmed'
+        AND check_in     < p_check_out
+        AND check_out    > p_check_in
+    ) THEN
       RETURN jsonb_build_object(
         'success',   false,
-        'remaining', v_remaining,
-        'error',     CASE
-          WHEN v_remaining <= 0
-            THEN 'This listing is fully booked for the selected dates.'
-          ELSE format(
-            'Only %s spot(s) left for these dates. You requested %s guests.',
-            v_remaining, v_requested_guests
-          )
-        END
+        'remaining', 0,
+        'error',     'This listing is fully booked for the selected dates.'
       );
     END IF;
   END IF;

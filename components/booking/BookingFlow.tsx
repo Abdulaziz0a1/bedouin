@@ -8,6 +8,7 @@ import {
   BookingStep, BookingConfirmation,
 } from "@/lib/types/booking";
 import { createBooking } from "@/lib/actions/booking";
+import { checkAvailability } from "@/lib/actions/availability";
 import StepIndicator from "./StepIndicator";
 import BookingSummaryCard from "./BookingSummaryCard";
 import ReviewStep from "./ReviewStep";
@@ -56,6 +57,7 @@ interface BookingFlowProps {
   checkOutStr: string;
   initialAdults: number;
   initialChildren: number;
+  prefill?: { firstName: string; lastName: string; email: string };
 }
 
 /* ─── Component ────────────────────────────────────────────────────────────── */
@@ -66,6 +68,7 @@ export default function BookingFlow({
   checkOutStr,
   initialAdults,
   initialChildren,
+  prefill,
 }: BookingFlowProps) {
   /* ── Step ── */
   const [step, setStep] = useState<BookingStep>(1);
@@ -78,12 +81,12 @@ export default function BookingFlow({
 
   /* ── Step 2: Guest details ── */
   const [guestDetails, setGuestDetails] = useState<GuestDetails>({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    nationality: "",
-    requests: "",
+    firstName:     prefill?.firstName ?? "",
+    lastName:      prefill?.lastName  ?? "",
+    email:         prefill?.email     ?? "",
+    phone:         "",
+    nationality:   "",
+    requests:      "",
     agreedToRules: false,
   });
 
@@ -112,7 +115,16 @@ export default function BookingFlow({
   const total      = subtotal + serviceFee;
 
   /* ── Step 1 save ── */
-  const handleStep1Next = (ci: Date, co: Date, a: number, c: number) => {
+  const [step1Checking, setStep1Checking] = useState(false);
+  const handleStep1Next = async (ci: Date, co: Date, a: number, c: number) => {
+    setStep1Checking(true);
+    setBookingError(null);
+    const res = await checkAvailability(listing.id, toDateStr(ci), toDateStr(co), a + c);
+    setStep1Checking(false);
+    if (res.success && !res.data.available && !res.data.unchecked) {
+      setBookingError("This experience is fully booked for the selected dates. Please choose different dates.");
+      return;
+    }
     setCheckIn(ci); setCheckOut(co); setAdults(a); setChildren(c);
     setStep(2);
   };
@@ -211,6 +223,15 @@ export default function BookingFlow({
 
           {/* ── Left: current step ─────────────────────────────────────── */}
           <div className="flex-1 min-w-0">
+            {step === 1 && bookingError && (
+              <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-5">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-red-500 shrink-0 mt-0.5">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+                  <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+                <p className="text-sm text-red-600">{bookingError}</p>
+              </div>
+            )}
             {step === 1 && (
               <ReviewStep
                 checkIn={checkIn}
@@ -221,6 +242,7 @@ export default function BookingFlow({
                 minNights={listing.minNights}
                 houseRules={listing.houseRules}
                 onNext={handleStep1Next}
+                isChecking={step1Checking}
               />
             )}
             {step === 2 && (

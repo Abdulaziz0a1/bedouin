@@ -28,12 +28,13 @@ interface ReviewStepProps {
   maxGuests:  number;
   minNights:  number;
   houseRules: string[];
+  isChecking?: boolean;
   onNext: (checkIn: Date, checkOut: Date, adults: number, children: number) => void;
 }
 
 export default function ReviewStep({
   checkIn, checkOut, adults, children,
-  maxGuests, minNights, houseRules, onNext,
+  maxGuests, minNights, houseRules, isChecking = false, onNext,
 }: ReviewStepProps) {
   const [localCI, setLocalCI]         = useState<Date | null>(checkIn);
   const [localCO, setLocalCO]         = useState<Date | null>(checkOut);
@@ -273,10 +274,11 @@ export default function ReviewStep({
       <button
         type="button"
         onClick={handleNext}
-        className="w-full py-4 bg-[#8b5e38] font-bold text-base rounded-2xl hover:bg-[#7a5030] active:bg-[#6a4228] transition-colors shadow-sm"
+        disabled={isChecking}
+        className="w-full py-4 bg-[#8b5e38] font-bold text-base rounded-2xl hover:bg-[#7a5030] active:bg-[#6a4228] transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
         style={{ color: "#fff" }}
       >
-        Continue to Your Details →
+        {isChecking ? "Checking availability…" : "Continue to Your Details →"}
       </button>
     </div>
   );

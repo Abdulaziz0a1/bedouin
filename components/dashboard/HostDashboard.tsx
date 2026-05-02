@@ -238,15 +238,17 @@ export default function HostDashboard({
             </p>
           </div>
 
-          <a
-            href="/host/new"
-            className="sm:shrink-0 flex items-center gap-2 px-5 py-3 bg-[#8b5e38] text-white text-sm font-semibold rounded-xl hover:bg-[#7a5030] transition-colors shadow-sm"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-            </svg>
-            Add new listing
-          </a>
+          {activeTab === "listings" && (
+            <a
+              href="/host/new"
+              className="sm:shrink-0 flex items-center gap-2 px-5 py-3 bg-[#8b5e38] text-white text-sm font-semibold rounded-xl hover:bg-[#7a5030] transition-colors shadow-sm"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+              </svg>
+              Add new listing
+            </a>
+          )}
         </div>
 
         {/* Content */}

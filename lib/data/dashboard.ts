@@ -36,6 +36,7 @@ export interface DashboardBooking {
   listingId: string;
   listingTitle: string;
   listingImage: string;
+  guestId?: string;      // auth user id of the guest — used for messaging
   guestName: string;
   guestAvatar: string;
   guestNationality: string;

@@ -241,6 +241,7 @@ export async function fetchHostBookings(hostId: string): Promise<DashboardBookin
       listingId:        row.listing_slug,
       listingTitle:     row.listing_title,
       listingImage:     row.image,
+      guestId:          row.user_id ?? undefined,
       guestName:        row.guest_name,
       guestAvatar:      "",   // no fake avatar; BookingsSection renders initials
       guestNationality: row.guest_nationality ?? "",

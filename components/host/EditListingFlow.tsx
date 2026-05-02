@@ -13,6 +13,7 @@ import Step3Details        from "./steps/Step3Details";
 import Step4Amenities      from "./steps/Step4Amenities";
 import Step5Pricing        from "./steps/Step5Pricing";
 import Step6Review         from "./steps/Step6Review";
+import AlertBanner         from "@/components/ui/AlertBanner";
 
 type EditStep = 1 | 2 | 3 | 4 | 5 | 6 | "saved";
 
@@ -56,18 +57,19 @@ interface EditListingFlowProps {
 
 function TemplateBanner() {
   return (
-    <div className="flex items-start gap-3 bg-[#fdf8ee] border border-[#ead9a6] rounded-2xl px-5 py-4 mb-8">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-[#8b6a1f] shrink-0 mt-0.5">
-        <path d="M8 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M14 2v6h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-      <div>
-        <p className="text-sm font-semibold text-[#8b6a1f] mb-1">You are using a previous listing as a template</p>
-        <p className="text-xs text-[#8b6a1f] leading-relaxed">
-          The fields below are pre-filled from your original listing. Review and update the title, location, photos, price, and capacity before submitting for admin review.
-        </p>
-      </div>
-    </div>
+    <AlertBanner
+      variant="warning"
+      title="You are using a previous listing as a template"
+      description="The fields below are pre-filled from your original listing. Review and update the title, location, photos, price, and capacity before submitting for admin review."
+      icon={
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M8 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M14 2v6h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      }
+      dismissible
+      className="mb-8"
+    />
   );
 }
 

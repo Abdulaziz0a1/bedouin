@@ -4,14 +4,33 @@ import { useState } from "react";
 import type { DashboardBooking } from "@/lib/data/dashboard";
 import UserAvatar from "@/components/ui/UserAvatar";
 import DashboardEmptyState from "../shared/DashboardEmptyState";
+import { sendMessage } from "@/lib/actions/messages";
 
-type Tab = "upcoming" | "past";
+type Tab        = "upcoming" | "past";
+type DateFilter = "all" | "30" | "60" | "90";
 
 const PAYMENT_LABELS: Record<string, string> = {
   card:      "Credit / Debit Card",
   mada:      "Mada",
   apple_pay: "Apple Pay",
 };
+
+const TEMPLATES: { label: string; text: string }[] = [
+  {
+    label: "Thank you",
+    text:  "Thank you for staying with us! It was a pleasure hosting you and we hope you had a wonderful experience. We'd love to welcome you back anytime.",
+  },
+  {
+    label: "Special offer",
+    text:  "As one of our valued past guests, we'd like to offer you a special returning-guest discount on your next stay. Reply to this message and we'll share the details!",
+  },
+  {
+    label: "New experience",
+    text:  "We're excited to share that we've added a new experience to our listing. As a past guest, we wanted you to hear about it first!",
+  },
+];
+
+// ── StatusChip ──────────────────────────────────────────────────────────────
 
 function StatusChip({
   status,
@@ -47,7 +66,233 @@ function StatusChip({
   );
 }
 
-function BookingRow({ booking }: { booking: DashboardBooking }) {
+// ── BulkMessageModal ─────────────────────────────────────────────────────────
+
+function BulkMessageModal({
+  pastBookings,
+  onClose,
+}: {
+  pastBookings: DashboardBooking[];
+  onClose: () => void;
+}) {
+  const [filter,           setFilter]          = useState<DateFilter>("all");
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [customTitle,      setCustomTitle]      = useState("");
+  const [message,          setMessage]          = useState("");
+  const [sending,          setSending]          = useState(false);
+  const [done,             setDone]             = useState<{ sent: number; failed: number } | null>(null);
+
+  const wordCount      = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
+  const titleOverLimit = wordCount(customTitle) > 6;
+  const fullContent    = selectedTemplate === "Custom" && customTitle.trim()
+    ? `${customTitle.trim()}\n\n${message.trim()}`
+    : message.trim();
+
+  const now = Date.now();
+  const cutoffs: Record<Exclude<DateFilter, "all">, Date> = {
+    "30": new Date(now - 30 * 86400000),
+    "60": new Date(now - 60 * 86400000),
+    "90": new Date(now - 90 * 86400000),
+  };
+
+  const eligible = pastBookings.filter((b) => {
+    if (!b.guestId) return false;
+    if (filter === "all") return true;
+    return new Date(b.checkOut) >= cutoffs[filter as Exclude<DateFilter, "all">];
+  });
+
+  // One message per unique guest — keep the most-recent booking for context
+  const uniqueGuests = Object.values(
+    eligible.reduce<Record<string, DashboardBooking>>((acc, b) => {
+      if (!acc[b.guestId!] || b.checkOut > acc[b.guestId!].checkOut) {
+        acc[b.guestId!] = b;
+      }
+      return acc;
+    }, {})
+  );
+
+  const handleSend = async () => {
+    if (!fullContent || uniqueGuests.length === 0 || titleOverLimit) return;
+    setSending(true);
+    let sent = 0, failed = 0;
+    for (const b of uniqueGuests) {
+      const res = await sendMessage(b.guestId!, fullContent, b.listingId || undefined, b.id);
+      if (res.success) sent++; else failed++;
+    }
+    setSending(false);
+    setDone({ sent, failed });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4 pb-4 sm:pb-0">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh] overflow-hidden">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#f0e8de] shrink-0">
+          <h3 className="font-display font-bold text-[#1a0e02] text-base">Message past guests</h3>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-[#f0e8de] transition-colors text-[#64707d]"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
+          {done ? (
+            <div className="flex flex-col items-center text-center gap-3 py-6">
+              <div className="w-12 h-12 rounded-2xl bg-[#f0faf5] flex items-center justify-center text-[#049153]">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+                </svg>
+              </div>
+              <p className="font-semibold text-[#1a0e02] text-sm">
+                {done.sent} message{done.sent !== 1 ? "s" : ""} sent
+              </p>
+              {done.failed > 0 && (
+                <p className="text-xs text-red-600">{done.failed} failed to send</p>
+              )}
+              <button
+                onClick={onClose}
+                className="mt-2 px-5 py-2 bg-[#461e00] text-white text-sm font-semibold rounded-xl hover:bg-[#5a2900] transition-colors"
+              >
+                Done
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Recipient filter */}
+              <div className="flex flex-col gap-2">
+                <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest">Recipients</p>
+                <div className="flex gap-2 flex-wrap">
+                  {([
+                    { id: "all", label: "All past guests" },
+                    { id: "30",  label: "Last 30 days"    },
+                    { id: "60",  label: "Last 60 days"    },
+                    { id: "90",  label: "Last 90 days"    },
+                  ] as { id: DateFilter; label: string }[]).map(({ id, label }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setFilter(id)}
+                      className={[
+                        "px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors",
+                        filter === id
+                          ? "bg-[#461e00] text-white border-[#461e00]"
+                          : "bg-white text-[#64707d] border-[#e8dfd4] hover:border-[#8b5e38]",
+                      ].join(" ")}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-[#64707d]">
+                  {uniqueGuests.length} unique guest{uniqueGuests.length !== 1 ? "s" : ""} will receive this message
+                </p>
+              </div>
+
+              {/* Templates */}
+              <div className="flex flex-col gap-2">
+                <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest">Templates</p>
+                <div className="flex gap-2 flex-wrap">
+                  {TEMPLATES.map((t) => (
+                    <button
+                      key={t.label}
+                      type="button"
+                      onClick={() => { setSelectedTemplate(t.label); setMessage(t.text); setCustomTitle(""); }}
+                      className={[
+                        "px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors",
+                        selectedTemplate === t.label
+                          ? "bg-[#8b5e38] text-white border-[#8b5e38]"
+                          : "bg-white text-[#64707d] border-[#e8dfd4] hover:border-[#8b5e38] hover:text-[#1a0e02]",
+                      ].join(" ")}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedTemplate("Custom"); setMessage(""); setCustomTitle(""); }}
+                    className={[
+                      "px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors",
+                      selectedTemplate === "Custom"
+                        ? "bg-[#8b5e38] text-white border-[#8b5e38]"
+                        : "bg-white text-[#64707d] border-[#e8dfd4] hover:border-[#8b5e38] hover:text-[#1a0e02]",
+                    ].join(" ")}
+                  >
+                    Custom
+                  </button>
+                </div>
+
+                {/* Custom title input — shown only when Custom is selected */}
+                {selectedTemplate === "Custom" && (
+                  <div className="flex flex-col gap-1 mt-1">
+                    <input
+                      type="text"
+                      value={customTitle}
+                      onChange={(e) => { if (e.target.value.length <= 40) setCustomTitle(e.target.value); }}
+                      placeholder="Message title…"
+                      className={[
+                        "w-full border rounded-xl px-3 py-2 text-sm text-[#1a0e02] placeholder:text-[#a09080] focus:outline-none transition-colors",
+                        titleOverLimit ? "border-red-400 focus:border-red-500" : "border-[#e8dfd4] focus:border-[#8b5e38]",
+                      ].join(" ")}
+                    />
+                    <div className="flex items-center justify-between px-0.5">
+                      <p className="text-[10px] text-[#a09080]">Keep it short and clear.</p>
+                      <p className={`text-[10px] font-semibold ${titleOverLimit ? "text-red-500" : "text-[#a09080]"}`}>
+                        {customTitle.length}/40 · {wordCount(customTitle)}/6 words
+                      </p>
+                    </div>
+                    {titleOverLimit && (
+                      <p className="text-[10px] text-red-500 px-0.5">Title must be 6 words or fewer.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Message */}
+              <div className="flex flex-col gap-1.5">
+                <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest">Message</p>
+                <textarea
+                  rows={5}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Write your message to past guests…"
+                  className="w-full border border-[#e8dfd4] rounded-xl px-3 py-2.5 text-sm text-[#1a0e02] placeholder:text-[#a09080] focus:outline-none focus:border-[#8b5e38] resize-none transition-colors"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSend}
+                disabled={sending || !fullContent || uniqueGuests.length === 0 || titleOverLimit}
+                className="w-full py-3 bg-[#461e00] text-white font-bold text-sm rounded-2xl hover:bg-[#5a2900] disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+              >
+                {sending ? (
+                  <>
+                    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeDasharray="31.4" strokeDashoffset="15" />
+                    </svg>
+                    Sending…
+                  </>
+                ) : (
+                  `Send to ${uniqueGuests.length} guest${uniqueGuests.length !== 1 ? "s" : ""}`
+                )}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── BookingRow ────────────────────────────────────────────────────────────────
+
+function BookingRow({ booking, isPast }: { booking: DashboardBooking; isPast: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const fmtDate = (iso: string) =>
     new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -125,7 +370,20 @@ function BookingRow({ booking }: { booking: DashboardBooking }) {
             </div>
           </div>
 
-          {/* Cancellation details — only when cancelled by guest */}
+          {/* Message guest — past bookings with a known guest user id */}
+          {isPast && booking.guestId && (
+            <a
+              href={`/messages?with=${booking.guestId}&booking=${booking.id}&listing=${booking.listingId}`}
+              className="inline-flex items-center gap-2 self-start px-4 py-2 rounded-xl border border-[#e8dfd4] bg-white text-sm font-semibold text-[#1a0e02] hover:bg-[#faf7f4] hover:border-[#8b5e38] transition-colors"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Message {booking.guestName.split(" ")[0]}
+            </a>
+          )}
+
+          {/* Cancellation details — only when cancelled */}
           {booking.status === "cancelled" && (
             <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3">
               <div className="flex items-center gap-1.5 mb-1.5">
@@ -158,8 +416,11 @@ function BookingRow({ booking }: { booking: DashboardBooking }) {
   );
 }
 
+// ── BookingsSection ───────────────────────────────────────────────────────────
+
 export default function BookingsSection({ bookings }: { bookings: DashboardBooking[] }) {
-  const [tab, setTab] = useState<Tab>("upcoming");
+  const [tab,       setTab]       = useState<Tab>("upcoming");
+  const [showBulk,  setShowBulk]  = useState(false);
 
   const upcoming = bookings.filter((b) => b.status === "upcoming" || b.status === "active");
   const past      = bookings.filter((b) => b.status === "completed" || b.status === "cancelled");
@@ -168,6 +429,8 @@ export default function BookingsSection({ bookings }: { bookings: DashboardBooki
 
   const totalRevenue = past.filter(b => b.status === "completed")
     .reduce((s, b) => s + b.hostPayout, 0);
+
+  const messagablePastGuests = past.filter((b) => b.guestId).length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -183,22 +446,38 @@ export default function BookingsSection({ bookings }: { bookings: DashboardBooki
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-[#f0e8de] rounded-xl p-1 w-fit">
-        {(["upcoming", "past"] as Tab[]).map((t) => (
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex gap-1 bg-[#f0e8de] rounded-xl p-1">
+          {(["upcoming", "past"] as Tab[]).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={[
+                "px-5 py-2 rounded-lg text-sm font-semibold transition-all",
+                tab === t ? "bg-white text-[#1a0e02] shadow-sm" : "text-[#64707d] hover:text-[#1a0e02]",
+              ].join(" ")}
+            >
+              {t === "upcoming" ? "Upcoming" : "Past"}
+              <span className={`ml-1.5 text-xs ${tab === t ? "text-[#8b5e38]" : "text-[#a09080]"}`}>
+                {t === "upcoming" ? upcoming.length : past.length}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Bulk message — only on past tab with messageable guests */}
+        {tab === "past" && messagablePastGuests > 0 && (
           <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={[
-              "px-5 py-2 rounded-lg text-sm font-semibold transition-all",
-              tab === t ? "bg-white text-[#1a0e02] shadow-sm" : "text-[#64707d] hover:text-[#1a0e02]",
-            ].join(" ")}
+            type="button"
+            onClick={() => setShowBulk(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#e8dfd4] bg-white text-xs font-semibold text-[#64707d] hover:border-[#8b5e38] hover:text-[#1a0e02] transition-colors"
           >
-            {t === "upcoming" ? "Upcoming" : "Past"}
-            <span className={`ml-1.5 text-xs ${tab === t ? "text-[#8b5e38]" : "text-[#a09080]"}`}>
-              {t === "upcoming" ? upcoming.length : past.length}
-            </span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Message past guests
           </button>
-        ))}
+        )}
       </div>
 
       {/* List */}
@@ -220,7 +499,7 @@ export default function BookingsSection({ bookings }: { bookings: DashboardBooki
       ) : (
         <div className="flex flex-col gap-3">
           {shown.map((b) => (
-            <BookingRow key={b.id} booking={b} />
+            <BookingRow key={b.id} booking={b} isPast={tab === "past"} />
           ))}
         </div>
       )}
@@ -250,6 +529,11 @@ export default function BookingsSection({ bookings }: { bookings: DashboardBooki
             </div>
           </div>
         </div>
+      )}
+
+      {/* Bulk message modal */}
+      {showBulk && (
+        <BulkMessageModal pastBookings={past} onClose={() => setShowBulk(false)} />
       )}
     </div>
   );

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
 import Footer from "@/components/layout/Footer";
 import HostOnboardingForm from "@/components/host/HostOnboardingForm";
+import AlertBanner from "@/components/ui/AlertBanner";
 
 export const metadata = {
   title: "Become a Bedouin Host — Apply",
@@ -61,13 +62,13 @@ export default async function HostOnboardingPage() {
 
             {/* Rejection notice */}
             {profile?.host_status === "rejected" && (
-              <div className="mt-4 inline-flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-2 text-sm text-red-700">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
-                  <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-                Your previous application was not approved. You may apply again.
-              </div>
+              <AlertBanner
+                variant="error"
+                title="Your previous application was not approved. You may apply again."
+                compact
+                dismissible
+                className="mt-4 mx-auto"
+              />
             )}
           </div>
 

@@ -15,6 +15,7 @@ import {
   type EarningsMonth,
 } from "@/lib/data/dashboard";
 import StatusBadge from "../shared/StatusBadge";
+import AlertBanner from "@/components/ui/AlertBanner";
 
 function KPICard({
   label,
@@ -190,40 +191,22 @@ export default function OverviewSection({
   return (
     <div className="flex flex-col gap-6">
 
-      {/* Alert: pending review */}
       {pendingListings.length > 0 && (
-        <div className="bg-[#fdf8ee] border border-[#ead9a6] rounded-2xl px-5 py-4 flex items-start gap-3">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-[#c49a4f] shrink-0 mt-0.5">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
-            <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          <div>
-            <p className="text-sm font-semibold text-[#8b6a1f]">
-              {pendingListings.length} listing{pendingListings.length > 1 ? "s" : ""} under review
-            </p>
-            <p className="text-xs text-[#a08040] mt-0.5">
-              Our team usually responds within 48 hours. You'll receive an email once approved.
-            </p>
-          </div>
-        </div>
+        <AlertBanner
+          variant="warning"
+          title={`${pendingListings.length} listing${pendingListings.length > 1 ? "s" : ""} under review`}
+          description="Our team usually responds within 48 hours. You'll receive an email once approved."
+          dismissible
+        />
       )}
 
-      {/* Alert: rejected */}
       {rejectedListings.length > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4 flex items-start gap-3">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-red-500 shrink-0 mt-0.5">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
-            <path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          <div>
-            <p className="text-sm font-semibold text-red-700">
-              {rejectedListings.length} listing{rejectedListings.length > 1 ? "s were" : " was"} not approved
-            </p>
-            <p className="text-xs text-red-600 mt-0.5">
-              Review the feedback in My Listings and resubmit when ready.
-            </p>
-          </div>
-        </div>
+        <AlertBanner
+          variant="error"
+          title={`${rejectedListings.length} listing${rejectedListings.length > 1 ? "s were" : " was"} not approved`}
+          description="Review the feedback in My Listings and resubmit when ready."
+          dismissible
+        />
       )}
 
       {/* KPI grid */}

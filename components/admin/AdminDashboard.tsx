@@ -29,14 +29,13 @@ import ListingReviewPanel from "./ListingReviewPanel";
 // ──────────────────────────────────────────────────────────────────────────────
 
 type Section   = "listings" | "hosts" | "cohosts" | "cancellations" | "support";
-type TabFilter = "pending_review" | "approved" | "rejected" | "all";
+type TabFilter = "pending_review" | "approved" | "rejected";
 type AppStatus = "pending" | "approved" | "rejected";
 
 const LISTING_TABS: { id: TabFilter; label: string }[] = [
   { id: "pending_review", label: "Pending" },
   { id: "approved",       label: "Approved" },
   { id: "rejected",       label: "Rejected" },
-  { id: "all",            label: "All" },
 ];
 
 const APP_TABS: { id: AppStatus | "all"; label: string }[] = [
@@ -340,12 +339,10 @@ export default function AdminDashboard({
     pending_review: listings.filter((l) => l.status === "pending_review").length,
     approved:       listings.filter((l) => l.status === "approved").length,
     rejected:       listings.filter((l) => l.status === "rejected").length,
-    all:            listings.length,
   }), [listings]);
 
   const filteredListings = useMemo(() => {
-    let res = listings;
-    if (listingTab !== "all") res = res.filter((l) => l.status === listingTab);
+    let res = listings.filter((l) => l.status === listingTab);
     if (search.trim()) {
       const q = search.toLowerCase();
       res = res.filter((l) =>
@@ -399,8 +396,8 @@ export default function AdminDashboard({
     setListings((prev) => prev.map((l) => l.id === id ? { ...l, status: "approved" as AdminListingStatus, reviewedAt: new Date().toISOString() } : l));
   };
 
-  const handleReject = async (id: string, reason: string, step: string | null) => {
-    const result = await rejectSubmission(id, reason, (step ?? undefined) as RejectionStep | undefined);
+  const handleReject = async (id: string, reason: string, steps: string[]) => {
+    const result = await rejectSubmission(id, reason, steps as RejectionStep[]);
     if (!result.success) { console.error("Reject failed:", result.error); return; }
     setListings((prev) => prev.map((l) => l.id === id ? { ...l, status: "rejected" as AdminListingStatus, rejectionReason: reason, reviewedAt: new Date().toISOString() } : l));
   };
@@ -587,7 +584,7 @@ export default function AdminDashboard({
                       className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${listingTab === t.id ? "bg-white text-[#1a0e02] shadow-sm" : "text-[#64707d] hover:text-[#1a0e02]"}`}>
                       {t.label}
                       {listingCounts[t.id] > 0 && (
-                        <span className={`text-[10px] font-bold rounded-full px-1 min-w-[16px] text-center ${listingTab === t.id ? t.id === "pending_review" ? "bg-[#c49a4f] text-white" : t.id === "approved" ? "bg-[#049153] text-white" : t.id === "rejected" ? "bg-red-500 text-white" : "bg-[#64707d] text-white" : "bg-[#e8dfd4] text-[#64707d]"}`}>
+                        <span className={`text-[10px] font-bold rounded-full px-1 min-w-[16px] text-center ${listingTab === t.id ? t.id === "pending_review" ? "bg-[#c49a4f] text-white" : t.id === "approved" ? "bg-[#049153] text-white" : "bg-red-500 text-white" : "bg-[#e8dfd4] text-[#64707d]"}`}>
                           {listingCounts[t.id]}
                         </span>
                       )}

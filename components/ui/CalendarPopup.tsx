@@ -52,6 +52,7 @@ export default function CalendarPopup({
   return (
     <div
       className={`absolute ${positionClass} z-[100] bg-white border border-[#e8dfd4] rounded-2xl shadow-2xl p-4 w-[300px]`}
+      onClick={(e) => e.stopPropagation()}
     >
       {/* Month navigation */}
       <div className="flex items-center justify-between mb-4">

@@ -18,6 +18,7 @@ function buildAdminHost(
   hostId: string,
   profile: ProfileRow | undefined,
   email: string | null,
+  counts: { total: number; approved: number },
 ): AdminHost {
   const name = profile
     ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || "Unknown Host"
@@ -30,9 +31,9 @@ function buildAdminHost(
     email,
     phone:            profile?.phone       ?? null,
     joinedAt:         profile?.created_at  ?? null,
-    totalListings:    0,
-    approvedListings: 0,
-    responseRate:     0,
+    totalListings:    counts.total,
+    approvedListings: counts.approved,
+    responseRate:     null, // not yet computable from available data
     superhost:        false,
   };
 }
@@ -69,7 +70,6 @@ export async function fetchSubmissionQueue(): Promise<AdminListing[]> {
     const { data: submissions, error } = await supabase
       .from("listing_submissions")
       .select("*")
-      .eq("status", "pending_review")
       .is("removed_at", null)
       .order("submitted_at", { ascending: false });
 
@@ -93,6 +93,23 @@ export async function fetchSubmissionQueue(): Promise<AdminListing[]> {
     }
 
     const emailMap = await fetchEmailMap(hostIds);
+
+    // Batch-fetch submission counts (all statuses) per host in one query.
+    // Aggregated in JS since Supabase JS client doesn't expose GROUP BY.
+    const countMap: Record<string, { total: number; approved: number }> = {};
+    if (hostIds.length > 0) {
+      const { data: allSubs } = await supabase
+        .from("listing_submissions")
+        .select("host_id, status")
+        .in("host_id", hostIds)
+        .is("removed_at", null);
+
+      (allSubs ?? []).forEach((row) => {
+        if (!countMap[row.host_id]) countMap[row.host_id] = { total: 0, approved: 0 };
+        countMap[row.host_id].total++;
+        if (row.status === "approved") countMap[row.host_id].approved++;
+      });
+    }
 
     return submissions.map((row): AdminListing => ({
       id:               row.id,
@@ -122,7 +139,7 @@ export async function fetchSubmissionQueue(): Promise<AdminListing[]> {
       reviewedBy:       row.reviewed_by   ?? undefined,
       rejectionReason:  row.rejection_reason ?? undefined,
       adminNotes:       row.admin_notes   ?? undefined,
-      host:             buildAdminHost(row.host_id, profileMap[row.host_id], emailMap[row.host_id] ?? null),
+      host:             buildAdminHost(row.host_id, profileMap[row.host_id], emailMap[row.host_id] ?? null, countMap[row.host_id] ?? { total: 0, approved: 0 }),
     }));
   } catch {
     return [];

@@ -1,11 +1,13 @@
+import Link from "next/link";
 import { Host } from "@/lib/data/listing-details";
 import UserAvatar from "@/components/ui/UserAvatar";
 
 interface HostCardProps {
   host: Host;
+  messageHref: string | null;
 }
 
-export default function HostCard({ host }: HostCardProps) {
+export default function HostCard({ host, messageHref }: HostCardProps) {
   return (
     <div className="flex flex-col gap-5">
       {/* Host header */}
@@ -58,9 +60,21 @@ export default function HostCard({ host }: HostCardProps) {
       {/* Bio */}
       <p className="text-[#2b3037] text-sm leading-relaxed">{host.bio}</p>
 
-      <button className="self-start px-5 py-2.5 border border-[#1a0e02] text-[#1a0e02] text-sm font-semibold rounded-xl hover:bg-[#1a0e02] hover:text-white transition-colors">
-        Message Host
-      </button>
+      {messageHref ? (
+        <Link
+          href={messageHref}
+          className="self-start px-5 py-2.5 border border-[#1a0e02] text-[#1a0e02] text-sm font-semibold rounded-xl hover:bg-[#1a0e02] hover:text-white transition-colors"
+        >
+          Message Host
+        </Link>
+      ) : (
+        <button
+          disabled
+          className="self-start px-5 py-2.5 border border-[#dddfe3] text-[#8b94a4] text-sm font-semibold rounded-xl cursor-not-allowed"
+        >
+          Message Host
+        </button>
+      )}
     </div>
   );
 }

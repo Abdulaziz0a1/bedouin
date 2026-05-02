@@ -261,26 +261,42 @@ export default async function ListingPage({ params }: Props) {
               {/* Host */}
               <div>
                 <h2 className="font-display font-bold text-[#1a0e02] text-xl mb-5">Meet your host</h2>
-                <HostCard host={listing.host} />
+                <HostCard
+                  host={listing.host}
+                  messageHref={
+                    user && listing.host.userId && listing.host.userId !== user.id && listing.listingDbId
+                      ? `/messages?with=${listing.host.userId}&listing=${listing.listingDbId}`
+                      : null
+                  }
+                />
               </div>
 
               {/* Divider */}
               <div className="h-px bg-[#e8dfd4]" />
 
-              {/* Reviews — only render when real reviews exist */}
-              {effectiveReviews.length > 0 && (
-                <div>
-                  <h2 className="font-display font-bold text-[#1a0e02] text-xl mb-6">
-                    Guest reviews
-                  </h2>
+              {/* Reviews */}
+              <div>
+                <h2 className="font-display font-bold text-[#1a0e02] text-xl mb-6">
+                  Guest reviews
+                </h2>
+                {effectiveReviews.length > 0 ? (
                   <ReviewsSection
                     score={effectiveScore}
                     reviewCount={effectiveCount}
                     reviews={effectiveReviews}
                     breakdown={null}
                   />
-                </div>
-              )}
+                ) : (
+                  <div className="flex flex-col gap-1.5 px-5 py-5 bg-white border border-[#e8dfd4] rounded-2xl">
+                    <p className="text-sm font-semibold text-[#1a0e02]">
+                      Be the first to experience {listing.title} 🌟
+                    </p>
+                    <p className="text-xs text-[#64707d]">
+                      Your story could inspire the next traveler.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* ── Right column: Booking card ───────────────────────────────── */}
@@ -294,6 +310,7 @@ export default async function ListingPage({ params }: Props) {
                 minNights={listing.minNights}
                 maxGuests={listing.maxGuests}
                 listingId={listing.id}
+                isOwnListing={!!(user && listing.host.userId && user.id === listing.host.userId)}
               />
             </div>
           </div>

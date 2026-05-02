@@ -29,6 +29,7 @@ interface BookingCardProps {
   minNights: number;
   maxGuests: number;
   listingId: string;
+  isOwnListing?: boolean;
 }
 
 type ActiveField = "checkin" | "checkout" | "guests" | null;
@@ -49,6 +50,7 @@ export default function BookingCard({
   minNights,
   maxGuests,
   listingId,
+  isOwnListing = false,
 }: BookingCardProps) {
   const [checkIn, setCheckIn]   = useState<Date | null>(null);
   const [checkOut, setCheckOut] = useState<Date | null>(null);
@@ -145,214 +147,230 @@ export default function BookingCard({
         </div>
       </div>
 
-      {/* Date & guest selector */}
-      <div className="border border-[#e8dfd4] rounded-2xl overflow-visible">
-        {/* Dates row */}
-        <div className="flex divide-x divide-[#e8dfd4] relative">
-          {/* Check In */}
-          <div className={`relative ${fieldCls} rounded-tl-2xl`} onClick={() => toggle("checkin")}>
-            <span className={labelCls}>Check In</span>
-            <span className={valueCls(!!checkIn)}>
-              {checkIn ? formatDate(checkIn) : "Add date"}
-            </span>
-            {active === "checkin" && (
-              <CalendarPopup
-                value={checkIn}
-                onChange={(d) => {
-                  setCheckIn(d);
-                  if (checkOut && d >= checkOut) setCheckOut(null);
-                  setActive("checkout");
-                }}
-                minDate={today()}
-                onClose={() => setActive(null)}
-                positionClass="top-full mt-2 left-0"
-              />
-            )}
-          </div>
-
-          {/* Check Out */}
-          <div className={`relative ${fieldCls} rounded-tr-2xl`} onClick={() => toggle("checkout")}>
-            <span className={labelCls}>Check Out</span>
-            <span className={valueCls(!!checkOut)}>
-              {checkOut ? formatDate(checkOut) : "Add date"}
-            </span>
-            {active === "checkout" && (
-              <CalendarPopup
-                value={checkOut}
-                onChange={(d) => { setCheckOut(d); setActive(null); }}
-                minDate={checkIn ? new Date(checkIn.getTime() + 86400000) : today()}
-                onClose={() => setActive(null)}
-                positionClass="top-full mt-2 right-0"
-              />
-            )}
-          </div>
+      {/* Owner block — replaces all interaction for the listing owner */}
+      {isOwnListing && (
+        <div className="flex items-center gap-3 px-4 py-3.5 bg-[#faf7f4] border border-[#e8dfd4] rounded-2xl text-sm text-[#64707d]">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0 text-[#8b5e38]">
+            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+            <path d="M9 22V12h6v10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span>You own this listing and cannot book it.</span>
         </div>
-
-        {/* Divider */}
-        <div className="h-px bg-[#e8dfd4]" />
-
-        {/* Guests */}
-        <div
-          className={`relative ${fieldCls} rounded-b-2xl`}
-          onClick={() => toggle("guests")}
-        >
-          <span className={labelCls}>Guests</span>
-          <span className={valueCls(true)}>
-            {adults + children} guest{adults + children !== 1 ? "s" : ""}
-            {" "}·{" "}
-            {adults} adult{adults !== 1 ? "s" : ""}
-            {children > 0 && `, ${children} child${children !== 1 ? "ren" : ""}`}
-          </span>
-
-          {/* Guests popover */}
-          {active === "guests" && (
-            <div
-              className="absolute top-full mt-2 left-0 right-0 z-[100] bg-white border border-[#e8dfd4] rounded-2xl shadow-2xl p-4"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {[
-                { label: "Adults", sub: "Ages 13+", value: adults, set: setAdults, min: 1, max: maxGuests },
-                { label: "Children", sub: "Ages 2–12", value: children, set: setChildren, min: 0, max: maxGuests - adults },
-              ].map(({ label, sub, value, set, min, max }) => (
-                <div key={label} className="flex items-center justify-between py-3 border-b last:border-0 border-[#f0e8de]">
-                  <div>
-                    <p className="text-sm font-semibold text-[#1a0e02]">{label}</p>
-                    <p className="text-xs text-[#64707d]">{sub}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => set((v) => Math.max(min, v - 1))}
-                      disabled={value <= min}
-                      className="w-8 h-8 rounded-full border border-[#e8dfd4] flex items-center justify-center text-[#1a0e02] text-base disabled:opacity-30 hover:border-[#8b5e38] transition-colors"
-                    >
-                      −
-                    </button>
-                    <span className="w-5 text-center text-sm font-semibold text-[#1a0e02]">{value}</span>
-                    <button
-                      type="button"
-                      onClick={() => set((v) => Math.min(max, v + 1))}
-                      disabled={value >= max}
-                      className="w-8 h-8 rounded-full border border-[#e8dfd4] flex items-center justify-center text-[#1a0e02] text-base disabled:opacity-30 hover:border-[#8b5e38] transition-colors"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => setActive(null)}
-                className="w-full mt-3 py-2.5 bg-[#8b5e38] text-white text-sm font-semibold rounded-xl hover:bg-[#7a5030] transition-colors"
-              >
-                Done
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Min nights notice */}
-      {minNights > 1 && (
-        <p className="text-xs text-[#64707d] -mt-2">
-          Minimum stay: {minNights} night{minNights !== 1 ? "s" : ""}
-        </p>
       )}
 
-      {/* Availability status banner */}
-      {checkIn && checkOut && (
-        <div className="-mt-2">
-          {isChecking && (
-            <div className="flex items-center gap-2 text-xs text-[#64707d] bg-[#faf7f4] border border-[#e8dfd4] rounded-xl px-3 py-2">
-              <svg className="animate-spin w-3.5 h-3.5 text-[#8b5e38]" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4" strokeDashoffset="15" />
-              </svg>
-              Checking availability…
+      {/* All interactive content — hidden for the listing owner */}
+      {!isOwnListing && (
+        <>
+          {/* Date & guest selector */}
+          <div className="border border-[#e8dfd4] rounded-2xl overflow-visible">
+            {/* Dates row */}
+            <div className="flex divide-x divide-[#e8dfd4] relative">
+              {/* Check In */}
+              <div className={`relative ${fieldCls} rounded-tl-2xl`} onClick={() => toggle("checkin")}>
+                <span className={labelCls}>Check In</span>
+                <span className={valueCls(!!checkIn)}>
+                  {checkIn ? formatDate(checkIn) : "Add date"}
+                </span>
+                {active === "checkin" && (
+                  <CalendarPopup
+                    value={checkIn}
+                    onChange={(d) => {
+                      setCheckIn(d);
+                      if (checkOut && d >= checkOut) setCheckOut(null);
+                      setActive("checkout");
+                    }}
+                    minDate={today()}
+                    onClose={() => setActive(null)}
+                    positionClass="top-full mt-2 left-0"
+                  />
+                )}
+              </div>
+
+              {/* Check Out */}
+              <div className={`relative ${fieldCls} rounded-tr-2xl`} onClick={() => toggle("checkout")}>
+                <span className={labelCls}>Check Out</span>
+                <span className={valueCls(!!checkOut)}>
+                  {checkOut ? formatDate(checkOut) : "Add date"}
+                </span>
+                {active === "checkout" && (
+                  <CalendarPopup
+                    value={checkOut}
+                    onChange={(d) => { setCheckOut(d); setActive(null); }}
+                    minDate={checkIn ? new Date(checkIn.getTime() + 86400000) : today()}
+                    onClose={() => setActive(null)}
+                    positionClass="top-full mt-2 right-0"
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="h-px bg-[#e8dfd4]" />
+
+            {/* Guests */}
+            <div
+              className={`relative ${fieldCls} rounded-b-2xl`}
+              onClick={() => toggle("guests")}
+            >
+              <span className={labelCls}>Guests</span>
+              <span className={valueCls(true)}>
+                {adults + children} guest{adults + children !== 1 ? "s" : ""}
+                {" "}·{" "}
+                {adults} adult{adults !== 1 ? "s" : ""}
+                {children > 0 && `, ${children} child${children !== 1 ? "ren" : ""}`}
+              </span>
+
+              {/* Guests popover */}
+              {active === "guests" && (
+                <div
+                  className="absolute top-full mt-2 left-0 right-0 z-[100] bg-white border border-[#e8dfd4] rounded-2xl shadow-2xl p-4"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {[
+                    { label: "Adults", sub: "Ages 13+", value: adults, set: setAdults, min: 1, max: maxGuests },
+                    { label: "Children", sub: "Ages 2–12", value: children, set: setChildren, min: 0, max: maxGuests - adults },
+                  ].map(({ label, sub, value, set, min, max }) => (
+                    <div key={label} className="flex items-center justify-between py-3 border-b last:border-0 border-[#f0e8de]">
+                      <div>
+                        <p className="text-sm font-semibold text-[#1a0e02]">{label}</p>
+                        <p className="text-xs text-[#64707d]">{sub}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => set((v) => Math.max(min, v - 1))}
+                          disabled={value <= min}
+                          className="w-8 h-8 rounded-full border border-[#e8dfd4] flex items-center justify-center text-[#1a0e02] text-base disabled:opacity-30 hover:border-[#8b5e38] transition-colors"
+                        >
+                          −
+                        </button>
+                        <span className="w-5 text-center text-sm font-semibold text-[#1a0e02]">{value}</span>
+                        <button
+                          type="button"
+                          onClick={() => set((v) => Math.min(max, v + 1))}
+                          disabled={value >= max}
+                          className="w-8 h-8 rounded-full border border-[#e8dfd4] flex items-center justify-center text-[#1a0e02] text-base disabled:opacity-30 hover:border-[#8b5e38] transition-colors"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setActive(null)}
+                    className="w-full mt-3 py-2.5 bg-[#8b5e38] text-white text-sm font-semibold rounded-xl hover:bg-[#7a5030] transition-colors"
+                  >
+                    Done
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Min nights notice */}
+          {minNights > 1 && (
+            <p className="text-xs text-[#64707d] -mt-2">
+              Minimum stay: {minNights} night{minNights !== 1 ? "s" : ""}
+            </p>
+          )}
+
+          {/* Availability status banner */}
+          {checkIn && checkOut && (
+            <div className="-mt-2">
+              {isChecking && (
+                <div className="flex items-center gap-2 text-xs text-[#64707d] bg-[#faf7f4] border border-[#e8dfd4] rounded-xl px-3 py-2">
+                  <svg className="animate-spin w-3.5 h-3.5 text-[#8b5e38]" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4" strokeDashoffset="15" />
+                  </svg>
+                  Checking availability…
+                </div>
+              )}
+              {avail.status === "available" && !avail.unchecked && (
+                <div className="flex items-center gap-2 text-xs text-[#049153] bg-[#f0faf5] border border-[#c3e8d6] rounded-xl px-3 py-2">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                    <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" />
+                  </svg>
+                  {avail.remaining <= 3
+                    ? `Only ${avail.remaining} spot${avail.remaining === 1 ? "" : "s"} left for these dates`
+                    : "Available for selected dates"}
+                </div>
+              )}
+              {avail.status === "unavailable" && (
+                <div className="flex items-center gap-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+                    <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  {avail.message}
+                </div>
+              )}
+              {avail.status === "error" && (
+                <p className="text-xs text-[#a09080] px-1">Could not check availability — try again.</p>
+              )}
             </div>
           )}
-          {avail.status === "available" && !avail.unchecked && (
-            <div className="flex items-center gap-2 text-xs text-[#049153] bg-[#f0faf5] border border-[#c3e8d6] rounded-xl px-3 py-2">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-                <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" />
-              </svg>
-              {avail.remaining <= 3
-                ? `Only ${avail.remaining} spot${avail.remaining === 1 ? "" : "s"} left for these dates`
-                : "Available for selected dates"}
-            </div>
-          )}
-          {avail.status === "unavailable" && (
-            <div className="flex items-center gap-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+
+          {/* Min nights validation warning */}
+          {checkIn && checkOut && nights > 0 && nights < minNights && (
+            <div className="-mt-2 flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
                 <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
                 <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
-              {avail.message}
+              Minimum stay is {minNights} night{minNights !== 1 ? "s" : ""}
             </div>
           )}
-          {avail.status === "error" && (
-            <p className="text-xs text-[#a09080] px-1">Could not check availability — try again.</p>
+
+          {/* Price breakdown */}
+          {nights > 0 && (
+            <div className="flex flex-col gap-2 text-sm border-t border-[#f0e8de] pt-4">
+              <div className="flex justify-between text-[#1a0e02]">
+                <span>SAR {price} × {nights} night{nights !== 1 ? "s" : ""}</span>
+                <span>SAR {subtotal}</span>
+              </div>
+              <div className="flex justify-between text-[#64707d]">
+                <span>Service fee</span>
+                <span>SAR {serviceFee}</span>
+              </div>
+              <div className="flex justify-between font-bold text-[#1a0e02] text-base border-t border-[#f0e8de] pt-3 mt-1">
+                <span>Total</span>
+                <span>SAR {total}</span>
+              </div>
+            </div>
           )}
-        </div>
-      )}
 
-      {/* Min nights validation warning */}
-      {checkIn && checkOut && nights > 0 && nights < minNights && (
-        <div className="-mt-2 flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
-            <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          Minimum stay is {minNights} night{minNights !== 1 ? "s" : ""}
-        </div>
-      )}
+          {/* CTA */}
+          {canReserve ? (
+            <a
+              href={`/booking/${listingId}?checkIn=${checkIn?.toISOString().split("T")[0]}&checkOut=${checkOut?.toISOString().split("T")[0]}&adults=${adults}&children=${children}`}
+              className="w-full py-4 bg-[#8b5e38] text-white font-bold text-base rounded-2xl text-center hover:bg-[#7a5030] active:bg-[#6a4228] transition-colors shadow-sm"
+              style={{ color: "#fff" }}
+            >
+              Reserve Now
+            </a>
+          ) : (
+            <button
+              type="button"
+              disabled={isUnavailable}
+              onClick={() => { if (!checkIn || !checkOut) setActive("checkin"); }}
+              className={[
+                "w-full py-4 font-bold text-base rounded-2xl text-center transition-colors shadow-sm",
+                isUnavailable
+                  ? "bg-[#e8dfd4] text-[#a09080] cursor-not-allowed"
+                  : "bg-[#8b5e38] text-white hover:bg-[#7a5030] active:bg-[#6a4228] cursor-pointer",
+              ].join(" ")}
+            >
+              {isUnavailable ? "Not Available" : "Check Availability"}
+            </button>
+          )}
 
-      {/* Price breakdown */}
-      {nights > 0 && (
-        <div className="flex flex-col gap-2 text-sm border-t border-[#f0e8de] pt-4">
-          <div className="flex justify-between text-[#1a0e02]">
-            <span>SAR {price} × {nights} night{nights !== 1 ? "s" : ""}</span>
-            <span>SAR {subtotal}</span>
-          </div>
-          <div className="flex justify-between text-[#64707d]">
-            <span>Service fee</span>
-            <span>SAR {serviceFee}</span>
-          </div>
-          <div className="flex justify-between font-bold text-[#1a0e02] text-base border-t border-[#f0e8de] pt-3 mt-1">
-            <span>Total</span>
-            <span>SAR {total}</span>
-          </div>
-        </div>
+          <p className="text-xs text-[#64707d] text-center -mt-2">
+            No charge until you confirm your booking
+          </p>
+        </>
       )}
-
-      {/* CTA */}
-      {canReserve ? (
-        <a
-          href={`/booking/${listingId}?checkIn=${checkIn?.toISOString().split("T")[0]}&checkOut=${checkOut?.toISOString().split("T")[0]}&adults=${adults}&children=${children}`}
-          className="w-full py-4 bg-[#8b5e38] text-white font-bold text-base rounded-2xl text-center hover:bg-[#7a5030] active:bg-[#6a4228] transition-colors shadow-sm"
-          style={{ color: "#fff" }}
-        >
-          Reserve Now
-        </a>
-      ) : (
-        <button
-          type="button"
-          disabled={isUnavailable}
-          onClick={() => { if (!checkIn || !checkOut) setActive("checkin"); }}
-          className={[
-            "w-full py-4 font-bold text-base rounded-2xl text-center transition-colors shadow-sm",
-            isUnavailable
-              ? "bg-[#e8dfd4] text-[#a09080] cursor-not-allowed"
-              : "bg-[#8b5e38] text-white hover:bg-[#7a5030] active:bg-[#6a4228] cursor-pointer",
-          ].join(" ")}
-        >
-          {isUnavailable ? "Not Available" : "Check Availability"}
-        </button>
-      )}
-
-      <p className="text-xs text-[#64707d] text-center -mt-2">
-        No charge until you confirm your booking
-      </p>
     </div>
   );
 }

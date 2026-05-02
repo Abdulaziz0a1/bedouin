@@ -153,6 +153,65 @@ export async function cancelInvitation(invitationId: string): Promise<ActionResu
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// requestWithdrawal
+// Called by the co-host — sets status to 'withdrawal_requested'
+// ─────────────────────────────────────────────────────────────────────────────
+
+export async function requestWithdrawal(assignmentId: string): Promise<ActionResult> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: "Not signed in." };
+
+    const { error } = await supabase
+      .from("cohost_assignments")
+      .update({ status: "withdrawal_requested" })
+      .eq("id", assignmentId)
+      .eq("cohost_user_id", user.id)
+      .eq("status", "active");
+
+    if (error) return { success: false, error: error.message };
+
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Unexpected error." };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// resolveWithdrawal
+// Called by the host — approve sets status to 'ended', reject sets to 'active'
+// ─────────────────────────────────────────────────────────────────────────────
+
+export async function resolveWithdrawal(
+  assignmentId: string,
+  decision:     "approve" | "reject",
+): Promise<ActionResult> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: "Not signed in." };
+
+    const newStatus = decision === "approve" ? "ended" : "active";
+
+    const { error } = await supabase
+      .from("cohost_assignments")
+      .update({ status: newStatus })
+      .eq("id", assignmentId)
+      .eq("host_id", user.id)
+      .eq("status", "withdrawal_requested");
+
+    if (error) return { success: false, error: error.message };
+
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Unexpected error." };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // removeAssignment
 // Called by the host from their dashboard Co-hosts tab
 // ─────────────────────────────────────────────────────────────────────────────

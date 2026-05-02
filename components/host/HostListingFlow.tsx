@@ -3,7 +3,8 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
 import { ListingDraft, INITIAL_DRAFT, SubmittedListing } from "@/lib/types/host";
-import { submitListing, type ListingPayload } from "@/lib/actions/listing";
+import type { ListingPayload, SubmitListingResult } from "@/lib/types/listing";
+import { uploadImages, deleteUploadedImages } from "@/lib/client/upload-images";
 import HostStepProgress from "./HostStepProgress";
 import HostListingPreview from "./HostListingPreview";
 import HostConfirmation from "./HostConfirmation";
@@ -19,13 +20,14 @@ type HostStep = 1 | 2 | 3 | 4 | 5 | 6 | "confirmed";
 /* ─── Component ────────────────────────────────────────────────────────────── */
 
 export default function HostListingFlow({ userId }: { userId: string }) {
-  const [step,    setStep]    = useState<HostStep>(1);
-  const [draft,   setDraft]   = useState<ListingDraft>(INITIAL_DRAFT);
-  const [submitting,   setSubmitting]   = useState(false);
-  const [submitted,    setSubmitted]    = useState<SubmittedListing | null>(null);
-  const [submitError,  setSubmitError]  = useState<string | null>(null);
+  const [step,         setStep]        = useState<HostStep>(1);
+  const [draft,        setDraft]       = useState<ListingDraft>(INITIAL_DRAFT);
+  // Parallel array: File object for each blob URL, null for http URLs (URL fallback)
+  const [imageFiles,   setImageFiles]  = useState<(File | null)[]>([]);
+  const [submitting,   setSubmitting]  = useState(false);
+  const [submitted,    setSubmitted]   = useState<SubmittedListing | null>(null);
+  const [submitError,  setSubmitError] = useState<string | null>(null);
 
-  /* Generic field updater — type-safe, works for all ListingDraft keys */
   const update = useCallback(
     <K extends keyof ListingDraft>(key: K, value: ListingDraft[K]) => {
       setDraft((d) => ({ ...d, [key]: value }));
@@ -33,65 +35,110 @@ export default function HostListingFlow({ userId }: { userId: string }) {
     []
   );
 
-  /* Image management — URL-based (no file upload; avoids blob: persistence issue) */
-  const addImages = useCallback((url: string) => {
+  const addImages = useCallback((url: string, file?: File) => {
     setDraft((d) => ({
       ...d,
       imagePreviewUrls: [...d.imagePreviewUrls, url].slice(0, 10),
     }));
+    setImageFiles((prev) => [...prev, file ?? null].slice(0, 10));
   }, []);
 
   const removeImage = useCallback((index: number) => {
-    setDraft((d) => ({
-      ...d,
-      imagePreviewUrls: d.imagePreviewUrls.filter((_, i) => i !== index),
-    }));
+    setDraft((d) => {
+      const url = d.imagePreviewUrls[index];
+      if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
+      return {
+        ...d,
+        imagePreviewUrls: d.imagePreviewUrls.filter((_, i) => i !== index),
+      };
+    });
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
-  /* Submit — inserts into listing_submissions via Server Action */
   const handleSubmit = useCallback(async () => {
     setSubmitting(true);
     setSubmitError(null);
 
-    // Construct a clean, fully-serializable payload.
-    // Do NOT pass the full ListingDraft — it contains optional undefined fields
-    // (hostId, submittedAt, listingRef) that can break Next.js wire-format encoding.
-    const payload: ListingPayload = {
-      category:         draft.category,
-      title:            draft.title,
-      description:      draft.description,
-      highlights:       draft.highlights,
-      region:           draft.region,
-      location:         draft.location,
-      mapsUrl:          draft.mapsUrl,
-      maxGuests:        draft.maxGuests,
-      bedrooms:         draft.bedrooms,
-      beds:             draft.beds,
-      baths:            draft.baths,
-      minNights:        draft.minNights,
-      checkInTime:      draft.checkInTime,
-      checkOutTime:     draft.checkOutTime,
-      amenities:        draft.amenities,
-      price:            draft.price,
-      originalPrice:    draft.originalPrice,
-      priceUnit:        draft.priceUnit,
-      imagePreviewUrls: draft.imagePreviewUrls,
-      houseRules:       draft.houseRules,
-    };
-    console.log("[submitListing] action: submitListing | flow: create | payload:", payload);
+    // Tracks Storage paths uploaded this attempt so we can roll them back if
+    // the DB write fails — preventing orphaned files in Supabase Storage.
+    let uploadedPaths: string[] = [];
 
-    const result = await submitListing(payload);
+    try {
+      // Step 1 — upload any new File objects (blob URLs) to Storage.
+      // Existing https URLs pass through unchanged.
+      console.log("[submit] step 1/2 — uploading images…", {
+        total: draft.imagePreviewUrls.length,
+        toUpload: imageFiles.filter(Boolean).length,
+      });
+      const { urls: finalImageUrls, uploadedPaths: newPaths } =
+        await uploadImages(draft.imagePreviewUrls, imageFiles, userId);
+      uploadedPaths = newPaths;
 
-    setSubmitting(false);
+      // Step 2 — write to DB via stable Route Handler (not a Server Action).
+      // fetch() to a path is never affected by Fast Refresh stale action IDs.
+      console.log("[submit] step 2/2 — POST /api/host/listings/submit…");
+      const payload: ListingPayload = {
+        category:         draft.category,
+        title:            draft.title,
+        description:      draft.description,
+        highlights:       draft.highlights,
+        region:           draft.region,
+        location:         draft.location,
+        mapsUrl:          draft.mapsUrl,
+        maxGuests:        draft.maxGuests,
+        bedrooms:         draft.bedrooms,
+        beds:             draft.beds,
+        baths:            draft.baths,
+        minNights:        draft.minNights,
+        checkInTime:      draft.checkInTime,
+        checkOutTime:     draft.checkOutTime,
+        amenities:        draft.amenities,
+        price:            draft.price,
+        originalPrice:    draft.originalPrice,
+        priceUnit:        draft.priceUnit,
+        imagePreviewUrls: finalImageUrls,
+        houseRules:       draft.houseRules,
+      };
 
-    if (!result.success) {
-      setSubmitError(result.error);
-      return;
+      const response = await fetch("/api/host/listings/submit", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(payload),
+      });
+
+      // HTTP-level failures (401, 500) mean something threw on the server
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({})) as { error?: string };
+        throw new Error(body.error ?? `Server error (${response.status})`);
+      }
+
+      const result = await response.json() as SubmitListingResult;
+      console.log("[submit] API result:", result);
+
+      if (!result.success) {
+        await deleteUploadedImages(uploadedPaths);
+        setSubmitError(result.error);
+        return;
+      }
+
+      setSubmitted(result.listing);
+      setStep("confirmed");
+    } catch (err) {
+      console.error("[submit] caught:", err);
+      // Roll back any files that were uploaded before the failure
+      await deleteUploadedImages(uploadedPaths);
+
+      const raw = err instanceof Error ? err.message : "Submission failed — please try again.";
+      // "Invalid Server Actions request" = dev Fast Refresh stale module — page needs a hard reload
+      const msg = raw.includes("Invalid Server Actions request")
+        ? "The page needs to be refreshed. Please refresh and try again."
+        : raw;
+      setSubmitError(msg);
+    } finally {
+      // Always release the button — success, structured error, or thrown exception
+      setSubmitting(false);
     }
-
-    setSubmitted(result.listing);
-    setStep("confirmed");
-  }, [draft]);
+  }, [draft, imageFiles, userId]);
 
   /* ─── Confirmation ─────────────────────────────────────────────────── */
   if (step === "confirmed" && submitted) {
@@ -197,7 +244,6 @@ export default function HostListingFlow({ userId }: { userId: string }) {
                   onSubmit={handleSubmit}
                   onBack={() => setStep(5)}
                   isSubmitting={submitting}
-                  userId={userId}
                 />
               </>
             )}

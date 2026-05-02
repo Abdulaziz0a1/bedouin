@@ -99,6 +99,7 @@ export interface CoHostAssignment {
   listingImage: string;
   services: CoHostService[];
   assignedAt: string;                      // ISO
+  status: "active" | "withdrawal_requested" | "ended";
 }
 
 /** Simplified listing reference for invite modal dropdowns */

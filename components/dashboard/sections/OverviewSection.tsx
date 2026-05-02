@@ -89,7 +89,7 @@ function MiniBarChart({ data }: {
 
   return (
     <div style={{ height: 180 }}>
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="99%" height="100%">
         <AreaChart data={chartData} margin={{ top: 12, right: 8, left: 8, bottom: 0 }}>
           <defs>
             <linearGradient id="earningsGrad" x1="0" y1="0" x2="0" y2="1">
@@ -137,11 +137,15 @@ function UpcomingRow({ booking }: { booking: DashboardBooking }) {
 
   return (
     <div className="flex items-center gap-3 py-3 border-b last:border-0 border-[#f0e8de]">
-      <img
-        src={booking.listingImage}
-        alt={booking.listingTitle}
-        className="w-12 h-10 rounded-lg object-cover shrink-0"
-      />
+      {booking.listingImage ? (
+        <img
+          src={booking.listingImage}
+          alt={booking.listingTitle}
+          className="w-12 h-10 rounded-lg object-cover shrink-0"
+        />
+      ) : (
+        <div className="w-12 h-10 rounded-lg bg-[#f0e8de] shrink-0" />
+      )}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-[#1a0e02] truncate">{booking.guestName}</p>
         <p className="text-xs text-[#64707d] truncate">{booking.listingTitle}</p>
@@ -331,20 +335,32 @@ export default function OverviewSection({
           <h2 className="font-display font-semibold text-[#1a0e02]">Listing status</h2>
         </div>
         <div className="divide-y divide-[#f0e8de]">
-          {listings.map((listing) => (
-            <div key={listing.id} className="flex items-center gap-4 px-5 py-3">
-              <img
-                src={listing.imageUrl}
-                alt={listing.title}
-                className="w-12 h-10 rounded-lg object-cover shrink-0"
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-[#1a0e02] truncate">{listing.title}</p>
-                <p className="text-xs text-[#64707d]">{listing.region} · SAR {listing.price}/{listing.priceUnit.replace("per ", "")}</p>
+          {listings
+            .filter((l) => l.status !== "draft")
+            .map((listing) => (
+              <div key={listing.id} className="flex items-center gap-4 px-5 py-3">
+                {listing.imageUrl ? (
+                  <img
+                    src={listing.imageUrl}
+                    alt={listing.title}
+                    className="w-12 h-10 rounded-lg object-cover shrink-0"
+                  />
+                ) : (
+                  <div className="w-12 h-10 rounded-lg bg-[#f0e8de] shrink-0 flex items-center justify-center">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-[#c4b8a8]">
+                      <rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="1.4" />
+                      <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.4" />
+                      <path d="M21 15l-5-5-4 4-2-2-5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-[#1a0e02] truncate">{listing.title}</p>
+                  <p className="text-xs text-[#64707d]">{listing.region} · SAR {listing.price}/{listing.priceUnit.replace("per ", "")}</p>
+                </div>
+                <StatusBadge status={listing.status} />
               </div>
-              <StatusBadge status={listing.status} />
-            </div>
-          ))}
+            ))}
         </div>
       </div>
 

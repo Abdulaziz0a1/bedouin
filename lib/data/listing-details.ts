@@ -12,6 +12,7 @@ export interface Host {
   languages: string[];
   bio: string;
   superhost: boolean;
+  userId?: string | null; // Supabase auth.users UUID — null for seeded/mock listings
 }
 
 export interface Amenity {
@@ -56,6 +57,7 @@ export interface ListingDetail extends Listing {
   minNights: number;
   houseRules: string[];
   mapsUrl?: string;      // Google Maps / GPS link — optional, set by host on submission
+  listingDbId?: string | null; // Real Supabase UUID — null for mock/fallback listings
 }
 
 /* ─── Mock detail data ────────────────────────────────────────────────────── */

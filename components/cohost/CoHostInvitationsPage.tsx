@@ -132,7 +132,7 @@ function InvitationCard({
               <p className="text-sm font-semibold">You accepted this invitation.</p>
             </div>
             <a
-              href={`/messages?with=${item.hostId}`}
+              href={`/messages?with=${item.hostId}${item.listingId ? `&listing=${item.listingId}` : ""}`}
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8b5e38] hover:text-[#461e00] transition-colors"
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none">

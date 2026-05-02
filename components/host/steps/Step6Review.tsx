@@ -26,7 +26,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 interface Step6ReviewProps {
   draft: ListingDraft;
   onChangeImages: {
-    add:    (url: string) => void;
+    add:    (url: string, file?: File) => void;
     remove: (index: number) => void;
   };
   onChangeRules:  (rules: string[]) => void;
@@ -35,8 +35,6 @@ interface Step6ReviewProps {
   isSubmitting:   boolean;
   /** Override the submit button label. Defaults to "Submit for Approval →" */
   submitLabel?:   string;
-  /** Authenticated host UID — passed to ImageUploadZone to avoid a redundant getSession() call */
-  userId:         string;
 }
 
 /* ── Helper: collapsible review section ─────────────────────────────────── */
@@ -57,7 +55,7 @@ function ReviewSection({
 }
 
 export default function Step6Review({
-  draft, onChangeImages, onChangeRules, onSubmit, onBack, isSubmitting, submitLabel, userId,
+  draft, onChangeImages, onChangeRules, onSubmit, onBack, isSubmitting, submitLabel,
 }: Step6ReviewProps) {
   const [newRule, setNewRule]   = useState("");
   const [photoError, setPhotoError] = useState("");
@@ -111,7 +109,6 @@ export default function Step6Review({
           onRemove={onChangeImages.remove}
           minImages={3}
           maxImages={10}
-          userId={userId}
         />
         {photoError && (
           <p className="text-xs text-red-600 mt-2 flex items-center gap-1.5">

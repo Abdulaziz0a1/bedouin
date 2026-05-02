@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import MessagesPage from "@/components/messages/MessagesPage";
 import { createClient } from "@/lib/supabase-server";
-import { fetchConversations, fetchProfileName } from "@/lib/services/messages";
+import { fetchConversations, fetchProfileName, fetchListingTitle } from "@/lib/services/messages";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 interface Props {
-  searchParams?: Promise<{ with?: string }>;
+  searchParams?: Promise<{ with?: string; listing?: string; booking?: string }>;
 }
 
 export default async function Page({ searchParams }: Props) {
@@ -22,11 +22,14 @@ export default async function Page({ searchParams }: Props) {
   if (!user) redirect("/login?returnTo=/messages");
 
   const sp            = await searchParams;
-  const withUserId    = sp?.with ?? null;
+  const withUserId    = sp?.with     ?? null;
+  const listingId     = sp?.listing  ?? null;
+  const bookingId     = sp?.booking  ?? null;
 
-  const [conversations, withName] = await Promise.all([
+  const [conversations, withName, listingTitle] = await Promise.all([
     fetchConversations(user.id),
-    withUserId ? fetchProfileName(withUserId) : Promise.resolve(undefined),
+    withUserId  ? fetchProfileName(withUserId)     : Promise.resolve(undefined),
+    listingId   ? fetchListingTitle(listingId)     : Promise.resolve(undefined),
   ]);
 
   return (
@@ -35,8 +38,11 @@ export default async function Page({ searchParams }: Props) {
         <MessagesPage
           myId={user.id}
           conversations={conversations}
-          initialWithUserId={withUserId ?? undefined}
+          initialWithUserId={withUserId   ?? undefined}
           initialWithName={withName}
+          initialListingId={listingId     ?? undefined}
+          initialListingTitle={listingTitle ?? undefined}
+          initialBookingId={bookingId     ?? undefined}
         />
       </div>
     </div>

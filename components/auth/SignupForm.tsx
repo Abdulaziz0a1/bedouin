@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
+import PasswordInput from "@/components/ui/PasswordInput";
 
 export default function SignupForm() {
   const [firstName, setFirstName] = useState("");
@@ -157,14 +158,12 @@ export default function SignupForm() {
           <label className="text-xs font-bold text-[#1a0e02] uppercase tracking-wide">
             Password
           </label>
-          <input
-            type="password"
+          <PasswordInput
             placeholder="At least 6 characters"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             disabled={loading}
-            className="w-full border border-[#e8dfd4] rounded-xl px-4 py-3 text-sm text-[#1a0e02] placeholder:text-[#64707d] outline-none focus:border-[#c49a4f] transition-colors disabled:opacity-50"
           />
         </div>
 

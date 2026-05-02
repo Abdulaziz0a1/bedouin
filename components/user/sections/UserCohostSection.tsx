@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useTransition } from "react";
+import { requestWithdrawal } from "@/lib/actions/cohost";
 import type { CohostAssignmentItem } from "@/lib/services/cohost";
 
 type CohostStatus = "pending" | "approved" | "rejected" | null;
@@ -53,14 +55,44 @@ function fmtDate(iso: string) {
   });
 }
 
-function AssignmentCard({ assignment }: { assignment: CohostAssignmentItem }) {
+function AssignmentCard({
+  assignment,
+  onWithdrawalRequested,
+}: {
+  assignment:             CohostAssignmentItem;
+  onWithdrawalRequested:  (id: string) => void;
+}) {
+  const [localStatus, setLocalStatus] = useState(assignment.status ?? "active");
+  const [confirming,  setConfirming]  = useState(false);
+  const [pending,     startTransition] = useTransition();
+
+  const isWithdrawalPending = localStatus === "withdrawal_requested";
+
+  function handleConfirmWithdrawal() {
+    startTransition(async () => {
+      const result = await requestWithdrawal(assignment.id);
+      if (result.success) {
+        setLocalStatus("withdrawal_requested");
+        onWithdrawalRequested(assignment.id);
+        setConfirming(false);
+      }
+    });
+  }
+
   return (
     <div className="bg-white border border-[#e8dfd4] rounded-2xl overflow-hidden">
-      {/* Active banner */}
-      <div className="bg-[#f0faf5] border-b border-[#9edcbb] px-4 py-1.5 flex items-center gap-1.5">
-        <span className="w-2 h-2 rounded-full bg-[#049153] animate-pulse" />
-        <span className="text-[10px] font-bold text-[#049153] uppercase tracking-wide">Active assignment</span>
-      </div>
+      {/* Status banner */}
+      {isWithdrawalPending ? (
+        <div className="bg-[#fdf8ee] border-b border-[#ead9a6] px-4 py-1.5 flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-[#c49a4f]" />
+          <span className="text-[10px] font-bold text-[#8b6a1f] uppercase tracking-wide">Pending host approval</span>
+        </div>
+      ) : (
+        <div className="bg-[#f0faf5] border-b border-[#9edcbb] px-4 py-1.5 flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-[#049153] animate-pulse" />
+          <span className="text-[10px] font-bold text-[#049153] uppercase tracking-wide">Active assignment</span>
+        </div>
+      )}
 
       <div className="p-4 flex items-start gap-4">
         {/* Listing thumbnail */}
@@ -83,29 +115,60 @@ function AssignmentCard({ assignment }: { assignment: CohostAssignmentItem }) {
             Host: <span className="font-semibold text-[#8b5e38]">{assignment.hostName}</span>
             {" · "}Since {fmtDate(assignment.assignedAt)}
           </p>
-          {/* Actions */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <a
-              href={`/messages?with=${assignment.hostId}`}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8b5e38] hover:text-[#461e00] transition-colors"
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              Message host
-            </a>
-            <span className="text-[#e8dfd4]">·</span>
-            <a
-              href={`/listing/${assignment.listingId}`}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#64707d] hover:text-[#1a0e02] transition-colors"
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M15 3h6v6M10 14L21 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              View listing
-            </a>
-          </div>
+
+          {/* Actions — vary by status */}
+          {isWithdrawalPending ? (
+            <p className="text-xs text-[#8b6a1f] italic">
+              Withdrawal request sent — awaiting the host&apos;s decision.
+            </p>
+          ) : confirming ? (
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-xs text-[#64707d]">Send withdrawal request to host?</p>
+              <button
+                onClick={() => setConfirming(false)}
+                className="text-[10px] font-bold text-[#64707d] px-2.5 py-1 rounded-lg border border-[#e8dfd4] hover:border-[#8b5e38] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={pending}
+                onClick={handleConfirmWithdrawal}
+                className="text-[10px] font-bold text-white bg-[#8b6a1f] px-2.5 py-1 rounded-lg hover:bg-[#7a5a10] transition-colors disabled:opacity-60"
+              >
+                {pending ? "Sending…" : "Confirm"}
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 flex-wrap">
+              <a
+                href={`/messages?with=${assignment.hostId}${assignment.listingDbId ? `&listing=${assignment.listingDbId}` : ""}`}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8b5e38] hover:text-[#461e00] transition-colors"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Message host
+              </a>
+              <span className="text-[#e8dfd4]">·</span>
+              <a
+                href={`/listing/${assignment.listingId}`}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#64707d] hover:text-[#1a0e02] transition-colors"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M15 3h6v6M10 14L21 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                View listing
+              </a>
+              <span className="text-[#e8dfd4]">·</span>
+              <button
+                onClick={() => setConfirming(true)}
+                className="text-[10px] font-bold text-[#a09080] hover:text-[#8b6a1f] transition-colors"
+              >
+                Request to stop
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -115,12 +178,19 @@ function AssignmentCard({ assignment }: { assignment: CohostAssignmentItem }) {
 export default function UserCohostSection({
   cohostStatus,
   cohostRejectionReason,
-  assignments = [],
+  assignments: initialAssignments = [],
 }: {
   cohostStatus:          CohostStatus;
   cohostRejectionReason: string | null;
   assignments?:          CohostAssignmentItem[];
 }) {
+  const [assignments, setAssignments] = useState(initialAssignments);
+
+  function handleWithdrawalRequested(id: string) {
+    setAssignments((prev) =>
+      prev.map((a) => a.id === id ? { ...a, status: "withdrawal_requested" as const } : a)
+    );
+  }
 
   // ── Not applied yet ────────────────────────────────────────────────────────
 
@@ -266,7 +336,11 @@ export default function UserCohostSection({
             </p>
             <div className="flex flex-col gap-3">
               {assignments.map((a) => (
-                <AssignmentCard key={a.id} assignment={a} />
+                <AssignmentCard
+                  key={a.id}
+                  assignment={a}
+                  onWithdrawalRequested={handleWithdrawalRequested}
+                />
               ))}
             </div>
           </div>

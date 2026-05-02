@@ -102,7 +102,7 @@ function ModeSwitchButton({
 // ──────────────────────────────────────────────────────────────────────────────
 
 export default function Navbar() {
-  const { user, activeMode, isAdmin, hostStatus, signOut, switchMode } = useAuth();
+  const { user, loading, activeMode, isAdmin, hostStatus, signOut, switchMode } = useAuth();
   const [open,          setOpen]          = useState(false);
   const [dropdownOpen,  setDropdownOpen]  = useState(false);
   const [switchError,   setSwitchErr]     = useState<string | null>(null);
@@ -144,7 +144,6 @@ export default function Navbar() {
         } else {
           router.push("/account");
         }
-        router.refresh();
       } else {
         setSwitchErr(result.error ?? "Could not switch mode.");
       }
@@ -220,13 +219,17 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-2 shrink-0">
             {user ? (
               <>
-                <ModeSwitchButton
-                  activeMode={activeMode}
-                  hostStatus={hostStatus}
-                  isAdmin={isAdmin}
-                  onSwitch={handleSwitch}
-                  isPending={isPending}
-                />
+                {loading ? (
+                  <div className="w-28 h-9 rounded-xl bg-[#f4efe6] animate-pulse shrink-0" />
+                ) : (
+                  <ModeSwitchButton
+                    activeMode={activeMode}
+                    hostStatus={hostStatus}
+                    isAdmin={isAdmin}
+                    onSwitch={handleSwitch}
+                    isPending={isPending}
+                  />
+                )}
 
                 <div ref={handleDropdownRef} className="relative z-50">
                   <button

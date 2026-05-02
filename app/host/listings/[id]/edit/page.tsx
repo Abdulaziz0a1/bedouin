@@ -16,7 +16,7 @@ export default async function EditListingPage({ params, searchParams }: Props) {
   const { id }           = await params;
   const { step, fromTemplate } = await searchParams;
 
-  // Parse the step query param — must be 1–6, otherwise start at 1
+  // Parse the step query param — must be 1–6, otherwise undefined (auto-computed in flow)
   const stepNum = step ? parseInt(step, 10) : NaN;
   const initialStep = (stepNum >= 1 && stepNum <= 6)
     ? (stepNum as 1 | 2 | 3 | 4 | 5 | 6)
@@ -86,6 +86,16 @@ export default async function EditListingPage({ params, searchParams }: Props) {
     status:           row.status           ?? "draft",
   };
 
+  // Merge new rejected_steps array + legacy single rejected_step for backward compat
+  const rawSteps = (row.rejected_steps as string[] | null) ?? [];
+  const legacyStep = (row.rejected_step as string | null) ?? "";
+  const rejectedSteps: string[] =
+    rawSteps.length > 0
+      ? rawSteps
+      : legacyStep
+        ? [legacyStep]
+        : [];
+
   return (
     <div className="min-h-screen bg-[#f4efe6]">
       <main className="pt-[72px]">
@@ -94,6 +104,7 @@ export default async function EditListingPage({ params, searchParams }: Props) {
           initialDraft={initialDraft}
           currentStatus={row.status as "pending_review" | "rejected" | "draft"}
           rejectionReason={row.rejection_reason ?? undefined}
+          rejectedSteps={rejectedSteps}
           listingTitle={row.title ?? "Untitled Listing"}
           userId={user.id}
           initialStep={initialStep}

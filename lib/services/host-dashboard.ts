@@ -180,6 +180,12 @@ export async function fetchHostListings(hostId: string): Promise<DashboardListin
                               : undefined,
           rejectionReason:  row.rejection_reason ?? undefined,
           rejectedStep:     row.rejected_step    ?? undefined,
+          // Merge new array column + legacy single column for backward compat
+          rejectedSteps:    (row.rejected_steps as string[] | null)?.length
+                              ? (row.rejected_steps as string[])
+                              : row.rejected_step
+                                ? [row.rejected_step as string]
+                                : undefined,
           totalBookings:    bkStats.totalBookings,
           totalEarned:      bkStats.totalEarned,
           avgRating:        rvStats.avgRating,

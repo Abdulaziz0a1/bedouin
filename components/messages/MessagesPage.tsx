@@ -6,10 +6,13 @@ import { sendMessage, fetchThread, type ThreadMessage } from "@/lib/actions/mess
 import type { Conversation } from "@/lib/services/messages";
 
 interface MessagesPageProps {
-  myId:               string;
-  conversations:      Conversation[];
-  initialWithUserId?: string;
-  initialWithName?:   string;
+  myId:                 string;
+  conversations:        Conversation[];
+  initialWithUserId?:   string;
+  initialWithName?:     string;
+  initialListingId?:    string;
+  initialListingTitle?: string;
+  initialBookingId?:    string;
 }
 
 function fmtTime(iso: string) {
@@ -22,6 +25,33 @@ function fmtTime(iso: string) {
   if (diffDays < 7)
     return d.toLocaleDateString("en-SA", { weekday: "short" });
   return d.toLocaleDateString("en-SA", { day: "numeric", month: "short" });
+}
+
+// ── Role badge ────────────────────────────────────────────────────────────
+
+const ROLE_STYLES: Record<string, { bg: string; color: string }> = {
+  "Host":             { bg: "#fdf5ee", color: "#8b5e38" },
+  "Guest (Booked)":   { bg: "#f0f4ff", color: "#0046cc" },
+  "Guest (Inquiry)":  { bg: "#fff8ee", color: "#b17a50" },
+  "Co-host":          { bg: "#f0faf5", color: "#049153" },
+};
+
+function RoleBadge({ role }: { role: string }) {
+  const s = ROLE_STYLES[role] ?? { bg: "#f1f2f3", color: "#64707d" };
+  return (
+    <span
+      className="shrink-0 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border"
+      style={{ background: s.bg, color: s.color, borderColor: s.bg }}
+    >
+      {role}
+    </span>
+  );
+}
+
+function fmtShortDate(iso: string) {
+  return new Date(iso + "T12:00:00").toLocaleDateString("en-SA", {
+    day: "numeric", month: "short",
+  });
 }
 
 // ── Conversation list item ─────────────────────────────────────────────────
@@ -53,10 +83,17 @@ function ConvItem({
             <span className="text-[10px] text-[#a09080] shrink-0">{fmtTime(conv.lastAt)}</span>
           )}
         </div>
-        {conv.lastMessage && (
-          <p className="text-xs text-[#64707d] truncate">{conv.lastMessage}</p>
+        {(conv.otherParticipantRole || conv.listingTitle) && (
+          <div className="flex items-center gap-1.5 mb-0.5">
+            {conv.otherParticipantRole && <RoleBadge role={conv.otherParticipantRole} />}
+            {conv.listingTitle && (
+              <span className="text-[11px] text-[#a09080] truncate">{conv.listingTitle}</span>
+            )}
+          </div>
         )}
-        {!conv.lastMessage && (
+        {conv.lastMessage ? (
+          <p className="text-xs text-[#64707d] truncate">{conv.lastMessage}</p>
+        ) : (
           <p className="text-xs text-[#a09080] italic">No messages yet</p>
         )}
       </div>
@@ -103,6 +140,9 @@ export default function MessagesPage({
   conversations: initialConvs,
   initialWithUserId,
   initialWithName,
+  initialListingId,
+  initialListingTitle,
+  initialBookingId,
 }: MessagesPageProps) {
   // Merge the initialWith user into the conversation list if they aren't there yet
   const [convList, setConvList] = useState<Conversation[]>(() => {
@@ -112,10 +152,16 @@ export default function MessagesPage({
     ) {
       return [
         {
-          userId:      initialWithUserId,
-          name:        initialWithName ?? "User",
-          lastMessage: "",
-          lastAt:      "",
+          userId:               initialWithUserId,
+          name:                 initialWithName ?? "User",
+          lastMessage:          "",
+          lastAt:               "",
+          listingId:            initialListingId    ?? null,
+          listingTitle:         initialListingTitle ?? null,
+          bookingId:            initialBookingId    ?? null,
+          bookingCheckIn:       null,
+          bookingCheckOut:      null,
+          otherParticipantRole: null,
         },
         ...initialConvs,
       ];
@@ -135,7 +181,17 @@ export default function MessagesPage({
   // Mobile: show thread panel when a conversation is selected
   const [showThread, setShowThread]     = useState(!!initialWithUserId);
 
-  const activeName = convList.find((c) => c.userId === activeId)?.name ?? "User";
+  const activeConv  = convList.find((c) => c.userId === activeId) ?? null;
+  const activeName  = activeConv?.name ?? "User";
+
+  // Context line shown below the name in the thread header
+  let contextLine: string | null = null;
+  if (activeConv?.bookingCheckIn && activeConv?.bookingCheckOut) {
+    const range = `${fmtShortDate(activeConv.bookingCheckIn)} → ${fmtShortDate(activeConv.bookingCheckOut)}`;
+    contextLine = activeConv.listingTitle ? `${range} · ${activeConv.listingTitle}` : range;
+  } else if (activeConv?.listingTitle) {
+    contextLine = `Inquiry about ${activeConv.listingTitle}`;
+  }
 
   const loadThread = useCallback(async (otherId: string) => {
     setThreadLoad(true);
@@ -165,15 +221,36 @@ export default function MessagesPage({
     setSendError(null);
     setInputText("");
 
+    // When the active conversation is the one we arrived at via URL params,
+    // use the URL-supplied IDs as fallback — existing conv entries may have
+    // null listingId/bookingId if prior messages were sent without context.
+    const isInitialConv = activeId === initialWithUserId;
+    const effectiveListingId =
+      activeConv?.listingId ?? (isInitialConv ? initialListingId : undefined);
+    const effectiveBookingId =
+      activeConv?.bookingId ?? (isInitialConv ? initialBookingId : undefined);
+
     startSend(async () => {
-      const result = await sendMessage(activeId, text);
+      const result = await sendMessage(
+        activeId,
+        text,
+        effectiveListingId,
+        effectiveBookingId,
+      );
       if (result.success) {
         const msgs = await fetchThread(activeId);
         setThread(msgs);
         setConvList((prev) =>
           prev.map((c) =>
             c.userId === activeId
-              ? { ...c, lastMessage: text, lastAt: new Date().toISOString() }
+              ? {
+                  ...c,
+                  lastMessage: text,
+                  lastAt:      new Date().toISOString(),
+                  // Persist context so future sends in this session also carry it
+                  listingId:   c.listingId ?? effectiveListingId ?? null,
+                  bookingId:   c.bookingId ?? effectiveBookingId ?? null,
+                }
               : c
           )
         );
@@ -249,8 +326,37 @@ export default function MessagesPage({
                 </svg>
               </button>
               <UserAvatar name={activeName} size={36} className="rounded-full shrink-0" />
-              <p className="font-semibold text-[#1a0e02] text-sm">{activeName}</p>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-[#1a0e02] text-sm truncate">{activeName}</p>
+                  {activeConv?.otherParticipantRole && <RoleBadge role={activeConv.otherParticipantRole} />}
+                </div>
+                {contextLine && (
+                  <p className="text-[11px] text-[#64707d] truncate mt-0.5">{contextLine}</p>
+                )}
+              </div>
             </div>
+
+            {/* Conversation context banner */}
+            {(activeConv?.listingTitle || (activeConv?.bookingCheckIn && activeConv?.bookingCheckOut)) && (
+              <div className="px-5 py-2.5 bg-white border-b border-[#f0e8de] flex flex-col gap-0.5">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#a09080]">
+                  You&apos;re talking about
+                </span>
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                  {activeConv.listingTitle && (
+                    <span className="text-xs font-semibold text-[#1a0e02]">
+                      {activeConv.listingTitle}
+                    </span>
+                  )}
+                  {activeConv.bookingCheckIn && activeConv.bookingCheckOut && (
+                    <span className="text-[11px] text-[#64707d]">
+                      {fmtShortDate(activeConv.bookingCheckIn)} – {fmtShortDate(activeConv.bookingCheckOut)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Thread messages */}
             <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4">

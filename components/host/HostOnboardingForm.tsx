@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { applyAsHost } from "@/lib/actions/profile";
 import { useAuth } from "@/context/AuthProvider";
+import { SAUDI_REGIONS } from "@/lib/constants/regions";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Data
@@ -20,11 +21,6 @@ const PROPERTY_TYPE_OPTIONS = [
 
 const LANGUAGE_OPTIONS = ["Arabic", "English", "Urdu", "Tagalog", "French", "Other"];
 
-const SAUDI_REGIONS = [
-  "Riyadh", "Makkah", "Madinah", "Eastern Province", "Asir",
-  "Tabuk", "Hail", "Northern Borders", "Jouf", "Qassim",
-  "Al Baha", "Najran", "Jizan",
-];
 
 type Step = 1 | 2 | 3;
 

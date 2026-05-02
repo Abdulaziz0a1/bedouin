@@ -200,16 +200,19 @@ export type RejectionStep =
   | "pricing"
   | "media";
 
+const VALID_REJECTION_STEPS: RejectionStep[] = [
+  "category", "description", "location", "capacity_rules", "amenities", "pricing", "media",
+];
+
 /**
- * Rejects a listing submission:
- *   1. Verifies admin role.
- *   2. UPDATEs `listing_submissions` with rejected status, reason, and optional
- *      rejectedStep so the host is routed directly to the relevant form step.
+ * Rejects a listing submission.
+ * Writes rejected_steps (TEXT[]) for multi-step highlighting.
+ * Also mirrors the first step to rejected_step for backward compat with old rows.
  */
 export async function rejectSubmission(
   submissionId: string,
   reason: string,
-  rejectedStep?: RejectionStep
+  rejectedSteps?: RejectionStep[]
 ): Promise<AdminActionResult> {
   try {
     const supabase = await createClient();
@@ -218,6 +221,8 @@ export async function rejectSubmission(
     if ("error" in authResult) return { success: false, error: authResult.error };
     const { adminId } = authResult;
 
+    const steps = (rejectedSteps ?? []).filter((s) => VALID_REJECTION_STEPS.includes(s));
+
     const { error } = await supabase
       .from("listing_submissions")
       .update({
@@ -225,7 +230,8 @@ export async function rejectSubmission(
         reviewed_at:      new Date().toISOString(),
         reviewed_by:      adminId,
         rejection_reason: reason,
-        rejected_step:    rejectedStep ?? null,
+        rejected_steps:   steps.length > 0 ? steps : null,
+        rejected_step:    steps[0] ?? null,
       })
       .eq("id", submissionId);
 

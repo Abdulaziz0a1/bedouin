@@ -9,7 +9,7 @@ import UserAvatar from "@/components/ui/UserAvatar";
 interface ListingReviewPanelProps {
   listing: AdminListing;
   onApprove:  (id: string) => Promise<void>;
-  onReject:   (id: string, reason: string, step: string | null) => Promise<void>;
+  onReject:   (id: string, reason: string, steps: string[]) => Promise<void>;
   onClose?:   () => void;
 }
 
@@ -100,7 +100,7 @@ export default function ListingReviewPanel({
 
   const handleReject = async (payload: RejectPayload) => {
     setIsRejecting(true);
-    await onReject(listing.id, payload.reason, payload.step);
+    await onReject(listing.id, payload.reason, payload.steps);
     setIsRejecting(false);
     setShowReject(false);
     setDecision("rejected");
@@ -390,7 +390,7 @@ export default function ListingReviewPanel({
                       { label: "Joined",            value: listing.host.joinedAt
                                                       ? new Date(listing.host.joinedAt).toLocaleDateString("en-GB", { month: "long", year: "numeric" })
                                                       : "—" },
-                      { label: "Response rate",     value: `${listing.host.responseRate}%` },
+                      { label: "Response rate",     value: listing.host.responseRate != null ? `${listing.host.responseRate}%` : "—" },
                       { label: "Total listings",    value: String(listing.host.totalListings) },
                       { label: "Approved listings", value: String(listing.host.approvedListings) },
                     ].map(({ label, value }) => (

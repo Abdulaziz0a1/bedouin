@@ -448,6 +448,7 @@ export const MOCK_ASSIGNMENTS: CoHostAssignment[] = [
     listingImage: "https://picsum.photos/seed/alula-dome/400/280",
     services: ["guest_communication", "calendar", "listing_support"],
     assignedAt: "2025-11-01T00:00:00Z",
+    status: "active",
   },
 ];
 

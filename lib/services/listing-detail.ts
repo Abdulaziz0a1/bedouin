@@ -40,6 +40,7 @@ export async function fetchListingDetail(slug: string): Promise<ListingDetail | 
       .select(`
         id,
         slug,
+        host_id,
         image,
         title,
         location,
@@ -112,6 +113,7 @@ export async function fetchListingDetail(slug: string): Promise<ListingDetail | 
       languages:    (dbHost.languages    as string[]) || ["Arabic", "English"],
       bio:          (dbHost.bio          as string)   || (dbHost.tagline as string) || "Verified Bedouin host.",
       superhost:    (dbHost.superhost    as boolean)  || false,
+      userId:       data.host_id ?? null,
     };
 
     // Normalize: snake_case DB columns + JSONB fields → ListingDetail interface
@@ -155,6 +157,7 @@ export async function fetchListingDetail(slug: string): Promise<ListingDetail | 
       minNights:       Number(d.min_nights)  || Number(data.min_nights)  || 1,
       houseRules:      (d.house_rules as string[]) ?? [],
       mapsUrl:         (data.maps_url as string | null) ?? undefined,
+      listingDbId:     data.id ?? null,
     };
 
     return detail;

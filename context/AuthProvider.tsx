@@ -26,40 +26,12 @@ interface AuthContextValue {
   user:       User | null;
   session:    Session | null;
   loading:    boolean;
-  /**
-   * The user's currently active mode.
-   * 'tourist' — browse and book (default)
-   * 'host'    — manage listings and bookings (only settable if host_status = 'approved')
-   */
   activeMode: ActiveMode;
-  /**
-   * True if role = 'admin'. Admins bypass mode checks and have full access.
-   */
-  isAdmin: boolean;
-  /**
-   * The user's host application status.
-   *   null      — has not applied yet
-   *   'pending' — awaiting admin review
-   *   'approved'— approved; can freely switch between tourist ↔ host modes
-   *   'rejected'— rejected; should re-apply via /host/onboarding
-   */
+  isAdmin:    boolean;
   hostStatus: HostStatus;
-  /**
-   * The user's co-host / service provider application status.
-   */
   cohostStatus: CohostStatus;
-  /** Sign the current user out and clear the session */
-  signOut: () => Promise<void>;
-  /**
-   * Switches the active mode in the database and updates local state.
-   * The server action enforces that host_status = 'approved' before allowing
-   * a switch to 'host' mode.
-   * Returns { success, error? } — the CALLER is responsible for navigation.
-   */
-  switchMode: (mode: ActiveMode) => Promise<{ success: boolean; error?: string }>;
-  /**
-   * Force-reloads the profile from the DB (e.g. after submitting a host application).
-   */
+  signOut:       () => Promise<void>;
+  switchMode:    (mode: ActiveMode) => Promise<{ success: boolean; error?: string }>;
   reloadProfile: () => Promise<void>;
 }
 
@@ -93,8 +65,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [hostStatus,   setHostStatus]   = useState<HostStatus>(null);
   const [cohostStatus, setCohostStatus] = useState<CohostStatus>(null);
 
-  const supabase = createClient();
+  // Stable client — created exactly once via the lazy initializer.
+  // Never recreated on re-renders, so loadProfile / switchMode never go stale.
+  const [supabase] = useState(() => createClient());
 
+  // Used by reloadProfile and switchMode (user-initiated — no flash risk).
   const loadProfile = useCallback(async (uid: string) => {
     const { data: profile, error } = await supabase
       .from("profiles")
@@ -103,15 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .single();
 
     if (error) {
-      // Columns may not exist yet (pending DB migration) — fall back to basic fields
-      const { data: basic } = await supabase
-        .from("profiles")
-        .select("role, active_mode")
-        .eq("id", uid)
-        .single();
-      setActiveMode((basic?.active_mode as ActiveMode) ?? "tourist");
-      setIsAdmin(basic?.role === "admin");
-      return;
+      console.warn("[AuthProvider] loadProfile failed:", error.message);
     }
 
     setActiveMode((profile?.active_mode as ActiveMode) ?? "tourist");
@@ -121,16 +88,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase]);
 
   useEffect(() => {
-    // onAuthStateChange fires with INITIAL_SESSION on first subscription — no need
-    // to also call getSession(), which would cause loadProfile to run twice on mount.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
       if (session?.user) {
-        await loadProfile(session.user.id);
+        // Fetch the profile BEFORE updating any UI-visible state.
+        // This prevents the flash where user != null but hostStatus is still null
+        // (which caused approved hosts to see "Become a Host" on every page load).
+        const { data: profile, error } = await supabase
+          .from("profiles")
+          .select("role, active_mode, host_status, cohost_status")
+          .eq("id", session.user.id)
+          .single();
+
+        if (error) {
+          console.warn("[AuthProvider] session profile fetch failed:", error.message);
+        }
+
+        // React 18 automatic batching: all setState calls after an await boundary
+        // inside the same async callback are batched into a single re-render.
+        // The UI jumps directly from "loading" to the correct final state.
+        setSession(session);
+        setUser(session.user);
+        setActiveMode((profile?.active_mode as ActiveMode) ?? "tourist");
+        setIsAdmin(profile?.role === "admin");
+        setHostStatus((profile?.host_status as HostStatus) ?? null);
+        setCohostStatus((profile?.cohost_status as CohostStatus) ?? null);
       } else {
+        setSession(null);
+        setUser(null);
         setActiveMode("tourist");
         setIsAdmin(false);
         setHostStatus(null);
@@ -140,11 +126,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
+  // supabase is stable (useState lazy initializer) — safe to omit from deps
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
     setActiveMode("tourist");
     setIsAdmin(false);
     setHostStatus(null);
@@ -155,18 +144,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (mode: ActiveMode): Promise<{ success: boolean; error?: string }> => {
       const result = await switchModeAction(mode);
       if (result.success) {
+        // Only active_mode changes — update it locally, no profile re-fetch needed.
         setActiveMode(mode);
         return { success: true };
       }
       return { success: false, error: result.error };
     },
-    []
+    [] // no deps — only calls a server action and a stable setter
   );
 
-  /**
-   * Exposed so components can force a profile refresh after an application
-   * is submitted or after an external event (e.g. admin approval webhook).
-   */
   const reloadProfile = useCallback(async () => {
     const { data: { user: currentUser } } = await supabase.auth.getUser();
     if (currentUser) {

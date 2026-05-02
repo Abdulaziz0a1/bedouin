@@ -6,25 +6,10 @@ export type Category =
   | "glamping"
   | "doms";
 
-// ─── Official 13 Saudi administrative regions ─────────────────────────────────
+// ─── Official 13 Saudi administrative regions (canonical source: lib/constants/regions.ts) ──
 
-export const SAUDI_REGIONS = [
-  "Riyadh",
-  "Makkah",
-  "Madinah",
-  "Eastern Province",
-  "Asir",
-  "Tabuk",
-  "Hail",
-  "Al Qassim",
-  "Jazan",
-  "Najran",
-  "Al Baha",
-  "Al Jouf",
-  "Northern Borders",
-] as const;
-
-export type Region = typeof SAUDI_REGIONS[number];
+export { SAUDI_REGIONS, REGIONS, type Region } from "@/lib/constants/regions";
+import type { Region } from "@/lib/constants/regions";
 
 // Region → cities map — extend this as the platform grows.
 export const REGION_CITIES: Record<Region, string[]> = {
@@ -311,8 +296,6 @@ export const CATEGORIES: { id: Category | "all"; label: string }[] = [
   { id: "glamping",    label: "Glamping"    },
   { id: "doms",        label: "Doms"        },
 ];
-
-export const REGIONS: (Region | "All")[] = ["All", ...SAUDI_REGIONS];
 
 export const PRICE_RANGES = [
   { id: "all",    label: "Any price"       },

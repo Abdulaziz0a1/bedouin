@@ -106,6 +106,8 @@ export async function switchMode(mode: ActiveMode): Promise<SwitchModeResult> {
       .eq("id", user.id);
 
     if (error) return { success: false, error: error.message };
+    // No revalidatePath — active_mode is client-side state managed by AuthProvider.
+    // The dashboard page uses force-dynamic so it always renders fresh anyway.
     return { success: true, mode };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Unexpected error." };

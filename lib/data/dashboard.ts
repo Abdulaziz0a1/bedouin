@@ -16,7 +16,10 @@ export interface DashboardListing {
   submittedAt: string; // ISO date
   approvedAt?: string;
   rejectionReason?: string;
-  rejectedStep?: string;    // one of: category|description|location|capacity_rules|amenities|pricing|media
+  /** Legacy single-step field — kept for backward compat with old DB rows. */
+  rejectedStep?: string;
+  /** Multi-step rejection — array of step keys flagged by admin. */
+  rejectedSteps?: string[];
   totalBookings: number;
   totalEarned: number;
   avgRating: number;
@@ -162,7 +165,8 @@ export const MOCK_LISTINGS: DashboardListing[] = [
     imageUrl: "https://picsum.photos/seed/hail-camp/600/400",
     status: "rejected",
     submittedAt: "2026-01-18",
-    rejectionReason: "Photos do not meet quality standards. Please upload high-resolution images of the accommodation and surroundings.",
+    rejectionReason: "Photos do not meet quality standards. Also, the Google Maps location link is missing — please add the exact coordinates.",
+    rejectedSteps: ["media", "location"],
     totalBookings: 0,
     totalEarned: 0,
     avgRating: 0,

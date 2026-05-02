@@ -186,6 +186,7 @@ export async function fetchHostAssignments(
       .from("cohost_assignments")
       .select("*")
       .eq("host_id", hostId)
+      .in("status", ["active", "withdrawal_requested"])
       .order("assigned_at", { ascending: false });
 
     if (error || !data || data.length === 0) return [];
@@ -231,6 +232,7 @@ export async function fetchHostAssignments(
         listingImage:     row.listing_image,
         services:         (app?.service_types as CoHostService[]) ?? [],
         assignedAt:       row.assigned_at,
+        status:           (row.status as CoHostAssignment["status"]) ?? "active",
       };
     });
   } catch {
@@ -247,6 +249,7 @@ export interface CohostInboxItem {
   id:           string;
   hostId:       string;        // auth.users UUID — used to build /messages?with=HOST_ID
   hostName:     string;
+  listingId:    string | null; // listings UUID — used to build &listing= param for message context
   listingTitle: string;
   listingImage: string;
   message:      string;
@@ -257,7 +260,9 @@ export interface CohostInboxItem {
 export interface CohostAssignmentItem {
   id:            string;
   listingId:     string;   // listing SLUG — matches bookings.listing_slug for dedup filtering
+  listingDbId:   string | null; // listings UUID — used for &listing= param in message context
   listingTitle:  string;
+  status:        "active" | "withdrawal_requested" | "ended";
   listingImage:  string;
   hostId:        string;   // auth.users UUID — used for /messages?with=HOST_ID
   hostName:      string;
@@ -300,6 +305,7 @@ export async function fetchCohostInvitations(userId: string): Promise<CohostInbo
         id:           row.id,
         hostId:       row.host_id,
         hostName:     hostName || "A host",
+        listingId:    row.listing_id ?? null,
         listingTitle: row.listing_title,
         listingImage: row.listing_image,
         message:      row.message,
@@ -329,6 +335,7 @@ export async function fetchCohostAssignments(userId: string): Promise<CohostAssi
       .from("cohost_assignments")
       .select("*, listings(slug, check_in_time)")
       .eq("cohost_user_id", userId)
+      .in("status", ["active", "withdrawal_requested"])
       .order("assigned_at", { ascending: false });
 
     if (error || !data || data.length === 0) return [];
@@ -356,12 +363,14 @@ export async function fetchCohostAssignments(userId: string): Promise<CohostAssi
       return {
         id:           row.id,
         listingId:    listing?.slug ?? "",   // SLUG — matches bookings.listing_slug
+        listingDbId:  row.listing_id ?? null,
         listingTitle: row.listing_title,
         listingImage: row.listing_image,
         hostId:       row.host_id,
         hostName:     hostName || "Host",
         assignedAt:   row.assigned_at,
         checkInTime:  listing?.check_in_time,
+        status:       (row.status as CohostAssignmentItem["status"]) ?? "active",
       };
     });
   } catch {

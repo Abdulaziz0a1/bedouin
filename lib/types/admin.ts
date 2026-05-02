@@ -17,7 +17,7 @@ export interface AdminHost {
   joinedAt:  string | null;   // ISO date from profiles.created_at
   totalListings: number;
   approvedListings: number;
-  responseRate: number;       // 0–100
+  responseRate: number | null; // 0–100, or null when not yet computable
   superhost: boolean;
 }
 

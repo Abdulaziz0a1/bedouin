@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { SERVICE_LABELS } from "@/lib/data/cohost";
-import { cancelInvitation, removeAssignment } from "@/lib/actions/cohost";
+import { cancelInvitation, removeAssignment, resolveWithdrawal } from "@/lib/actions/cohost";
 import type { CoHostAssignment, CoHostInvitation } from "@/lib/types/cohost";
 import UserAvatar from "@/components/ui/UserAvatar";
 
@@ -44,9 +44,11 @@ function EmptyState({ title, sub, cta }: { title: string; sub: string; cta?: Rea
 function AssignmentCard({
   assignment,
   onRemove,
+  onWithdrawalResolved,
 }: {
-  assignment: CoHostAssignment;
-  onRemove:   (id: string) => Promise<void>;
+  assignment:           CoHostAssignment;
+  onRemove:             (id: string) => Promise<void>;
+  onWithdrawalResolved: (id: string, decision: "approve" | "reject") => void;
 }) {
   const [pending, startTransition] = useTransition();
   const [confirming, setConfirming] = useState(false);
@@ -54,13 +56,29 @@ function AssignmentCard({
   const fmtDate = (iso: string) =>
     new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
+  const isWithdrawalPending = assignment.status === "withdrawal_requested";
+
+  function handleResolve(decision: "approve" | "reject") {
+    startTransition(async () => {
+      const result = await resolveWithdrawal(assignment.id, decision);
+      if (result.success) onWithdrawalResolved(assignment.id, decision);
+    });
+  }
+
   return (
     <div className="bg-white border border-[#e8dfd4] rounded-2xl overflow-hidden">
-      {/* Active banner */}
-      <div className="bg-[#f0faf5] border-b border-[#9edcbb] px-4 py-1.5 flex items-center gap-1.5">
-        <span className="w-2 h-2 rounded-full bg-[#049153] animate-pulse" />
-        <span className="text-[10px] font-bold text-[#049153] uppercase tracking-wide">Active co-host</span>
-      </div>
+      {/* Status banner */}
+      {isWithdrawalPending ? (
+        <div className="bg-[#fdf8ee] border-b border-[#ead9a6] px-4 py-1.5 flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-[#c49a4f]" />
+          <span className="text-[10px] font-bold text-[#8b6a1f] uppercase tracking-wide">Withdrawal requested</span>
+        </div>
+      ) : (
+        <div className="bg-[#f0faf5] border-b border-[#9edcbb] px-4 py-1.5 flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-[#049153] animate-pulse" />
+          <span className="text-[10px] font-bold text-[#049153] uppercase tracking-wide">Active co-host</span>
+        </div>
+      )}
 
       <div className="p-4 flex items-start gap-4">
         {/* Avatar */}
@@ -75,7 +93,7 @@ function AssignmentCard({
                 <p className="text-[11px] text-[#8b5e38] font-medium mb-2">📍 {assignment.coHostRegion}</p>
               )}
             </div>
-            {!confirming && (
+            {!isWithdrawalPending && !confirming && (
               <button
                 onClick={() => setConfirming(true)}
                 className="text-[10px] font-bold text-[#a09080] hover:text-red-600 transition-colors px-2 py-1 rounded-lg hover:bg-red-50 shrink-0"
@@ -115,7 +133,7 @@ function AssignmentCard({
 
           {/* Message link */}
           <Link
-            href={`/messages?with=${assignment.coHostId}`}
+            href={`/messages?with=${assignment.coHostId}${assignment.listingId ? `&listing=${assignment.listingId}` : ""}`}
             className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#8b5e38] hover:text-[#461e00] transition-colors"
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
@@ -126,8 +144,29 @@ function AssignmentCard({
         </div>
       </div>
 
-      {/* Remove confirm row */}
-      {confirming && (
+      {/* Withdrawal request row — shown when co-host has requested to stop */}
+      {isWithdrawalPending && (
+        <div className="flex items-center gap-3 px-4 pb-4">
+          <p className="text-xs text-[#8b6a1f] flex-1">Co-host requested to stop. Approve or reject?</p>
+          <button
+            disabled={pending}
+            onClick={() => handleResolve("reject")}
+            className="text-xs font-semibold text-[#64707d] px-3 py-1.5 rounded-lg border border-[#e8dfd4] hover:border-[#8b5e38] transition-colors disabled:opacity-60"
+          >
+            {pending ? "…" : "Reject"}
+          </button>
+          <button
+            disabled={pending}
+            onClick={() => handleResolve("approve")}
+            className="text-xs font-semibold text-white bg-[#8b6a1f] px-3 py-1.5 rounded-lg hover:bg-[#7a5a10] transition-colors disabled:opacity-60"
+          >
+            {pending ? "…" : "Approve"}
+          </button>
+        </div>
+      )}
+
+      {/* Remove confirm row — only for active assignments */}
+      {!isWithdrawalPending && confirming && (
         <div className="flex items-center gap-3 px-4 pb-4">
           <p className="text-xs text-[#64707d] flex-1">Remove this co-host from the listing?</p>
           <button
@@ -233,6 +272,14 @@ export default function CoHostSection({
     }
   };
 
+  const handleWithdrawalResolved = (id: string, decision: "approve" | "reject") => {
+    if (decision === "approve") {
+      setAssignments((prev) => prev.filter((a) => a.id !== id));
+    } else {
+      setAssignments((prev) => prev.map((a) => a.id === id ? { ...a, status: "active" } : a));
+    }
+  };
+
   const hasAny = assignments.length > 0 || invitations.length > 0;
 
   return (
@@ -294,7 +341,7 @@ export default function CoHostSection({
         ) : (
           <div className="flex flex-col gap-3">
             {assignments.map((a) => (
-              <AssignmentCard key={a.id} assignment={a} onRemove={handleRemoveAssignment} />
+              <AssignmentCard key={a.id} assignment={a} onRemove={handleRemoveAssignment} onWithdrawalResolved={handleWithdrawalResolved} />
             ))}
           </div>
         )}

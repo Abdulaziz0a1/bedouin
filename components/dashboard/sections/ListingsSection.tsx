@@ -126,18 +126,43 @@ function RemoveModal({
 
 /* ─── Rejection notice ──────────────────────────────────────────────────────── */
 
-function RejectionNotice({ reason, submissionId, rejectedStep }: {
-  reason: string;
-  submissionId: string;
-  rejectedStep?: string;
+function RejectionNotice({
+  reason,
+  submissionId,
+  rejectedSteps = [],
+  rejectedStep,
+}: {
+  reason:        string;
+  submissionId:  string;
+  rejectedSteps?: string[];
+  /** Legacy single step — used when rejectedSteps is empty (old DB rows). */
+  rejectedStep?:  string;
 }) {
   const [open, setOpen] = useState(false);
 
-  const stepNum   = rejectedStep ? STEP_NUMBER[rejectedStep] : undefined;
-  const stepLabel = rejectedStep ? STEP_LABEL[rejectedStep]  : undefined;
-  const editHref  = stepNum
-    ? `/host/listings/${submissionId}/edit?step=${stepNum}`
+  // Normalise: prefer multi-step array, fall back to legacy single step
+  const effectiveSteps = rejectedSteps.length > 0
+    ? rejectedSteps
+    : rejectedStep ? [rejectedStep] : [];
+
+  // Collect unique step numbers (in ascending order) for routing + display
+  const stepEntries = [...new Map(
+    effectiveSteps
+      .map((k) => ({ key: k, num: STEP_NUMBER[k], label: STEP_LABEL[k] }))
+      .filter((e) => e.num !== undefined)
+      .map((e) => [e.num, e] as [number, typeof e])
+  ).values()].sort((a, b) => a.num - b.num);
+
+  // Route the CTA to the lowest-numbered rejected step
+  const firstStepNum = stepEntries[0]?.num;
+  const editHref     = firstStepNum
+    ? `/host/listings/${submissionId}/edit?step=${firstStepNum}`
     : `/host/listings/${submissionId}/edit`;
+
+  const stepLabels = stepEntries.map((e) => e.label);
+  const ctaLabel   = stepLabels.length === 1
+    ? `Fix ${stepLabels[0]} & resubmit`
+    : "Fix highlighted steps & resubmit";
 
   return (
     <div className="mt-3 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
@@ -163,14 +188,29 @@ function RejectionNotice({ reason, submissionId, rejectedStep }: {
       {open && (
         <div className="mt-2">
           <p className="text-xs text-red-600 leading-relaxed">{reason}</p>
-          {stepLabel && (
-            <div className="mt-2 flex items-center gap-1.5 text-[10px] font-bold text-red-500 uppercase tracking-widest">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
-                <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              Fix needed: Step {STEP_NUMBER[rejectedStep!]} — {stepLabel}
+          {stepEntries.length > 0 && (
+            <div className="mt-2 flex flex-col gap-1">
+              {stepEntries.map((e) => (
+                <div key={e.num} className="flex items-center gap-1.5 text-[10px] font-bold text-red-500 uppercase tracking-widest">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                    <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  Fix needed: Step {e.num} — {e.label}
+                </div>
+              ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Steps chip list */}
+      {stepLabels.length > 1 && (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {stepLabels.map((label) => (
+            <span key={label} className="text-[10px] font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">
+              {label}
+            </span>
+          ))}
         </div>
       )}
 
@@ -182,7 +222,7 @@ function RejectionNotice({ reason, submissionId, rejectedStep }: {
           <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        {stepLabel ? `Fix ${stepLabel} & resubmit` : "Fix & resubmit"}
+        {ctaLabel}
       </a>
     </div>
   );
@@ -368,11 +408,21 @@ function ListingCard({
       <div className="bg-white border border-[#e8dfd4] rounded-2xl overflow-hidden">
         {/* Image */}
         <div className="relative">
-          <img
-            src={listing.imageUrl}
-            alt={listing.title}
-            className="w-full h-44 object-cover"
-          />
+          {listing.imageUrl ? (
+            <img
+              src={listing.imageUrl}
+              alt={listing.title}
+              className="w-full h-44 object-cover"
+            />
+          ) : (
+            <div className="w-full h-44 bg-[#f0e8de] flex items-center justify-center">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" className="text-[#c4b8a8]">
+                <rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="1.4" />
+                <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.4" />
+                <path d="M21 15l-5-5-4 4-2-2-5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+          )}
           <div className="absolute top-3 left-3 flex items-center gap-2">
             <StatusBadge status={listing.status} />
             {hasPendingCancelReq && (
@@ -450,6 +500,7 @@ function ListingCard({
             <RejectionNotice
               reason={listing.rejectionReason}
               submissionId={listing.id}
+              rejectedSteps={listing.rejectedSteps}
               rejectedStep={listing.rejectedStep}
             />
           )}
@@ -627,20 +678,9 @@ export default function ListingsSection({ listings: initialListings }: { listing
     <div className="flex flex-col gap-6">
 
       {/* Header */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h2 className="font-display font-semibold text-[#1a0e02] text-lg">My Listings</h2>
-          <p className="text-xs text-[#64707d] mt-0.5">{counts.all} properties managed</p>
-        </div>
-        <a
-          href="/host/new"
-          className="flex items-center gap-1.5 px-4 py-2 bg-[#461e00] text-white text-xs font-semibold rounded-xl hover:bg-[#5a2800] transition-colors"
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-            <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-          </svg>
-          Add listing
-        </a>
+      <div>
+        <h2 className="font-display font-semibold text-[#1a0e02] text-lg">My Listings</h2>
+        <p className="text-xs text-[#64707d] mt-0.5">{counts.all} properties managed</p>
       </div>
 
       {/* Filter tabs */}

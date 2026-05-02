@@ -44,7 +44,7 @@ export default function AdminStatusBadge({
   status: AdminListingStatus;
   size?: Size;
 }) {
-  const c = CONFIG[status];
+  const c = CONFIG[status] ?? CONFIG.pending_review;
   return (
     <span
       className={[

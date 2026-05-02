@@ -3,7 +3,8 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ListingDraft } from "@/lib/types/host";
-import { updateListing, type ListingPayload } from "@/lib/actions/listing";
+import type { ListingPayload, UpdateListingResult } from "@/lib/types/listing";
+import { uploadImages, deleteUploadedImages } from "@/lib/client/upload-images";
 import HostStepProgress    from "./HostStepProgress";
 import HostListingPreview  from "./HostListingPreview";
 import Step1Type           from "./steps/Step1Type";
@@ -15,15 +16,37 @@ import Step6Review         from "./steps/Step6Review";
 
 type EditStep = 1 | 2 | 3 | 4 | 5 | 6 | "saved";
 
+/** Maps step-key strings to the form step numbers 1–6. */
+const STEP_KEY_TO_NUMBER: Record<string, number> = {
+  category:       1,
+  description:    2,
+  location:       3,
+  capacity_rules: 3,
+  amenities:      4,
+  pricing:        5,
+  media:          6,
+};
+
+const STEP_KEY_TO_LABEL: Record<string, string> = {
+  category:       "Property Type",
+  description:    "Title & Description",
+  location:       "Location & Details",
+  capacity_rules: "Capacity & Rules",
+  amenities:      "Amenities",
+  pricing:        "Pricing",
+  media:          "Photos & Media",
+};
+
 interface EditListingFlowProps {
   submissionId:    string;
   initialDraft:    ListingDraft;
   currentStatus:   "pending_review" | "rejected" | "draft";
   rejectionReason?: string;
+  /** Step keys that admin flagged as needing fixes (e.g. ["location", "media"]). */
+  rejectedSteps?:  string[];
   listingTitle:    string;
   userId:          string;
-  /** If provided, the form opens directly at this step (1–6).
-   *  Used when the host clicks "Fix & resubmit" from a rejection notice. */
+  /** If provided, the form opens directly at this step (1–6). */
   initialStep?:    1 | 2 | 3 | 4 | 5 | 6;
   /** True when this listing was created via "Use as template". */
   fromTemplate?:   boolean;
@@ -50,7 +73,19 @@ function TemplateBanner() {
 
 /* ─── Rejection Banner ──────────────────────────────────────────────────────── */
 
-function RejectionBanner({ reason, onDismiss }: { reason: string; onDismiss: () => void }) {
+function RejectionBanner({
+  reason,
+  rejectedSteps,
+  onDismiss,
+}: {
+  reason: string;
+  rejectedSteps: string[];
+  onDismiss: () => void;
+}) {
+  const stepLabels = [...new Set(
+    rejectedSteps.map((k) => STEP_KEY_TO_LABEL[k]).filter(Boolean)
+  )];
+
   return (
     <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-2xl px-5 py-4 mb-8">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-red-500 shrink-0 mt-0.5">
@@ -59,9 +94,16 @@ function RejectionBanner({ reason, onDismiss }: { reason: string; onDismiss: () 
       </svg>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-red-700 mb-1">This listing was rejected</p>
+        {stepLabels.length > 0 && (
+          <p className="text-xs text-red-600 font-medium mb-1.5">
+            Admin requested changes in:{" "}
+            <span className="font-bold">{stepLabels.join(", ")}</span>
+            . These steps are highlighted in the progress bar above.
+          </p>
+        )}
         <p className="text-sm text-red-600 leading-relaxed">{reason}</p>
         <p className="text-xs text-red-500 mt-2">
-          Address the feedback above, then save and resubmit. It will be re-queued for admin review.
+          Fix the highlighted steps, then save and resubmit. The listing will be re-queued for admin review.
         </p>
       </div>
       <button
@@ -117,6 +159,7 @@ export default function EditListingFlow({
   initialDraft,
   currentStatus,
   rejectionReason,
+  rejectedSteps = [],
   listingTitle,
   userId,
   initialStep,
@@ -124,11 +167,29 @@ export default function EditListingFlow({
 }: EditListingFlowProps) {
   const router = useRouter();
 
-  const [step,          setStep]          = useState<EditStep>(initialStep ?? 1);
+  // Derive the unique step numbers flagged by admin (dedup location+capacity_rules both = 3)
+  const rejectedStepNumbers = [...new Set(
+    rejectedSteps.map((k) => STEP_KEY_TO_NUMBER[k]).filter(Boolean)
+  )] as number[];
+
+  // Open at: explicit initialStep → first rejected step → step 1
+  const computedInitialStep: 1 | 2 | 3 | 4 | 5 | 6 =
+    initialStep ??
+    (rejectedStepNumbers.length > 0
+      ? (Math.min(...rejectedStepNumbers) as 1 | 2 | 3 | 4 | 5 | 6)
+      : 1);
+
+  const [step,          setStep]          = useState<EditStep>(computedInitialStep);
   const [draft,         setDraft]         = useState<ListingDraft>(initialDraft);
+  // Parallel array: File for new blob URLs, null for existing http URLs
+  const [imageFiles,    setImageFiles]    = useState<(File | null)[]>(
+    () => initialDraft.imagePreviewUrls.map(() => null)
+  );
   const [saving,        setSaving]        = useState(false);
   const [saveError,     setSaveError]     = useState<string | null>(null);
-  const [showRejection, setShowRejection] = useState(currentStatus === "rejected" && !!rejectionReason);
+  const [showRejection, setShowRejection] = useState(
+    currentStatus === "rejected" && (!!rejectionReason || rejectedSteps.length > 0)
+  );
 
   const update = useCallback(
     <K extends keyof ListingDraft>(key: K, value: ListingDraft[K]) => {
@@ -137,60 +198,100 @@ export default function EditListingFlow({
     []
   );
 
-  const addImages = useCallback((url: string) => {
+  const addImages = useCallback((url: string, file?: File) => {
     setDraft((d) => ({
       ...d,
       imagePreviewUrls: [...d.imagePreviewUrls, url].slice(0, 10),
     }));
+    setImageFiles((prev) => [...prev, file ?? null].slice(0, 10));
   }, []);
 
   const removeImage = useCallback((index: number) => {
-    setDraft((d) => ({
-      ...d,
-      imagePreviewUrls: d.imagePreviewUrls.filter((_, i) => i !== index),
-    }));
+    setDraft((d) => {
+      const url = d.imagePreviewUrls[index];
+      if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
+      return {
+        ...d,
+        imagePreviewUrls: d.imagePreviewUrls.filter((_, i) => i !== index),
+      };
+    });
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
   const handleSave = useCallback(async () => {
     setSaving(true);
     setSaveError(null);
 
-    const payload: ListingPayload = {
-      category:         draft.category,
-      title:            draft.title,
-      description:      draft.description,
-      highlights:       draft.highlights,
-      region:           draft.region,
-      location:         draft.location,
-      mapsUrl:          draft.mapsUrl,
-      maxGuests:        draft.maxGuests,
-      bedrooms:         draft.bedrooms,
-      beds:             draft.beds,
-      baths:            draft.baths,
-      minNights:        draft.minNights,
-      checkInTime:      draft.checkInTime,
-      checkOutTime:     draft.checkOutTime,
-      amenities:        draft.amenities,
-      price:            draft.price,
-      originalPrice:    draft.originalPrice,
-      priceUnit:        draft.priceUnit,
-      imagePreviewUrls: draft.imagePreviewUrls,
-      houseRules:       draft.houseRules,
-    };
-    console.log("[updateListing] action: updateListing | flow: edit | submissionId:", submissionId, "| payload:", payload);
+    let uploadedPaths: string[] = [];
 
-    const result = await updateListing(submissionId, payload);
+    try {
+      console.log("[save] step 1/2 — uploading images…", {
+        total: draft.imagePreviewUrls.length,
+        toUpload: imageFiles.filter(Boolean).length,
+      });
+      const { urls: finalImageUrls, uploadedPaths: newPaths } =
+        await uploadImages(draft.imagePreviewUrls, imageFiles, userId);
+      uploadedPaths = newPaths;
 
-    setSaving(false);
+      console.log("[save] step 2/2 — PATCH /api/host/listings/…");
+      const payload: ListingPayload = {
+        category:         draft.category,
+        title:            draft.title,
+        description:      draft.description,
+        highlights:       draft.highlights,
+        region:           draft.region,
+        location:         draft.location,
+        mapsUrl:          draft.mapsUrl,
+        maxGuests:        draft.maxGuests,
+        bedrooms:         draft.bedrooms,
+        beds:             draft.beds,
+        baths:            draft.baths,
+        minNights:        draft.minNights,
+        checkInTime:      draft.checkInTime,
+        checkOutTime:     draft.checkOutTime,
+        amenities:        draft.amenities,
+        price:            draft.price,
+        originalPrice:    draft.originalPrice,
+        priceUnit:        draft.priceUnit,
+        imagePreviewUrls: finalImageUrls,
+        houseRules:       draft.houseRules,
+      };
 
-    if (!result.success) {
-      setSaveError(result.error);
-      return;
+      const response = await fetch(`/api/host/listings/${submissionId}`, {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({})) as { error?: string };
+        throw new Error(body.error ?? `Server error (${response.status})`);
+      }
+
+      const result = await response.json() as UpdateListingResult;
+      console.log("[save] API result:", result);
+
+      if (!result.success) {
+        await deleteUploadedImages(uploadedPaths);
+        setSaveError(result.error);
+        return;
+      }
+
+      setStep("saved");
+      router.refresh();
+    } catch (err) {
+      console.error("[save] caught:", err);
+      await deleteUploadedImages(uploadedPaths);
+
+      const raw = err instanceof Error ? err.message : "Save failed — please try again.";
+      const msg = raw.includes("Invalid Server Actions request")
+        ? "The page needs to be refreshed. Please refresh and try again."
+        : raw;
+      setSaveError(msg);
+    } finally {
+      setSaving(false);
     }
-
-    setStep("saved");
-    router.refresh();
-  }, [submissionId, draft, router]);
+  }, [submissionId, draft, imageFiles, userId, router]);
 
   /* ─── Confirmation ── */
   if (step === "saved") {
@@ -205,7 +306,10 @@ export default function EditListingFlow({
       {/* Step progress bar */}
       <div className="bg-white border-b border-[#e8dfd4] py-5 sticky top-[72px] z-30">
         <div className="max-w-[1232px] mx-auto px-6 lg:px-0">
-          <HostStepProgress currentStep={currentStep} />
+          <HostStepProgress
+            currentStep={currentStep}
+            rejectedSteps={rejectedStepNumbers}
+          />
         </div>
       </div>
 
@@ -241,9 +345,10 @@ export default function EditListingFlow({
         {fromTemplate && <TemplateBanner />}
 
         {/* Rejection banner */}
-        {showRejection && rejectionReason && (
+        {showRejection && (rejectionReason || rejectedSteps.length > 0) && (
           <RejectionBanner
-            reason={rejectionReason}
+            reason={rejectionReason ?? ""}
+            rejectedSteps={rejectedSteps}
             onDismiss={() => setShowRejection(false)}
           />
         )}
@@ -319,7 +424,6 @@ export default function EditListingFlow({
                   onBack={() => setStep(5)}
                   isSubmitting={saving}
                   submitLabel={fromTemplate ? "Submit for review" : "Save & resubmit"}
-                  userId={userId}
                 />
               </>
             )}

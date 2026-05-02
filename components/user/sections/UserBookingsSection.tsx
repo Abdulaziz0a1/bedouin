@@ -136,7 +136,7 @@ function BookingCard({
             <div className="flex items-center gap-2">
               {booking.hostId && (
                 <Link
-                  href={`/messages?with=${booking.hostId}`}
+                  href={`/messages?with=${booking.hostId}&booking=${booking.id}`}
                   className="px-3 py-1.5 border border-[#e8dfd4] rounded-xl text-xs font-semibold text-[#64707d] hover:border-[#8b5e38] hover:text-[#8b5e38] hover:bg-[#fdf5ee] transition-colors flex items-center gap-1"
                 >
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
@@ -268,9 +268,14 @@ function BookingCard({
               <p className="text-xs text-[#a09080]">Your host</p>
               <p className="text-sm font-semibold text-[#1a0e02]">{booking.hostName}</p>
             </div>
-            <button className="ml-auto px-3 py-1.5 border border-[#e8dfd4] rounded-xl text-xs font-semibold text-[#64707d] hover:border-[#8b5e38] hover:text-[#8b5e38] transition-colors">
-              Message host
-            </button>
+            {booking.hostId && (
+              <Link
+                href={`/messages?with=${booking.hostId}&booking=${booking.id}`}
+                className="ml-auto px-3 py-1.5 border border-[#e8dfd4] rounded-xl text-xs font-semibold text-[#64707d] hover:border-[#8b5e38] hover:text-[#8b5e38] transition-colors"
+              >
+                Message host
+              </Link>
+            )}
           </div>
         </div>
       )}
@@ -356,7 +361,7 @@ function CohostAssignmentCard({ assignment }: { assignment: CohostAssignmentItem
           {/* Actions — no price, no cancel button */}
           <div className="flex items-center gap-2 pt-3 border-t border-[#f0e8de] flex-wrap mt-auto">
             <Link
-              href={`/messages?with=${assignment.hostId}`}
+              href={`/messages?with=${assignment.hostId}${assignment.listingDbId ? `&listing=${assignment.listingDbId}` : ""}`}
               className="px-3 py-1.5 border border-[#9edcbb] rounded-xl text-xs font-semibold text-[#049153] hover:bg-[#f0faf5] transition-colors flex items-center gap-1"
             >
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none">

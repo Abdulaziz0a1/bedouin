@@ -67,6 +67,7 @@ export default async function HostOnboardingPage() {
                 title="Your previous application was not approved. You may apply again."
                 compact
                 dismissible
+                storageKey={`bdw:alert:host-rejected:${user.id}`}
                 className="mt-4 mx-auto"
               />
             )}

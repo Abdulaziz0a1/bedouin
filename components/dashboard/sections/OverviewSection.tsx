@@ -197,6 +197,7 @@ export default function OverviewSection({
           title={`${pendingListings.length} listing${pendingListings.length > 1 ? "s" : ""} under review`}
           description="Our team usually responds within 48 hours. You'll receive an email once approved."
           dismissible
+          storageKey={`bdw:alert:pending:${pendingListings.map((l) => l.id).sort().join(",")}`}
         />
       )}
 
@@ -206,6 +207,7 @@ export default function OverviewSection({
           title={`${rejectedListings.length} listing${rejectedListings.length > 1 ? "s were" : " was"} not approved`}
           description="Review the feedback in My Listings and resubmit when ready."
           dismissible
+          storageKey={`bdw:alert:rejected:${rejectedListings.map((l) => l.id).sort().join(",")}`}
         />
       )}
 

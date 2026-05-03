@@ -122,7 +122,12 @@ export default function BookingFlow({
     const res = await checkAvailability(listing.id, toDateStr(ci), toDateStr(co), a + c);
     setStep1Checking(false);
     if (res.success && !res.data.available && !res.data.unchecked) {
-      setBookingError("This experience is fully booked for the selected dates. Please choose different dates.");
+      const remaining = res.data.remaining ?? 0;
+      setBookingError(
+        remaining > 0
+          ? `Only ${remaining} spot${remaining === 1 ? "" : "s"} remaining for these dates. Reduce your guest count to ${remaining} or fewer.`
+          : "These dates are fully booked. Please choose different dates."
+      );
       return;
     }
     setCheckIn(ci); setCheckOut(co); setAdults(a); setChildren(c);

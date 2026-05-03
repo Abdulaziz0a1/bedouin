@@ -61,14 +61,15 @@ SECURITY DEFINER
 SET search_path = public, auth
 AS $$
 DECLARE
-  v_max_guests  INTEGER;
-  v_has_booking BOOLEAN;
+  v_max_guests INTEGER;
+  v_booked     INTEGER;
+  v_remaining  INTEGER;
 BEGIN
   SELECT max_guests INTO v_max_guests
   FROM public.listings
   WHERE slug = p_slug;
 
-  -- Listing not found in listings table — skip enforcement (unlisted/demo slug)
+  -- Slug not in listings table (unlisted / demo slug) — skip enforcement
   IF v_max_guests IS NULL THEN
     RETURN jsonb_build_object(
       'available',  true,
@@ -77,20 +78,22 @@ BEGIN
     );
   END IF;
 
-  -- A single confirmed booking for overlapping dates makes the listing unavailable.
-  SELECT EXISTS (
-    SELECT 1 FROM public.bookings
-    WHERE listing_slug = p_slug
-      AND status       = 'confirmed'
-      AND check_in     < p_check_out
-      AND check_out    > p_check_in
-  ) INTO v_has_booking;
+  -- Sum guests from all confirmed bookings that overlap the requested range.
+  -- Overlap: existing.check_in < p_check_out AND existing.check_out > p_check_in
+  SELECT COALESCE(SUM(adults + children), 0) INTO v_booked
+  FROM public.bookings
+  WHERE listing_slug = p_slug
+    AND status       = 'confirmed'
+    AND check_in     < p_check_out
+    AND check_out    > p_check_in;
+
+  v_remaining := GREATEST(0, v_max_guests - v_booked);
 
   RETURN jsonb_build_object(
-    'available',     NOT v_has_booking,
-    'remaining',     CASE WHEN v_has_booking THEN 0 ELSE v_max_guests END,
+    'available',     v_remaining >= p_requested_guests,
+    'remaining',     v_remaining,
     'max_guests',    v_max_guests,
-    'booked_guests', CASE WHEN v_has_booking THEN v_max_guests ELSE 0 END
+    'booked_guests', v_booked
   );
 END;
 $$;
@@ -146,7 +149,10 @@ SECURITY DEFINER
 SET search_path = public, auth
 AS $$
 DECLARE
-  v_max_guests INTEGER;
+  v_max_guests       INTEGER;
+  v_booked           INTEGER;
+  v_remaining        INTEGER;
+  v_requested_guests INTEGER;
 BEGIN
   -- ── Security: only the authenticated user can book as themselves ──────────
   IF auth.uid() IS NULL OR auth.uid() != p_user_id THEN
@@ -167,21 +173,31 @@ BEGIN
   WHERE slug = p_listing_slug
   FOR UPDATE;
 
-  -- ── Availability check (skipped for unlisted/demo slugs with no row) ──────
-  -- Each listing is a single unit. Any confirmed booking for overlapping dates
-  -- makes it unavailable — we do not allow concurrent bookings for the same slot.
+  -- ── Capacity check (skipped for unlisted/demo slugs with no row) ─────────
   IF v_max_guests IS NOT NULL THEN
-    IF EXISTS (
-      SELECT 1 FROM public.bookings
-      WHERE listing_slug = p_listing_slug
-        AND status       = 'confirmed'
-        AND check_in     < p_check_out
-        AND check_out    > p_check_in
-    ) THEN
+    v_requested_guests := p_adults + p_children;
+
+    SELECT COALESCE(SUM(adults + children), 0) INTO v_booked
+    FROM public.bookings
+    WHERE listing_slug = p_listing_slug
+      AND status       = 'confirmed'
+      AND check_in     < p_check_out
+      AND check_out    > p_check_in;
+
+    v_remaining := GREATEST(0, v_max_guests - v_booked);
+
+    IF v_remaining < v_requested_guests THEN
       RETURN jsonb_build_object(
         'success',   false,
-        'remaining', 0,
-        'error',     'This listing is fully booked for the selected dates.'
+        'remaining', v_remaining,
+        'error',     CASE
+          WHEN v_remaining = 0
+            THEN 'This listing is fully booked for the selected dates.'
+          ELSE format(
+            'Only %s spot(s) remaining for these dates. You requested %s guests.',
+            v_remaining, v_requested_guests
+          )
+        END
       );
     END IF;
   END IF;

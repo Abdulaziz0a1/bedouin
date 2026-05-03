@@ -9,14 +9,15 @@ interface Step2AboutProps {
   onChangeTitle:      (v: string)   => void;
   onChangeDesc:       (v: string)   => void;
   onChangeHighlights: (v: string[]) => void;
-  onNext: () => void;
-  onBack: () => void;
+  onNext:      () => void;
+  onBack:      () => void;
+  isRejected?: boolean;
 }
 
 export default function Step2About({
   title, description, highlights,
   onChangeTitle, onChangeDesc, onChangeHighlights,
-  onNext, onBack,
+  onNext, onBack, isRejected,
 }: Step2AboutProps) {
   const [errors, setErrors] = useState<{ title?: string; description?: string }>({});
   const [newHighlight, setNewHighlight] = useState("");
@@ -64,7 +65,16 @@ export default function Step2About({
         </p>
       </div>
 
-      <div className="bg-white border border-[#e8dfd4] rounded-2xl p-6 flex flex-col gap-5">
+      <div className={`bg-white border rounded-2xl p-6 flex flex-col gap-5 ${isRejected ? "border-red-300 bg-red-50/20" : "border-[#e8dfd4]"}`}>
+        {isRejected && (
+          <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" className="shrink-0">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+              <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            Please update this section based on admin feedback.
+          </div>
+        )}
 
         {/* Title */}
         <div>

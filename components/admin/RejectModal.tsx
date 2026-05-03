@@ -5,28 +5,32 @@ import type { RejectionStep } from "@/lib/actions/admin";
 
 /* ─── Step catalogue ─────────────────────────────────────────────────────── */
 
+/**
+ * One entry per form step (1–6), in order.
+ * Step 3 groups both "location" and "capacity_rules" — selecting it
+ * toggles both keys so they stay in sync.
+ */
 const REJECTION_CATEGORIES: {
-  id:    RejectionStep;
+  ids:   RejectionStep[];
   label: string;
   step:  number;
   hint:  string;
 }[] = [
-  { id: "media",          label: "Photos / Media",          step: 6, hint: "Images are missing, low quality, or inappropriate." },
-  { id: "description",    label: "Title / Description",      step: 2, hint: "Title or description is unclear, too short, or misleading." },
-  { id: "location",       label: "Location",                 step: 3, hint: "Location or Google Maps link is missing or inaccurate." },
-  { id: "pricing",        label: "Pricing",                  step: 5, hint: "Price is missing, inconsistent, or not aligned with quality." },
-  { id: "capacity_rules", label: "Capacity / House Rules",   step: 3, hint: "Capacity, min nights, or house rules are incomplete." },
-  { id: "amenities",      label: "Amenities",                step: 4, hint: "Too few amenities or inaccurate amenity selections." },
-  { id: "category",       label: "Property Type",            step: 1, hint: "Property type doesn't match Bedouin's platform focus." },
+  { ids: ["category"],                    label: "Property Type",        step: 1, hint: "Property type doesn't match Bedouin's platform focus." },
+  { ids: ["description"],                 label: "Title & Description",  step: 2, hint: "Title or description is unclear, too short, or misleading." },
+  { ids: ["location", "capacity_rules"],  label: "Location & Details",   step: 3, hint: "Location, capacity, or house rules are incomplete or inaccurate." },
+  { ids: ["amenities"],                   label: "Amenities",            step: 4, hint: "Too few amenities or inaccurate amenity selections." },
+  { ids: ["pricing"],                     label: "Pricing",              step: 5, hint: "Price is missing, inconsistent, or not aligned with quality." },
+  { ids: ["media"],                       label: "Photos & Media",       step: 6, hint: "Images are missing, low quality, or inappropriate." },
 ];
 
-const QUICK_REASONS = [
-  "Photos do not meet quality standards (min. 4 high-resolution images required).",
-  "Listing does not align with Bedouin's platform focus (farm, desert, nature, or cultural experiences only).",
-  "Description is too brief — please add at least 150 words describing the experience.",
-  "Pricing appears inconsistent with the listing quality or region.",
-  "Location information is incomplete or inaccurate.",
-  "House rules are missing or insufficient.",
+const QUICK_REASONS: { text: string; steps: RejectionStep[] }[] = [
+  { text: "Photos do not meet quality standards (min. 4 high-resolution images required).",                    steps: ["media"] },
+  { text: "Listing does not align with Bedouin's platform focus (farm, desert, nature, or cultural experiences only).", steps: ["category"] },
+  { text: "Description is too brief — please add at least 150 words describing the experience.",               steps: ["description"] },
+  { text: "Pricing appears inconsistent with the listing quality or region.",                                  steps: ["pricing"] },
+  { text: "Location information is incomplete or inaccurate.",                                                steps: ["location"] },
+  { text: "House rules are missing or insufficient.",                                                         steps: ["capacity_rules"] },
 ];
 
 export interface RejectPayload {
@@ -47,14 +51,21 @@ export default function RejectModal({
   const [reason,        setReason]        = useState("");
   const [selectedSteps, setSelectedSteps] = useState<RejectionStep[]>([]);
 
-  const toggleStep = (id: RejectionStep) => {
-    setSelectedSteps((prev) =>
-      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
-    );
+  const toggleCategory = (ids: RejectionStep[]) => {
+    setSelectedSteps((prev) => {
+      const anyActive = ids.some((id) => prev.includes(id));
+      return anyActive
+        ? prev.filter((s) => !ids.includes(s))
+        : [...prev, ...ids.filter((id) => !prev.includes(id))];
+    });
   };
 
-  const handleQuickReason = (r: string) => {
-    setReason((prev) => prev ? `${prev.trimEnd()} ${r}` : r);
+  const handleQuickReason = (chip: { text: string; steps: RejectionStep[] }) => {
+    setReason((prev) => prev ? `${prev.trimEnd()} ${chip.text}` : chip.text);
+    setSelectedSteps((prev) => {
+      const toAdd = chip.steps.filter((s) => !prev.includes(s));
+      return toAdd.length > 0 ? [...prev, ...toAdd] : prev;
+    });
   };
 
   const canSubmit = selectedSteps.length > 0 && reason.trim().length > 0;
@@ -65,7 +76,7 @@ export default function RejectModal({
   };
 
   const selectedHints = REJECTION_CATEGORIES
-    .filter((c) => selectedSteps.includes(c.id))
+    .filter((c) => c.ids.some((id) => selectedSteps.includes(id)))
     .map((c) => c.hint);
 
   return (
@@ -116,12 +127,12 @@ export default function RejectModal({
             </p>
             <div className="grid grid-cols-2 gap-2">
               {REJECTION_CATEGORIES.map((cat) => {
-                const active = selectedSteps.includes(cat.id);
+                const active = cat.ids.some((id) => selectedSteps.includes(id));
                 return (
                   <button
-                    key={cat.id}
+                    key={cat.step}
                     type="button"
-                    onClick={() => toggleStep(cat.id)}
+                    onClick={() => toggleCategory(cat.ids)}
                     className={[
                       "text-left px-3 py-2.5 rounded-xl border text-xs transition-all",
                       active
@@ -168,14 +179,14 @@ export default function RejectModal({
               Quick reasons (click to add)
             </p>
             <div className="flex flex-col gap-1.5">
-              {QUICK_REASONS.map((r) => (
+              {QUICK_REASONS.map((chip) => (
                 <button
-                  key={r}
+                  key={chip.text}
                   type="button"
-                  onClick={() => handleQuickReason(r)}
+                  onClick={() => handleQuickReason(chip)}
                   className="text-left text-xs text-[#64707d] bg-[#faf7f4] border border-[#e8dfd4] px-3 py-2 rounded-xl hover:border-[#8b5e38] hover:text-[#1a0e02] transition-all line-clamp-2"
                 >
-                  {r}
+                  {chip.text}
                 </button>
               ))}
             </div>

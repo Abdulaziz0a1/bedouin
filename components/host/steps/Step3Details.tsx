@@ -10,10 +10,12 @@ const CHECK_OUT_TIMES = ["9:00 AM","10:00 AM","11:00 AM","12:00 PM","1:00 PM"];
 type UpdateFn = <K extends keyof ListingDraft>(key: K, value: ListingDraft[K]) => void;
 
 interface Step3DetailsProps {
-  draft:   ListingDraft;
-  onChange: UpdateFn;
-  onNext:  () => void;
-  onBack:  () => void;
+  draft:             ListingDraft;
+  onChange:          UpdateFn;
+  onNext:            () => void;
+  onBack:            () => void;
+  locationRejected?: boolean;
+  capacityRejected?: boolean;
 }
 
 function Counter({
@@ -44,7 +46,7 @@ function Counter({
   );
 }
 
-export default function Step3Details({ draft, onChange, onNext, onBack }: Step3DetailsProps) {
+export default function Step3Details({ draft, onChange, onNext, onBack, locationRejected, capacityRejected }: Step3DetailsProps) {
   const [errors, setErrors] = useState<{ region?: string; location?: string; mapsUrl?: string }>({});
 
   const validate = (): boolean => {
@@ -82,7 +84,16 @@ export default function Step3Details({ draft, onChange, onNext, onBack }: Step3D
       </div>
 
       {/* Location */}
-      <div className="bg-white border border-[#e8dfd4] rounded-2xl p-6 flex flex-col gap-5">
+      <div className={`bg-white border rounded-2xl p-6 flex flex-col gap-5 ${locationRejected ? "border-red-300 bg-red-50/20" : "border-[#e8dfd4]"}`}>
+        {locationRejected && (
+          <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" className="shrink-0">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+              <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            Please update this section based on admin feedback.
+          </div>
+        )}
         <div>
           <label className={labelCls}>Region <span className="text-red-500">*</span></label>
           <select
@@ -135,10 +146,19 @@ export default function Step3Details({ draft, onChange, onNext, onBack }: Step3D
       </div>
 
       {/* Guest & room capacity */}
-      <div className="bg-white border border-[#e8dfd4] rounded-2xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-[#f0e8de]">
+      <div className={`bg-white border rounded-2xl overflow-hidden ${capacityRejected ? "border-red-300 bg-red-50/20" : "border-[#e8dfd4]"}`}>
+        <div className={`px-5 py-4 border-b ${capacityRejected ? "border-red-200" : "border-[#f0e8de]"}`}>
           <h2 className="font-display font-semibold text-[#1a0e02]">Capacity</h2>
           <p className="text-xs text-[#64707d] mt-0.5">How many guests and rooms does your place have?</p>
+          {capacityRejected && (
+            <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2 mt-3">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" className="shrink-0">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+                <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              Please update this section based on admin feedback.
+            </div>
+          )}
         </div>
         <div className="px-5 py-2">
           <Counter label="Guests"   sub="Maximum at one time"    value={draft.maxGuests} min={1} max={30}

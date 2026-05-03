@@ -35,6 +35,7 @@ interface Step6ReviewProps {
   isSubmitting:   boolean;
   /** Override the submit button label. Defaults to "Submit for Approval →" */
   submitLabel?:   string;
+  isRejected?:    boolean;
 }
 
 /* ── Helper: collapsible review section ─────────────────────────────────── */
@@ -55,7 +56,7 @@ function ReviewSection({
 }
 
 export default function Step6Review({
-  draft, onChangeImages, onChangeRules, onSubmit, onBack, isSubmitting, submitLabel,
+  draft, onChangeImages, onChangeRules, onSubmit, onBack, isSubmitting, submitLabel, isRejected,
 }: Step6ReviewProps) {
   const [newRule, setNewRule]   = useState("");
   const [photoError, setPhotoError] = useState("");
@@ -98,7 +99,16 @@ export default function Step6Review({
       </div>
 
       {/* ── Photos ───────────────────────────────────────────────────── */}
-      <div className="bg-white border border-[#e8dfd4] rounded-2xl p-6">
+      <div className={`bg-white border rounded-2xl p-6 ${isRejected ? "border-red-300 bg-red-50/20" : "border-[#e8dfd4]"}`}>
+        {isRejected && (
+          <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2 mb-4">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" className="shrink-0">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+              <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            Please update this section based on admin feedback.
+          </div>
+        )}
         <h2 className="font-display font-semibold text-[#1a0e02] mb-1">Photos</h2>
         <p className="text-xs text-[#64707d] mb-4">
           Great photos are the #1 factor in guest decisions. Aim for bright, well-composed shots.

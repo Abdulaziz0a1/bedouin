@@ -62,6 +62,7 @@ export default async function ProvideServicePage() {
                 title="Your previous application was not approved. You may apply again."
                 compact
                 dismissible
+                storageKey={`bdw:alert:sp-rejected:${user.id}`}
                 className="mt-4 mx-auto"
               />
             )}

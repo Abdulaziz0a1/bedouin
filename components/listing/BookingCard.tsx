@@ -101,7 +101,11 @@ export default function BookingCard({
       if (d.available) {
         setAvail({ status: "available", remaining: d.remaining, unchecked: d.unchecked });
       } else {
-        setAvail({ status: "unavailable", remaining: 0, message: "These dates are already booked." });
+        const message =
+          d.remaining <= 0
+            ? "Not available for these dates."
+            : `Only ${d.remaining} spot${d.remaining === 1 ? "" : "s"} left — you requested ${totalGuests}.`;
+        setAvail({ status: "unavailable", remaining: d.remaining, message });
       }
     });
   }, [checkIn, checkOut, totalGuests, listingId]);
@@ -288,7 +292,9 @@ export default function BookingCard({
                     <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
                     <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" />
                   </svg>
-                  Available for selected dates
+                  {avail.remaining <= 3
+                    ? `Only ${avail.remaining} spot${avail.remaining === 1 ? "" : "s"} left for these dates`
+                    : "Available for selected dates"}
                 </div>
               )}
               {avail.status === "unavailable" && (

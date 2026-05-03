@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ListingDraft } from "@/lib/types/host";
 import type { ListingPayload, UpdateListingResult } from "@/lib/types/listing";
@@ -53,9 +53,15 @@ interface EditListingFlowProps {
   fromTemplate?:   boolean;
 }
 
+function simpleHash(str: string): string {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h) + str.charCodeAt(i);
+  return (h >>> 0).toString(36);
+}
+
 /* ─── Template Notice Banner ────────────────────────────────────────────────── */
 
-function TemplateBanner() {
+function TemplateBanner({ storageKey }: { storageKey: string }) {
   return (
     <AlertBanner
       variant="warning"
@@ -68,6 +74,7 @@ function TemplateBanner() {
         </svg>
       }
       dismissible
+      storageKey={storageKey}
       className="mb-8"
     />
   );
@@ -189,9 +196,20 @@ export default function EditListingFlow({
   );
   const [saving,        setSaving]        = useState(false);
   const [saveError,     setSaveError]     = useState<string | null>(null);
+  const rejectionStorageKey = `bdw:alert:rejection:${submissionId}:${simpleHash(
+    [...rejectedSteps].sort().join(",") + "|" + (rejectionReason ?? "")
+  )}`;
+  const templateStorageKey = `bdw:alert:template:${submissionId}`;
+
   const [showRejection, setShowRejection] = useState(
     currentStatus === "rejected" && (!!rejectionReason || rejectedSteps.length > 0)
   );
+
+  useEffect(() => {
+    if (localStorage.getItem(rejectionStorageKey) === "1") {
+      setShowRejection(false);
+    }
+  }, [rejectionStorageKey]);
 
   const update = useCallback(
     <K extends keyof ListingDraft>(key: K, value: ListingDraft[K]) => {
@@ -344,14 +362,17 @@ export default function EditListingFlow({
         </div>
 
         {/* Template notice */}
-        {fromTemplate && <TemplateBanner />}
+        {fromTemplate && <TemplateBanner storageKey={templateStorageKey} />}
 
         {/* Rejection banner */}
         {showRejection && (rejectionReason || rejectedSteps.length > 0) && (
           <RejectionBanner
             reason={rejectionReason ?? ""}
             rejectedSteps={rejectedSteps}
-            onDismiss={() => setShowRejection(false)}
+            onDismiss={() => {
+              localStorage.setItem(rejectionStorageKey, "1");
+              setShowRejection(false);
+            }}
           />
         )}
 
@@ -365,6 +386,7 @@ export default function EditListingFlow({
                 category={draft.category}
                 onChange={(v) => update("category", v)}
                 onNext={() => setStep(2)}
+                isRejected={rejectedSteps.includes("category")}
               />
             )}
             {currentStep === 2 && (
@@ -377,6 +399,7 @@ export default function EditListingFlow({
                 onChangeHighlights={(v) => update("highlights",   v)}
                 onNext={() => setStep(3)}
                 onBack={() => setStep(1)}
+                isRejected={rejectedSteps.includes("description")}
               />
             )}
             {currentStep === 3 && (
@@ -385,6 +408,8 @@ export default function EditListingFlow({
                 onChange={update}
                 onNext={() => setStep(4)}
                 onBack={() => setStep(2)}
+                locationRejected={rejectedSteps.includes("location")}
+                capacityRejected={rejectedSteps.includes("capacity_rules")}
               />
             )}
             {currentStep === 4 && (
@@ -393,6 +418,7 @@ export default function EditListingFlow({
                 onChange={(v) => update("amenities", v)}
                 onNext={() => setStep(5)}
                 onBack={() => setStep(3)}
+                isRejected={rejectedSteps.includes("amenities")}
               />
             )}
             {currentStep === 5 && (
@@ -405,6 +431,7 @@ export default function EditListingFlow({
                 onChangePriceUnit={(v) => update("priceUnit",     v)}
                 onNext={() => setStep(6)}
                 onBack={() => setStep(4)}
+                isRejected={rejectedSteps.includes("pricing")}
               />
             )}
             {currentStep === 6 && (
@@ -426,6 +453,7 @@ export default function EditListingFlow({
                   onBack={() => setStep(5)}
                   isSubmitting={saving}
                   submitLabel={fromTemplate ? "Submit for review" : "Save & resubmit"}
+                  isRejected={rejectedSteps.includes("media")}
                 />
               </>
             )}

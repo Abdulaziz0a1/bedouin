@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type Variant = "warning" | "error" | "success" | "info";
 
@@ -67,6 +67,13 @@ interface AlertBannerProps {
   /** Renders a smaller inline pill instead of the full-block banner. */
   compact?:     boolean;
   className?:   string;
+  /**
+   * When provided with dismissible=true, the dismissed state is persisted to
+   * localStorage under this key and survives page refresh. The key should
+   * encode the user/entity context so new alerts with different scope appear
+   * fresh. Example: "bdw:alert:pending:listingA,listingB"
+   */
+  storageKey?:  string;
 }
 
 export default function AlertBanner({
@@ -77,8 +84,22 @@ export default function AlertBanner({
   dismissible = false,
   compact     = false,
   className   = "",
+  storageKey,
 }: AlertBannerProps) {
   const [dismissed, setDismissed] = useState(false);
+
+  // Sync with localStorage on mount (client-only — localStorage unavailable on server)
+  useEffect(() => {
+    if (storageKey && localStorage.getItem(storageKey) === "1") {
+      setDismissed(true);
+    }
+  }, [storageKey]);
+
+  const handleDismiss = () => {
+    if (storageKey) localStorage.setItem(storageKey, "1");
+    setDismissed(true);
+  };
+
   if (dismissed) return null;
 
   const s = STYLES[variant];
@@ -98,7 +119,7 @@ export default function AlertBanner({
         {dismissible && (
           <button
             type="button"
-            onClick={() => setDismissed(true)}
+            onClick={handleDismiss}
             className={`ml-1 p-0.5 rounded transition-colors shrink-0 ${s.closeHover}`}
             aria-label="Dismiss"
           >
@@ -130,7 +151,7 @@ export default function AlertBanner({
       {dismissible && (
         <button
           type="button"
-          onClick={() => setDismissed(true)}
+          onClick={handleDismiss}
           className={`p-1 rounded-lg transition-colors shrink-0 ${s.closeHover}`}
           aria-label="Dismiss"
         >

@@ -31,6 +31,88 @@ function CapacityPill({ icon, label, value }: { icon: React.ReactNode; label: st
   );
 }
 
+/* ─── Quality score card ─────────────────────────────────────────────────── */
+
+const QUALITY_CHECKS: {
+  label:   string;
+  points:  number;
+  pass:    (l: AdminListing) => boolean;
+}[] = [
+  { label: "Photos added",            points: 20, pass: (l) => l.imageUrls.length >= 3 },
+  { label: "Description is detailed", points: 20, pass: (l) => l.description.length >= 150 },
+  { label: "Location provided",       points: 20, pass: (l) => !!l.location.trim() },
+  { label: "Price set",               points: 20, pass: (l) => l.price > 0 },
+  { label: "Guest capacity set",      points: 10, pass: (l) => l.maxGuests > 0 },
+  { label: "Amenities included",      points: 10, pass: (l) => l.amenities.length >= 3 },
+];
+
+function QualityCard({ listing }: { listing: AdminListing }) {
+  const checks = QUALITY_CHECKS.map((c) => ({ ...c, passed: c.pass(listing) }));
+  const score  = checks.filter((c) => c.passed).reduce((s, c) => s + c.points, 0);
+
+  const scoreColor =
+    score >= 80 ? "text-[#049153]" :
+    score >= 60 ? "text-[#c49a4f]" :
+                  "text-red-600";
+  const barColor =
+    score >= 80 ? "bg-[#049153]" :
+    score >= 60 ? "bg-[#c49a4f]" :
+                  "bg-red-500";
+  const ringColor =
+    score >= 80 ? "border-[#c3e8d6] bg-[#f0faf5]" :
+    score >= 60 ? "border-[#ead9a6] bg-[#fdf8ee]" :
+                  "border-red-200 bg-red-50";
+
+  return (
+    <div className={`border rounded-2xl p-5 flex flex-col gap-4 ${ringColor}`}>
+      {/* Header row */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest">
+          Listing quality
+        </h3>
+        <span className={`font-display font-extrabold text-2xl leading-none ${scoreColor}`}>
+          {score}%
+        </span>
+      </div>
+
+      {/* Progress bar */}
+      <div className="h-1.5 bg-[#e8dfd4] rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all ${barColor}`}
+          style={{ width: `${score}%` }}
+        />
+      </div>
+
+      {/* Checklist */}
+      <div className="flex flex-col gap-2">
+        {checks.map((c) => (
+          <div key={c.label} className="flex items-center gap-2.5">
+            {c.passed ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="shrink-0 text-[#049153]">
+                <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+              </svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="shrink-0 text-[#c4b49a]">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+                <path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            )}
+            <span className={`text-xs font-medium ${c.passed ? "text-[#1a0e02]" : "text-[#a09080]"}`}>
+              {c.label}
+              {!c.passed && (
+                <span className="ml-1.5 text-[10px] font-bold text-[#c4b49a] uppercase tracking-wide">
+                  +{c.points}%
+                </span>
+              )}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function GalleryStrip({ urls }: { urls: string[] }) {
   const [main, setMain] = useState(0);
   return (
@@ -259,6 +341,9 @@ export default function ListingReviewPanel({
                 )}
               </div>
             </div>
+
+            {/* Quality score */}
+            <QualityCard listing={listing} />
 
             {/* Capacity */}
             <div className="bg-white border border-[#e8dfd4] rounded-2xl p-5">

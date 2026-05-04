@@ -27,7 +27,7 @@ export default function GalleryGrid({ images, title }: GalleryGridProps) {
             fill
             className="object-cover"
             priority
-            sizes="100vw"
+            sizes="(max-width: 768px) 100vw, 616px"
           />
           <button
             onClick={() => setLightbox(0)}

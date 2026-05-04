@@ -65,6 +65,30 @@ export async function fetchConversations(myId: string): Promise<Conversation[]> 
 
     if (map.size === 0) return [];
 
+    // ── Filter hidden conversations ───────────────────────────────────────────
+    // A conversation is hidden when its other_user_id appears in conversation_hides
+    // AND the latest message (lastAt) was sent before hidden_at.
+    // If a new message arrives after hidden_at the conversation reappears.
+    const { data: hides } = await supabase
+      .from("conversation_hides")
+      .select("other_user_id, hidden_at")
+      .eq("user_id", myId);
+
+    const hiddenMap = new Map<string, string>(); // otherId → hidden_at ISO
+    (hides ?? []).forEach((h: { other_user_id: string; hidden_at: string }) => {
+      hiddenMap.set(h.other_user_id, h.hidden_at);
+    });
+
+    for (const [otherId, conv] of map) {
+      const hiddenAt = hiddenMap.get(otherId);
+      // Hide only when lastAt is at or before hidden_at (i.e., no new messages)
+      if (hiddenAt && conv.lastAt <= hiddenAt) {
+        map.delete(otherId);
+      }
+    }
+
+    if (map.size === 0) return [];
+
     // ── Batch-fetch profiles ──────────────────────────────────────────────────
     const { data: profiles } = await supabase
       .from("profiles")

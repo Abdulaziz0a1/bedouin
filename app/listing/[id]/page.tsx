@@ -192,6 +192,52 @@ export default async function ListingPage({ params }: Props) {
                 <AmenitiesGrid amenities={listing.amenities} />
               </div>
 
+              {/* Saudi hospitality tips */}
+              <div>
+                <h2 className="font-display font-bold text-[#1a0e02] text-xl mb-4">Saudi hospitality tips</h2>
+                <div className="bg-white border border-[#e8dfd4] rounded-2xl p-5 flex flex-col gap-3">
+                  {[
+                    "Ask before taking photos",
+                    "Dress comfortably and respectfully",
+                    "Arrive on time",
+                    "Enjoy Arabic coffee and dates if offered",
+                  ].map((tip) => (
+                    <div key={tip} className="flex items-start gap-3">
+                      <span className="mt-0.5 text-[#c49a4f] shrink-0">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                        </svg>
+                      </span>
+                      <span className="text-sm text-[#2b3037]">{tip}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* What to expect */}
+              <div>
+                <h2 className="font-display font-bold text-[#1a0e02] text-xl mb-4">What to expect</h2>
+                <div className="flex flex-col">
+                  {[
+                    { n: 1, label: "Arrive at the location" },
+                    { n: 2, label: "Meet your host" },
+                    { n: 3, label: "Enjoy the experience" },
+                    { n: 4, label: "Leave a review" },
+                  ].map(({ n, label }, i) => (
+                    <div key={n} className="flex items-start gap-4">
+                      <div className="flex flex-col items-center shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-[#fdf5ee] border-2 border-[#c49a4f] flex items-center justify-center">
+                          <span className="text-xs font-bold text-[#8b5e38]">{n}</span>
+                        </div>
+                        {i < 3 && <div className="w-px h-6 bg-[#e8dfd4] my-1" />}
+                      </div>
+                      <p className="text-sm text-[#2b3037] pt-1.5">{label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* House rules */}
               {listing.houseRules.length > 0 && (
                 <div>

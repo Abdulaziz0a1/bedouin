@@ -85,6 +85,27 @@ export default function Step6Review({
 
   const iconProps = { width: "16", height: "16", viewBox: "0 0 24 24", fill: "none" };
 
+  // ── Smart tips ──────────────────────────────────────────────────────────
+  const requiredIssues: string[] = [];
+  const suggestions:    string[] = [];
+
+  if (draft.imagePreviewUrls.length < 3) {
+    requiredIssues.push("Add at least 3 photos. This is required before submitting.");
+  } else if (draft.imagePreviewUrls.length < 4) {
+    suggestions.push("Add more photos to help guests understand the place better.");
+  }
+  if (draft.description.length < 150) {
+    suggestions.push("Add more details about what guests will experience.");
+  }
+  if (draft.amenities.length < 3) {
+    suggestions.push("Add more amenities so guests know what is included.");
+  }
+  if (!draft.mapsUrl?.trim()) {
+    suggestions.push("Add a Google Maps link so guests can find the location after booking.");
+  }
+
+  const allGood = requiredIssues.length === 0 && suggestions.length === 0;
+
   return (
     <div className="flex flex-col gap-7">
       {/* Heading */}
@@ -280,6 +301,62 @@ export default function Step6Review({
           </div>
         </ReviewSection>
       </div>
+
+      {/* ── Smart Host Tips ──────────────────────────────────────────── */}
+      {allGood ? (
+        <div className="flex items-center gap-3 bg-[#f0faf5] border border-[#c3e8d6] rounded-2xl px-5 py-4">
+          <div className="w-8 h-8 rounded-xl bg-[#049153]/10 flex items-center justify-center shrink-0">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+              <path d="M9 12l2 2 4-4" stroke="#049153" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="12" cy="12" r="10" stroke="#049153" strokeWidth="1.8" />
+            </svg>
+          </div>
+          <p className="text-sm font-semibold text-[#049153]">
+            Your listing looks complete and ready for review.
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <div className="h-px w-6 bg-[#c49a4f]" />
+            <p className="text-[#c49a4f] text-xs font-bold uppercase tracking-[0.16em]">Listing tips</p>
+          </div>
+
+          {requiredIssues.length > 0 && (
+            <div className="bg-[#fdf8ee] border border-[#ead9a6] rounded-2xl px-5 py-4 flex flex-col gap-2.5">
+              <p className="text-[10px] font-bold text-[#8b6a1f] uppercase tracking-widest">
+                Fix before submitting
+              </p>
+              {requiredIssues.map((tip, i) => (
+                <div key={i} className="flex items-start gap-2.5">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="shrink-0 mt-0.5 text-[#c49a4f]">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+                    <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  <p className="text-sm text-[#8b6a1f]">{tip}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {suggestions.length > 0 && (
+            <div className="bg-[#faf7f4] border border-[#e8dfd4] rounded-2xl px-5 py-4 flex flex-col gap-2.5">
+              <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest">
+                Suggestions
+              </p>
+              {suggestions.map((tip, i) => (
+                <div key={i} className="flex items-start gap-2.5">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="shrink-0 mt-0.5 text-[#c49a4f]">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+                    <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  <p className="text-sm text-[#64707d]">{tip}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Approval notice ───────────────────────────────────────────── */}
       <div className="flex items-start gap-3.5 bg-[#fff4e5] border border-[#f0dcc8] rounded-2xl p-5">

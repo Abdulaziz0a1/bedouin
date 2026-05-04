@@ -8,6 +8,7 @@ import type { CohostAssignmentItem } from "@/lib/services/cohost";
 import BookingStatusBadge from "../shared/BookingStatusBadge";
 import UserEmptyState from "../shared/UserEmptyState";
 import LeaveReviewModal from "@/components/reviews/LeaveReviewModal";
+import UserAvatar from "@/components/ui/UserAvatar";
 import CancelBookingModal from "../shared/CancelBookingModal";
 
 type Tab = "upcoming" | "past";
@@ -259,10 +260,11 @@ function BookingCard({
 
           {/* Host info */}
           <div className="mt-4 pt-4 border-t border-[#e8dfd4] flex items-center gap-3">
-            <img
+            <UserAvatar
               src={booking.hostAvatar}
-              alt={booking.hostName}
-              className="w-9 h-9 rounded-full object-cover border border-[#e8dfd4] shrink-0"
+              name={booking.hostName}
+              size={36}
+              className="border border-[#e8dfd4] shrink-0"
             />
             <div>
               <p className="text-xs text-[#a09080]">Your host</p>

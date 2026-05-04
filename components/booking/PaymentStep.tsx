@@ -70,11 +70,23 @@ const METHODS: { id: PaymentMethod; label: string; desc: string; icon: React.Rea
 
 /* ─── Component ──────────────────────────────────────────────────────────── */
 
+const READINESS_ITEMS = [
+  "I understand the exact location will be shared after booking.",
+  "I agree to follow the host's house rules.",
+  "I understand this may be an outdoor or rural experience.",
+];
+
 export default function PaymentStep({
   method, cardDetails, total, nights, listingPrice, serviceFee,
   isSubmitting, onMethodChange, onCardChange, onConfirm, onBack,
 }: PaymentStepProps) {
   const [errors, setErrors] = useState<Partial<Record<keyof CardDetails, string>>>({});
+  const [readinessChecks, setReadinessChecks] = useState([false, false, false]);
+
+  const allChecked = readinessChecks.every(Boolean);
+
+  const toggleCheck = (i: number) =>
+    setReadinessChecks((prev) => prev.map((v, idx) => (idx === i ? !v : v)));
 
   const updateCard = (field: keyof CardDetails, raw: string) => {
     let v = raw;
@@ -299,6 +311,53 @@ export default function PaymentStep({
         Your payment is protected by 256-bit SSL encryption
       </div>
 
+      {/* ── Guest Readiness Checklist ─────────────────────────────────── */}
+      <div className="bg-white border border-[#e8dfd4] rounded-2xl p-5 flex flex-col gap-4">
+        <div>
+          <h2 className="font-display font-semibold text-[#1a0e02] text-sm">Before you confirm</h2>
+          <p className="text-xs text-[#64707d] mt-0.5">
+            Please review these points to make sure the experience matches your expectations.
+          </p>
+        </div>
+        <div className="flex flex-col gap-3">
+          {READINESS_ITEMS.map((item, i) => (
+            <label key={i} className="flex items-start gap-3 cursor-pointer group">
+              <div
+                onClick={() => toggleCheck(i)}
+                className={[
+                  "mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all",
+                  readinessChecks[i]
+                    ? "border-[#8b5e38] bg-[#8b5e38]"
+                    : "border-[#c4b49a] bg-white group-hover:border-[#c49a4f]",
+                ].join(" ")}
+              >
+                {readinessChecks[i] && (
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                    <path d="M5 12l5 5 9-9" stroke="white" strokeWidth="2.5"
+                      strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </div>
+              <span
+                onClick={() => toggleCheck(i)}
+                className="text-sm text-[#2b3037] leading-snug select-none"
+              >
+                {item}
+              </span>
+            </label>
+          ))}
+        </div>
+        {!allChecked && (
+          <p className="text-xs text-[#a09080] flex items-center gap-1.5">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+              <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            Check all items above to enable the confirm button.
+          </p>
+        )}
+      </div>
+
       {/* ── Navigation ───────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row gap-3">
         <button
@@ -312,7 +371,7 @@ export default function PaymentStep({
         <button
           type="button"
           onClick={handleConfirm}
-          disabled={isSubmitting}
+          disabled={isSubmitting || !allChecked}
           className="flex-[2] py-4 bg-[#8b5e38] font-bold text-base rounded-2xl hover:bg-[#7a5030] disabled:opacity-70 transition-colors shadow-sm flex items-center justify-center gap-2"
           style={{ color: "#fff" }}
         >

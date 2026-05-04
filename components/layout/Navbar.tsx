@@ -184,7 +184,7 @@ export default function Navbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
             <div className="w-10 h-10 rounded-full overflow-hidden border border-[#e8dfd4] shrink-0">
-              <Image src="/logo.png" alt="Bedouin" width={40} height={40} className="object-cover w-full h-full" priority />
+              <Image src="/logo.png" alt="Bedouin" width={40} height={40} className="object-cover" priority />
             </div>
             <span className="font-display font-bold text-xl text-[#2b1a0e] tracking-tight leading-none group-hover:text-[#8b5e38] transition-colors">
               Bedouin

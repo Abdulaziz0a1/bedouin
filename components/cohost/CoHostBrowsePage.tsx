@@ -102,6 +102,7 @@ interface CoHostBrowsePageProps {
   hostListings:    InviteModalListing[];
   hostInvitations: CoHostInvitation[];
   hostAssignments: CoHostAssignment[];
+  currentUserId:   string | null;
   error?:          string;
 }
 
@@ -110,6 +111,7 @@ export default function CoHostBrowsePage({
   hostListings,
   hostInvitations,
   hostAssignments,
+  currentUserId,
   error,
 }: CoHostBrowsePageProps) {
   const [cohosts,         ]           = useState<CoHost[]>(initialCohosts);
@@ -139,6 +141,7 @@ export default function CoHostBrowsePage({
 
   const selectedCohost = effectiveCohosts.find((c) => c.id === selectedId) ?? null;
   const selectedRelation = selectedCohost ? relations.get(selectedCohost.userId) : undefined;
+  const isOwnProfile = !!(currentUserId && selectedCohost?.userId === currentUserId);
 
   // Derived regions
   const ALL_REGIONS = useMemo(
@@ -389,7 +392,8 @@ export default function CoHostBrowsePage({
               key={selectedCohost.id}
               cohost={selectedCohost}
               relation={selectedRelation}
-              onInvite={() => setShowInviteModal(true)}
+              isOwnProfile={isOwnProfile}
+              onInvite={() => { if (!isOwnProfile) setShowInviteModal(true); }}
               onCancelInvite={
                 selectedRelation?.invitationId
                   ? () => handleCancelInvite(selectedCohost.userId, selectedRelation.invitationId!)

@@ -225,6 +225,23 @@ export type ApplyAsCohostResult =
   | { success: true }
   | { success: false; error: string };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CohostApplicationPrefill — shape for pre-filling the form on edit/resubmit
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface CohostApplicationPrefill {
+  serviceTypes:    string[];
+  propertyTypes:   string[];
+  bio:             string;
+  languages:       string[];
+  experienceYears: number;
+  region:          string;
+  city:            string;
+  phone:           string;
+  feeModel:        "percentage" | "fixed" | "negotiable";
+  feeValue:        number | null;
+}
+
 export async function applyAsCohost(input: ApplyAsCohostInput): Promise<ApplyAsCohostResult> {
   try {
     const supabase = await createClient();
@@ -273,6 +290,90 @@ export async function applyAsCohost(input: ApplyAsCohostInput): Promise<ApplyAsC
       .eq("id", user.id);
 
     if (updateErr) return { success: false, error: updateErr.message };
+
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Unexpected error." };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// updateCohostApplication
+// Handles both first-time submissions (INSERT) and re-submissions (UPDATE).
+// Used when the user already has an application in any status and wants to edit.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export async function updateCohostApplication(input: ApplyAsCohostInput): Promise<ApplyAsCohostResult> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: "You must be signed in to apply." };
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (profile?.role === "admin") {
+      return { success: false, error: "Admin accounts cannot apply as co-hosts." };
+    }
+
+    const { data: existing } = await supabase
+      .from("cohost_applications")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (existing) {
+      const { error: updateErr } = await supabase
+        .from("cohost_applications")
+        .update({
+          service_types:    input.serviceTypes,
+          property_types:   input.propertyTypes,
+          bio:              input.bio.trim(),
+          experience_years: input.experienceYears,
+          languages:        input.languages,
+          region:           input.region.trim(),
+          city:             input.city.trim(),
+          phone:            input.phone.trim(),
+          fee_model:        input.feeModel,
+          fee_value:        input.feeValue ?? null,
+          status:           "pending",
+          reviewed_at:      null,
+          rejection_reason: null,
+        })
+        .eq("user_id", user.id);
+
+      if (updateErr) return { success: false, error: updateErr.message };
+    } else {
+      const { error: insertErr } = await supabase.from("cohost_applications").insert({
+        user_id:          user.id,
+        service_types:    input.serviceTypes,
+        property_types:   input.propertyTypes,
+        bio:              input.bio.trim(),
+        experience_years: input.experienceYears,
+        languages:        input.languages,
+        region:           input.region.trim(),
+        city:             input.city.trim(),
+        phone:            input.phone.trim(),
+        fee_model:        input.feeModel,
+        fee_value:        input.feeValue ?? null,
+        status:           "pending",
+      });
+
+      if (insertErr) return { success: false, error: insertErr.message };
+    }
+
+    const { error: profileErr } = await supabase
+      .from("profiles")
+      .update({ cohost_status: "pending", cohost_rejection_reason: null })
+      .eq("id", user.id);
+
+    if (profileErr) return { success: false, error: profileErr.message };
 
     return { success: true };
   } catch (err) {

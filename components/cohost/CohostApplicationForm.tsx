@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { applyAsCohost } from "@/lib/actions/profile";
+import { updateCohostApplication } from "@/lib/actions/profile";
+import type { CohostApplicationPrefill } from "@/lib/actions/profile";
 import { useAuth } from "@/context/AuthProvider";
 import { SAUDI_REGIONS } from "@/lib/constants/regions";
 
@@ -40,7 +41,13 @@ type Step = 1 | 2 | 3;
 // Component
 // ──────────────────────────────────────────────────────────────────────────────
 
-export default function CohostApplicationForm() {
+export default function CohostApplicationForm({
+  initialData,
+  isUpdate = false,
+}: {
+  initialData?: CohostApplicationPrefill;
+  isUpdate?:    boolean;
+}) {
   const router = useRouter();
   const { reloadProfile } = useAuth();
   const [isPending, startTransition] = useTransition();
@@ -49,20 +56,20 @@ export default function CohostApplicationForm() {
   const [submitted, setSubmitted] = useState(false);
 
   // Step 1 — Services
-  const [serviceTypes,    setServiceTypes]    = useState<string[]>([]);
-  const [propertyTypes,   setPropertyTypes]   = useState<string[]>([]);
+  const [serviceTypes,    setServiceTypes]    = useState<string[]>(initialData?.serviceTypes    ?? []);
+  const [propertyTypes,   setPropertyTypes]   = useState<string[]>(initialData?.propertyTypes   ?? []);
 
   // Step 2 — Background
-  const [bio,             setBio]             = useState("");
-  const [languages,       setLanguages]       = useState<string[]>([]);
-  const [experienceYears, setExperienceYears] = useState(0);
-  const [region,          setRegion]          = useState("");
-  const [city,            setCity]            = useState("");
-  const [phone,           setPhone]           = useState("");
+  const [bio,             setBio]             = useState(initialData?.bio             ?? "");
+  const [languages,       setLanguages]       = useState<string[]>(initialData?.languages       ?? []);
+  const [experienceYears, setExperienceYears] = useState(initialData?.experienceYears ?? 0);
+  const [region,          setRegion]          = useState(initialData?.region          ?? "");
+  const [city,            setCity]            = useState(initialData?.city            ?? "");
+  const [phone,           setPhone]           = useState(initialData?.phone           ?? "");
 
   // Step 3 — Fee
-  const [feeModel, setFeeModel] = useState<"percentage" | "fixed" | "negotiable">("negotiable");
-  const [feeValue, setFeeValue] = useState<string>("");
+  const [feeModel, setFeeModel] = useState<"percentage" | "fixed" | "negotiable">(initialData?.feeModel ?? "negotiable");
+  const [feeValue, setFeeValue] = useState<string>(initialData?.feeValue != null ? String(initialData.feeValue) : "");
 
   const toggleItem = (list: string[], setList: (v: string[]) => void, item: string) => {
     setList(list.includes(item) ? list.filter((x) => x !== item) : [...list, item]);
@@ -100,7 +107,7 @@ export default function CohostApplicationForm() {
     }
 
     startTransition(async () => {
-      const result = await applyAsCohost({
+      const result = await updateCohostApplication({
         bio,
         languages,
         experienceYears,
@@ -132,10 +139,13 @@ export default function CohostApplicationForm() {
             <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
-        <h2 className="font-display font-extrabold text-[#1a0e02] text-2xl">Application Submitted!</h2>
+        <h2 className="font-display font-extrabold text-[#1a0e02] text-2xl">
+          {isUpdate ? "Profile Updated!" : "Application Submitted!"}
+        </h2>
         <p className="text-[#64707d] text-sm leading-relaxed max-w-md">
-          Your service provider application is now under review. We typically respond within
-          1–2 business days. You&apos;ll see your status on your account dashboard.
+          {isUpdate
+            ? "Your co-host profile has been updated and is now under review. We typically respond within 1–2 business days."
+            : "Your service provider application is now under review. We typically respond within 1–2 business days. You'll see your status on your account dashboard."}
         </p>
         <button
           onClick={() => router.push("/account")}
@@ -396,7 +406,7 @@ export default function CohostApplicationForm() {
                   </svg>
                   Submitting…
                 </>
-              ) : "Submit Application"}
+              ) : isUpdate ? "Update Profile" : "Submit Application"}
             </button>
           </div>
 

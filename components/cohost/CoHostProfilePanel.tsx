@@ -68,6 +68,7 @@ function ReviewCard({ review }: { review: CoHost["reviews"][0] }) {
 interface Props {
   cohost: CoHost;
   relation?: CoHostRelation;
+  isOwnProfile?: boolean;
   onInvite: () => void;
   onCancelInvite?: () => void;
   onRemoveAssignment?: () => void;
@@ -77,13 +78,14 @@ interface Props {
 export default function CoHostProfilePanel({
   cohost,
   relation,
+  isOwnProfile = false,
   onInvite,
   onCancelInvite,
   onRemoveAssignment,
   onClose,
 }: Props) {
   const effectiveStatus = relation?.status ?? cohost.status;
-  const canInvite = effectiveStatus === "available" || effectiveStatus === "declined";
+  const canInvite = !isOwnProfile && (effectiveStatus === "available" || effectiveStatus === "declined");
 
   const feeLabel = (() => {
     if (cohost.feeModel === "percentage" && cohost.feeValue)
@@ -140,54 +142,62 @@ export default function CoHostProfilePanel({
 
           {/* Status CTA — top-right of header */}
           <div className="shrink-0 flex flex-col items-end gap-1.5">
-            {effectiveStatus === "available" && (
-              <button
-                onClick={onInvite}
-                className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#8b5e38] text-white hover:bg-[#7a5030] transition-colors"
-              >
-                Invite
-              </button>
-            )}
-            {effectiveStatus === "declined" && (
+            {isOwnProfile ? (
+              <span className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#fdf5ee] text-[#8b5e38] border border-[#e8c89a]">
+                Your profile
+              </span>
+            ) : (
               <>
-                <span className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-50 text-red-600 border border-red-200">
-                  Declined
-                </span>
-                <button
-                  onClick={onInvite}
-                  className="text-[11px] text-[#8b5e38] underline hover:text-[#7a5030] transition-colors"
-                >
-                  Re-invite
-                </button>
-              </>
-            )}
-            {effectiveStatus === "invited" && (
-              <>
-                <span className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                  Invitation pending
-                </span>
-                {onCancelInvite && (
+                {effectiveStatus === "available" && (
                   <button
-                    onClick={onCancelInvite}
-                    className="text-[11px] text-[#64707d] underline hover:text-red-600 transition-colors"
+                    onClick={onInvite}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#8b5e38] text-white hover:bg-[#7a5030] transition-colors"
                   >
-                    Cancel invite
+                    Invite
                   </button>
                 )}
-              </>
-            )}
-            {(effectiveStatus === "accepted" || effectiveStatus === "assigned") && (
-              <>
-                <span className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
-                  {effectiveStatus === "assigned" ? "Co-hosting" : "Accepted"}
-                </span>
-                {effectiveStatus === "assigned" && onRemoveAssignment && (
-                  <button
-                    onClick={onRemoveAssignment}
-                    className="text-[11px] text-[#64707d] underline hover:text-red-600 transition-colors"
-                  >
-                    Remove co-host
-                  </button>
+                {effectiveStatus === "declined" && (
+                  <>
+                    <span className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-50 text-red-600 border border-red-200">
+                      Declined
+                    </span>
+                    <button
+                      onClick={onInvite}
+                      className="text-[11px] text-[#8b5e38] underline hover:text-[#7a5030] transition-colors"
+                    >
+                      Re-invite
+                    </button>
+                  </>
+                )}
+                {effectiveStatus === "invited" && (
+                  <>
+                    <span className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                      Invitation pending
+                    </span>
+                    {onCancelInvite && (
+                      <button
+                        onClick={onCancelInvite}
+                        className="text-[11px] text-[#64707d] underline hover:text-red-600 transition-colors"
+                      >
+                        Cancel invite
+                      </button>
+                    )}
+                  </>
+                )}
+                {(effectiveStatus === "accepted" || effectiveStatus === "assigned") && (
+                  <>
+                    <span className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
+                      {effectiveStatus === "assigned" ? "Co-hosting" : "Accepted"}
+                    </span>
+                    {effectiveStatus === "assigned" && onRemoveAssignment && (
+                      <button
+                        onClick={onRemoveAssignment}
+                        className="text-[11px] text-[#64707d] underline hover:text-red-600 transition-colors"
+                      >
+                        Remove co-host
+                      </button>
+                    )}
+                  </>
                 )}
               </>
             )}
@@ -280,32 +290,47 @@ export default function CoHostProfilePanel({
           )}
 
           {/* Bottom CTA */}
-          {canInvite && (
-            <button
-              onClick={onInvite}
+          {isOwnProfile ? (
+            <a
+              href="/cohost/apply"
               className="w-full py-3 bg-[#1a0e02] text-white rounded-2xl text-sm font-semibold hover:bg-[#2e1a06] transition-colors flex items-center justify-center gap-2"
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              {effectiveStatus === "declined" ? `Re-invite ${cohost.firstName}` : `Invite ${cohost.firstName} to a listing`}
-            </button>
-          )}
-          {effectiveStatus === "invited" && onCancelInvite && (
-            <button
-              onClick={onCancelInvite}
-              className="w-full py-3 border border-red-200 text-red-600 rounded-2xl text-sm font-semibold hover:bg-red-50 transition-colors"
-            >
-              Cancel invitation
-            </button>
-          )}
-          {effectiveStatus === "assigned" && onRemoveAssignment && (
-            <button
-              onClick={onRemoveAssignment}
-              className="w-full py-3 border border-red-200 text-red-600 rounded-2xl text-sm font-semibold hover:bg-red-50 transition-colors"
-            >
-              Remove {cohost.firstName} as co-host
-            </button>
+              Manage your co-host profile
+            </a>
+          ) : (
+            <>
+              {canInvite && (
+                <button
+                  onClick={onInvite}
+                  className="w-full py-3 bg-[#1a0e02] text-white rounded-2xl text-sm font-semibold hover:bg-[#2e1a06] transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                  </svg>
+                  {effectiveStatus === "declined" ? `Re-invite ${cohost.firstName}` : `Invite ${cohost.firstName} to a listing`}
+                </button>
+              )}
+              {effectiveStatus === "invited" && onCancelInvite && (
+                <button
+                  onClick={onCancelInvite}
+                  className="w-full py-3 border border-red-200 text-red-600 rounded-2xl text-sm font-semibold hover:bg-red-50 transition-colors"
+                >
+                  Cancel invitation
+                </button>
+              )}
+              {effectiveStatus === "assigned" && onRemoveAssignment && (
+                <button
+                  onClick={onRemoveAssignment}
+                  className="w-full py-3 border border-red-200 text-red-600 rounded-2xl text-sm font-semibold hover:bg-red-50 transition-colors"
+                >
+                  Remove {cohost.firstName} as co-host
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>

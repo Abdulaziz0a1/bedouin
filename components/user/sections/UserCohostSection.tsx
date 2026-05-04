@@ -273,6 +273,16 @@ export default function UserCohostSection({
                 Our team is reviewing your co-host application. We typically respond within 1–2 business days.
                 You&apos;ll see your status updated here once a decision is made.
               </p>
+              <a
+                href="/cohost/apply"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8b5e38] hover:text-[#461e00] transition-colors mt-3"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Update application
+              </a>
             </div>
           </div>
         </div>
@@ -324,6 +334,16 @@ export default function UserCohostSection({
                   ? `You are actively co-hosting ${assignments.length} listing${assignments.length > 1 ? "s" : ""}. Hosts can still invite you for more.`
                   : "Your profile is live on the Bedouin co-host marketplace. Hosts across Saudi Arabia can find and invite you to manage their listings."}
               </p>
+              <a
+                href="/cohost/apply"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8b5e38] hover:text-[#461e00] transition-colors mt-3"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Edit co-host profile
+              </a>
             </div>
           </div>
         </div>

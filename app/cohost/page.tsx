@@ -35,6 +35,7 @@ export default async function CoHostPage() {
       hostListings={hostListings}
       hostInvitations={hostInvitations}
       hostAssignments={hostAssignments}
+      currentUserId={user?.id ?? null}
       error={dbCohosts.error ?? undefined}
     />
   );

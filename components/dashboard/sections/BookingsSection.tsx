@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { DashboardBooking } from "@/lib/data/dashboard";
 import UserAvatar from "@/components/ui/UserAvatar";
 import DashboardEmptyState from "../shared/DashboardEmptyState";
@@ -15,7 +15,8 @@ const PAYMENT_LABELS: Record<string, string> = {
   apple_pay: "Apple Pay",
 };
 
-const TEMPLATES: { label: string; text: string }[] = [
+// Templates for past-guest broadcasts (retention, offers)
+const PAST_TEMPLATES: { label: string; text: string }[] = [
   {
     label: "Thank you",
     text:  "Thank you for staying with us! It was a pleasure hosting you and we hope you had a wonderful experience. We'd love to welcome you back anytime.",
@@ -30,34 +31,44 @@ const TEMPLATES: { label: string; text: string }[] = [
   },
 ];
 
-// ── StatusChip ──────────────────────────────────────────────────────────────
+// Templates for upcoming-guest broadcasts (check-in, instructions)
+const UPCOMING_TEMPLATES: { label: string; text: string }[] = [
+  {
+    label: "Check-in info",
+    text:  "We're looking forward to welcoming you! Here are your check-in details: [add your address and entry instructions here]. Please reach out if you have any questions before your arrival.",
+  },
+  {
+    label: "Welcome",
+    text:  "We're so excited to have you staying with us soon! If there's anything we can do to make your stay more comfortable, don't hesitate to get in touch.",
+  },
+  {
+    label: "Reminder",
+    text:  "Your stay is coming up soon — just a friendly reminder to review the house rules before your arrival. We look forward to hosting you!",
+  },
+];
+
+// ── StatusChip ───────────────────────────────────────────────────────────────
 
 function StatusChip({
   status,
   cancellationType,
 }: {
-  status: DashboardBooking["status"];
-  cancellationType?: string;
+  status:             DashboardBooking["status"];
+  cancellationType?:  string;
 }) {
   const label =
     status === "cancelled" && cancellationType === "by_tourist"
       ? "Cancelled by guest"
-      : status === "cancelled"
-      ? "Cancelled"
-      : status === "upcoming"
-      ? "Upcoming"
-      : status === "active"
-      ? "Active"
+      : status === "cancelled"   ? "Cancelled"
+      : status === "upcoming"    ? "Upcoming"
+      : status === "active"      ? "Active"
       : "Completed";
 
   const cls =
-    status === "cancelled"
-      ? "bg-red-50 text-red-600 border-red-200"
-      : status === "upcoming"
-      ? "bg-[#fdf8ee] text-[#8b6a1f] border-[#ead9a6]"
-      : status === "active"
-      ? "bg-[#f0faf5] text-[#049153] border-[#c3e8d6]"
-      : "bg-[#f4f6f8] text-[#64707d] border-[#dddfe3]";
+    status === "cancelled"  ? "bg-red-50 text-red-600 border-red-200"
+    : status === "upcoming" ? "bg-[#fdf8ee] text-[#8b6a1f] border-[#ead9a6]"
+    : status === "active"   ? "bg-[#f0faf5] text-[#049153] border-[#c3e8d6]"
+    :                         "bg-[#f4f6f8] text-[#64707d] border-[#dddfe3]";
 
   return (
     <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${cls}`}>
@@ -66,14 +77,20 @@ function StatusChip({
   );
 }
 
-// ── BulkMessageModal ─────────────────────────────────────────────────────────
+// ── BroadcastModal — generic, reusable for all three message scopes ───────────
 
-function BulkMessageModal({
-  pastBookings,
+function BroadcastModal({
+  bookings,
+  title,
+  templates,
+  showDateFilter,
   onClose,
 }: {
-  pastBookings: DashboardBooking[];
-  onClose: () => void;
+  bookings:        DashboardBooking[];
+  title:           string;
+  templates:       { label: string; text: string }[];
+  showDateFilter?: boolean;
+  onClose:         () => void;
 }) {
   const [filter,           setFilter]          = useState<DateFilter>("all");
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
@@ -95,13 +112,13 @@ function BulkMessageModal({
     "90": new Date(now - 90 * 86400000),
   };
 
-  const eligible = pastBookings.filter((b) => {
+  const eligible = bookings.filter((b) => {
     if (!b.guestId) return false;
-    if (filter === "all") return true;
+    if (!showDateFilter || filter === "all") return true;
     return new Date(b.checkOut) >= cutoffs[filter as Exclude<DateFilter, "all">];
   });
 
-  // One message per unique guest — keep the most-recent booking for context
+  // One message per unique guest — keep their most-recent booking for context IDs
   const uniqueGuests = Object.values(
     eligible.reduce<Record<string, DashboardBooking>>((acc, b) => {
       if (!acc[b.guestId!] || b.checkOut > acc[b.guestId!].checkOut) {
@@ -129,7 +146,7 @@ function BulkMessageModal({
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#f0e8de] shrink-0">
-          <h3 className="font-display font-bold text-[#1a0e02] text-base">Message past guests</h3>
+          <h3 className="font-display font-bold text-[#1a0e02] text-base">{title}</h3>
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg hover:bg-[#f0e8de] transition-colors text-[#64707d]"
@@ -142,6 +159,7 @@ function BulkMessageModal({
 
         <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
           {done ? (
+            /* ── Success state ── */
             <div className="flex flex-col items-center text-center gap-3 py-6">
               <div className="w-12 h-12 rounded-2xl bg-[#f0faf5] flex items-center justify-center text-[#049153]">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -150,7 +168,7 @@ function BulkMessageModal({
                 </svg>
               </div>
               <p className="font-semibold text-[#1a0e02] text-sm">
-                {done.sent} message{done.sent !== 1 ? "s" : ""} sent
+                Message sent to {done.sent} guest{done.sent !== 1 ? "s" : ""}
               </p>
               {done.failed > 0 && (
                 <p className="text-xs text-red-600">{done.failed} failed to send</p>
@@ -164,41 +182,44 @@ function BulkMessageModal({
             </div>
           ) : (
             <>
-              {/* Recipient filter */}
-              <div className="flex flex-col gap-2">
-                <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest">Recipients</p>
-                <div className="flex gap-2 flex-wrap">
-                  {([
-                    { id: "all", label: "All past guests" },
-                    { id: "30",  label: "Last 30 days"    },
-                    { id: "60",  label: "Last 60 days"    },
-                    { id: "90",  label: "Last 90 days"    },
-                  ] as { id: DateFilter; label: string }[]).map(({ id, label }) => (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => setFilter(id)}
-                      className={[
-                        "px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors",
-                        filter === id
-                          ? "bg-[#461e00] text-white border-[#461e00]"
-                          : "bg-white text-[#64707d] border-[#e8dfd4] hover:border-[#8b5e38]",
-                      ].join(" ")}
-                    >
-                      {label}
-                    </button>
-                  ))}
+              {/* Recipient filter — only relevant for past-guest date scoping */}
+              {showDateFilter && (
+                <div className="flex flex-col gap-2">
+                  <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest">Recipients</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {([
+                      { id: "all", label: "All past guests" },
+                      { id: "30",  label: "Last 30 days"    },
+                      { id: "60",  label: "Last 60 days"    },
+                      { id: "90",  label: "Last 90 days"    },
+                    ] as { id: DateFilter; label: string }[]).map(({ id, label }) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => setFilter(id)}
+                        className={[
+                          "px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors",
+                          filter === id
+                            ? "bg-[#461e00] text-white border-[#461e00]"
+                            : "bg-white text-[#64707d] border-[#e8dfd4] hover:border-[#8b5e38]",
+                        ].join(" ")}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <p className="text-xs text-[#64707d]">
-                  {uniqueGuests.length} unique guest{uniqueGuests.length !== 1 ? "s" : ""} will receive this message
-                </p>
-              </div>
+              )}
+
+              <p className="text-xs text-[#64707d]">
+                {uniqueGuests.length} unique guest{uniqueGuests.length !== 1 ? "s" : ""} will receive this message
+              </p>
 
               {/* Templates */}
               <div className="flex flex-col gap-2">
                 <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest">Templates</p>
                 <div className="flex gap-2 flex-wrap">
-                  {TEMPLATES.map((t) => (
+                  {templates.map((t) => (
                     <button
                       key={t.label}
                       type="button"
@@ -227,7 +248,6 @@ function BulkMessageModal({
                   </button>
                 </div>
 
-                {/* Custom title input — shown only when Custom is selected */}
                 {selectedTemplate === "Custom" && (
                   <div className="flex flex-col gap-1 mt-1">
                     <input
@@ -237,7 +257,9 @@ function BulkMessageModal({
                       placeholder="Message title…"
                       className={[
                         "w-full border rounded-xl px-3 py-2 text-sm text-[#1a0e02] placeholder:text-[#a09080] focus:outline-none transition-colors",
-                        titleOverLimit ? "border-red-400 focus:border-red-500" : "border-[#e8dfd4] focus:border-[#8b5e38]",
+                        titleOverLimit
+                          ? "border-red-400 focus:border-red-500"
+                          : "border-[#e8dfd4] focus:border-[#8b5e38]",
                       ].join(" ")}
                     />
                     <div className="flex items-center justify-between px-0.5">
@@ -253,14 +275,14 @@ function BulkMessageModal({
                 )}
               </div>
 
-              {/* Message */}
+              {/* Message textarea */}
               <div className="flex flex-col gap-1.5">
                 <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest">Message</p>
                 <textarea
                   rows={5}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Write your message to past guests…"
+                  placeholder="Write your message…"
                   className="w-full border border-[#e8dfd4] rounded-xl px-3 py-2.5 text-sm text-[#1a0e02] placeholder:text-[#a09080] focus:outline-none focus:border-[#8b5e38] resize-none transition-colors"
                 />
               </div>
@@ -290,16 +312,29 @@ function BulkMessageModal({
   );
 }
 
+// ── MsgIcon — shared SVG to avoid repetition ─────────────────────────────────
+
+function MsgIcon({ size = 13 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path
+        d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
+        stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 // ── BookingRow ────────────────────────────────────────────────────────────────
 
-function BookingRow({ booking, isPast }: { booking: DashboardBooking; isPast: boolean }) {
+function BookingRow({ booking }: { booking: DashboardBooking }) {
   const [expanded, setExpanded] = useState(false);
   const fmtDate = (iso: string) =>
     new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
   return (
     <div className="bg-white border border-[#e8dfd4] rounded-2xl overflow-hidden">
-      {/* Main row */}
+      {/* Collapsed row */}
       <button
         className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-[#faf7f4] transition-colors"
         onClick={() => setExpanded(!expanded)}
@@ -370,20 +405,18 @@ function BookingRow({ booking, isPast }: { booking: DashboardBooking; isPast: bo
             </div>
           </div>
 
-          {/* Message guest — past bookings with a known guest user id */}
-          {isPast && booking.guestId && (
+          {/* ── Feature 1: Message guest — available for ALL bookings with a known guestId */}
+          {booking.guestId && (
             <a
               href={`/messages?with=${booking.guestId}&booking=${booking.id}&listing=${booking.listingId}`}
               className="inline-flex items-center gap-2 self-start px-4 py-2 rounded-xl border border-[#e8dfd4] bg-white text-sm font-semibold text-[#1a0e02] hover:bg-[#faf7f4] hover:border-[#8b5e38] transition-colors"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              <MsgIcon size={14} />
               Message {booking.guestName.split(" ")[0]}
             </a>
           )}
 
-          {/* Cancellation details — only when cancelled */}
+          {/* Cancellation details */}
           {booking.status === "cancelled" && (
             <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3">
               <div className="flex items-center gap-1.5 mb-1.5">
@@ -419,33 +452,69 @@ function BookingRow({ booking, isPast }: { booking: DashboardBooking; isPast: bo
 // ── BookingsSection ───────────────────────────────────────────────────────────
 
 export default function BookingsSection({ bookings }: { bookings: DashboardBooking[] }) {
-  const [tab,       setTab]       = useState<Tab>("upcoming");
-  const [showBulk,  setShowBulk]  = useState(false);
+  const [tab,             setTab]             = useState<Tab>("upcoming");
+  // past-guest broadcast
+  const [showPastBulk,    setShowPastBulk]    = useState(false);
+  // per-listing broadcast (upcoming)
+  const [listingMsg,      setListingMsg]      = useState<{ listingId: string; listingTitle: string } | null>(null);
+  // broadcast to ALL guests across all bookings
+  const [showAllBroadcast, setShowAllBroadcast] = useState(false);
 
   const upcoming = bookings.filter((b) => b.status === "upcoming" || b.status === "active");
   const past      = bookings.filter((b) => b.status === "completed" || b.status === "cancelled");
 
-  const shown = tab === "upcoming" ? upcoming : past;
+  const totalRevenue          = past.filter(b => b.status === "completed").reduce((s, b) => s + b.hostPayout, 0);
+  const messagablePastGuests  = past.filter((b) => b.guestId).length;
+  const messagableAllGuests   = bookings.filter((b) => b.guestId).length;
 
-  const totalRevenue = past.filter(b => b.status === "completed")
-    .reduce((s, b) => s + b.hostPayout, 0);
+  // ── Feature 2: group upcoming bookings by listing ────────────────────────
+  const upcomingGroups = useMemo(() => {
+    const map = new Map<string, { listingTitle: string; bookings: DashboardBooking[] }>();
+    for (const b of upcoming) {
+      if (!map.has(b.listingId)) map.set(b.listingId, { listingTitle: b.listingTitle, bookings: [] });
+      map.get(b.listingId)!.bookings.push(b);
+    }
+    return Array.from(map.entries()).map(([listingId, { listingTitle, bookings: bkgs }]) => ({
+      listingId,
+      listingTitle,
+      bookings:   bkgs,
+      guestCount: new Set(bkgs.map(b => b.guestId).filter(Boolean)).size,
+    }));
+  }, [upcoming]);
 
-  const messagablePastGuests = past.filter((b) => b.guestId).length;
+  // Bookings for the active listing-scoped modal
+  const listingMsgBookings = listingMsg
+    ? upcoming.filter((b) => b.listingId === listingMsg.listingId)
+    : [];
 
   return (
     <div className="flex flex-col gap-6">
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="font-display font-semibold text-[#1a0e02] text-lg">Bookings</h2>
           <p className="text-xs text-[#64707d] mt-0.5">
             {upcoming.length} upcoming · SAR {totalRevenue.toLocaleString("en-US")} earned to date
           </p>
         </div>
+
+        {/* Feature 3: Broadcast to ALL guests button */}
+        {messagableAllGuests > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowAllBroadcast(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#e8dfd4] bg-white text-xs font-semibold text-[#64707d] hover:border-[#8b5e38] hover:text-[#1a0e02] transition-colors"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+              <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.4 10.8a19.79 19.79 0 01-3.07-8.67A2 2 0 012.3 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Broadcast to all guests
+          </button>
+        )}
       </div>
 
-      {/* Tabs */}
+      {/* ── Tabs + per-tab actions ── */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex gap-1 bg-[#f0e8de] rounded-xl p-1">
           {(["upcoming", "past"] as Tab[]).map((t) => (
@@ -465,46 +534,91 @@ export default function BookingsSection({ bookings }: { bookings: DashboardBooki
           ))}
         </div>
 
-        {/* Bulk message — only on past tab with messageable guests */}
+        {/* Past tab: broadcast to past guests */}
         {tab === "past" && messagablePastGuests > 0 && (
           <button
             type="button"
-            onClick={() => setShowBulk(true)}
+            onClick={() => setShowPastBulk(true)}
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#e8dfd4] bg-white text-xs font-semibold text-[#64707d] hover:border-[#8b5e38] hover:text-[#1a0e02] transition-colors"
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <MsgIcon />
             Message past guests
           </button>
         )}
       </div>
 
-      {/* List */}
-      {shown.length === 0 ? (
-        <DashboardEmptyState
-          icon={
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.6" />
-              <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-            </svg>
-          }
-          title={tab === "upcoming" ? "No upcoming bookings" : "No past bookings"}
-          description={
-            tab === "upcoming"
-              ? "When guests book your listings, they'll appear here."
-              : "Completed and cancelled reservations will appear here."
-          }
-        />
-      ) : (
-        <div className="flex flex-col gap-3">
-          {shown.map((b) => (
-            <BookingRow key={b.id} booking={b} isPast={tab === "past"} />
-          ))}
-        </div>
+      {/* ── Upcoming tab: grouped by listing ── */}
+      {tab === "upcoming" && (
+        upcomingGroups.length === 0 ? (
+          <DashboardEmptyState
+            icon={
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.6" />
+                <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+            }
+            title="No upcoming bookings"
+            description="When guests book your listings, they'll appear here."
+          />
+        ) : (
+          <div className="flex flex-col gap-8">
+            {upcomingGroups.map((group) => (
+              <div key={group.listingId}>
+                {/* ── Feature 2: listing group header with "Message all guests" ── */}
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-xs font-bold text-[#1a0e02] uppercase tracking-widest">
+                      {group.listingTitle}
+                    </p>
+                    <p className="text-[10px] text-[#a09080] mt-0.5">
+                      {group.bookings.length} booking{group.bookings.length !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                  {group.guestCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setListingMsg({ listingId: group.listingId, listingTitle: group.listingTitle })}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#e8dfd4] bg-white text-xs font-semibold text-[#64707d] hover:border-[#8b5e38] hover:text-[#1a0e02] transition-colors"
+                    >
+                      <MsgIcon />
+                      Message all guests
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-col gap-3">
+                  {group.bookings.map((b) => (
+                    <BookingRow key={b.id} booking={b} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )
       )}
 
-      {/* Summary strip — past only */}
+      {/* ── Past tab: flat list ── */}
+      {tab === "past" && (
+        past.length === 0 ? (
+          <DashboardEmptyState
+            icon={
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.6" />
+                <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+            }
+            title="No past bookings"
+            description="Completed and cancelled reservations will appear here."
+          />
+        ) : (
+          <div className="flex flex-col gap-3">
+            {past.map((b) => (
+              <BookingRow key={b.id} booking={b} />
+            ))}
+          </div>
+        )
+      )}
+
+      {/* ── Summary strip (past only) ── */}
       {tab === "past" && past.length > 0 && (
         <div className="bg-white border border-[#e8dfd4] rounded-2xl p-5">
           <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest mb-3">Summary</p>
@@ -531,9 +645,37 @@ export default function BookingsSection({ bookings }: { bookings: DashboardBooki
         </div>
       )}
 
-      {/* Bulk message modal */}
-      {showBulk && (
-        <BulkMessageModal pastBookings={past} onClose={() => setShowBulk(false)} />
+      {/* ── Modals ── */}
+
+      {/* Feature 3: Broadcast to all guests */}
+      {showAllBroadcast && (
+        <BroadcastModal
+          bookings={bookings}
+          title="Broadcast to all guests"
+          templates={UPCOMING_TEMPLATES}
+          onClose={() => setShowAllBroadcast(false)}
+        />
+      )}
+
+      {/* Feature 2: Message all guests of a specific listing */}
+      {listingMsg && (
+        <BroadcastModal
+          bookings={listingMsgBookings}
+          title={`Message guests — ${listingMsg.listingTitle}`}
+          templates={UPCOMING_TEMPLATES}
+          onClose={() => setListingMsg(null)}
+        />
+      )}
+
+      {/* Existing: Message past guests */}
+      {showPastBulk && (
+        <BroadcastModal
+          bookings={past}
+          title="Message past guests"
+          templates={PAST_TEMPLATES}
+          showDateFilter
+          onClose={() => setShowPastBulk(false)}
+        />
       )}
     </div>
   );

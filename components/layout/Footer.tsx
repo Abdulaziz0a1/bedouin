@@ -31,13 +31,12 @@ export default function Footer() {
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-3 mb-5">
               <div
-                className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center"
+                className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center shrink-0"
                 style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.10)",
+                  border: "1px solid rgba(196,154,79,0.22)",
                 }}
               >
-                <Image src="/logo.png" alt="Bedouin" width={32} height={32} className="object-contain" />
+                <Image src="/images/bedouin-logo-symbol.jpeg" alt="Bedouin" width={36} height={36} className="object-cover scale-[1.42] origin-center" />
               </div>
               <span className="font-display font-bold text-lg text-white tracking-tight">
                 Bedouin

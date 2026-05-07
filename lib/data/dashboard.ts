@@ -4,6 +4,9 @@ export interface DashboardListing {
   id: string;
   /** Slug of the live listing in the `listings` table — only set when status = 'approved'. */
   listingSlug?: string;
+  /** UUID of the row in the `listings` table — only set when status = 'approved'.
+   *  Used to match co-host invitations/assignments (both reference listings.id). */
+  listingId?: string;
   title: string;
   category: string;
   region: string;

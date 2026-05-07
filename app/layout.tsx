@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
-import { Roboto, Poppins } from "next/font/google";
+import { DM_Sans, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthProvider";
 import Navbar from "@/components/layout/Navbar";
+import AnnouncementPopup from "@/components/notifications/AnnouncementPopup";
 
-const roboto = Roboto({
+const dmSans = DM_Sans({
   variable: "--font-roboto",
   subsets: ["latin"],
   weight: ["400", "500", "700"],
   display: "swap",
 });
 
-const poppins = Poppins({
+const playfairDisplay = Playfair_Display({
   variable: "--font-poppins",
   subsets: ["latin"],
   weight: ["400", "600", "800"],
@@ -31,10 +32,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${roboto.variable} ${poppins.variable} antialiased`}>
+      <body className={`${dmSans.variable} ${playfairDisplay.variable} antialiased`}>
         <AuthProvider>
           <Navbar />
           {children}
+          <AnnouncementPopup />
         </AuthProvider>
       </body>
     </html>

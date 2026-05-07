@@ -96,15 +96,9 @@ export async function respondToInvitation(
       return { success: false, error: "Invitation not found or already responded." };
     }
 
-    // Update status
-    const { error: updateErr } = await supabase
-      .from("cohost_invitations")
-      .update({ status: decision, responded_at: new Date().toISOString() })
-      .eq("id", invitationId);
-
-    if (updateErr) return { success: false, error: updateErr.message };
-
-    // If accepted → create assignment
+    // If accepted → create assignment FIRST (before changing invitation status).
+    // This prevents a race where status = 'accepted' but no assignment row exists
+    // if the insert below fails.
     if (decision === "accepted") {
       const { error: assignErr } = await supabase.from("cohost_assignments").insert({
         invitation_id:         invitationId,
@@ -117,6 +111,14 @@ export async function respondToInvitation(
       });
       if (assignErr) return { success: false, error: assignErr.message };
     }
+
+    // Update invitation status only after assignment is safely created
+    const { error: updateErr } = await supabase
+      .from("cohost_invitations")
+      .update({ status: decision, responded_at: new Date().toISOString() })
+      .eq("id", invitationId);
+
+    if (updateErr) return { success: false, error: updateErr.message };
 
     revalidatePath("/cohost/invitations");
     return { success: true };

@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
 import { fetchUserBookings } from "@/lib/services/bookings";
-import { fetchCohostAssignments } from "@/lib/services/cohost";
+import { fetchCohostAssignments, fetchCohostInvitations } from "@/lib/services/cohost";
+import { fetchUserNotifications } from "@/lib/services/notifications";
 import { fetchUserWishlist } from "@/lib/services/wishlist";
 import { getReviewedBookingIds } from "@/lib/services/reviews";
 import { fetchUserTickets } from "@/lib/services/support";
@@ -34,9 +35,14 @@ export default async function AccountPage() {
   ]);
 
   const cohostStatusValue = (profileResult.data?.cohost_status ?? null) as "pending" | "approved" | "rejected" | null;
-  const cohostAssignments = cohostStatusValue === "approved"
-    ? await fetchCohostAssignments(user.id)
-    : [];
+  const [cohostAssignments, cohostInvitations, userNotifications] = cohostStatusValue === "approved"
+    ? await Promise.all([fetchCohostAssignments(user.id), fetchCohostInvitations(user.id), fetchUserNotifications(user.id)])
+    : [[], [], await fetchUserNotifications(user.id)] as [
+        Awaited<ReturnType<typeof fetchCohostAssignments>>,
+        Awaited<ReturnType<typeof fetchCohostInvitations>>,
+        Awaited<ReturnType<typeof fetchUserNotifications>>,
+      ];
+  const pendingCohostInvitationCount = cohostInvitations.filter((i) => i.status === "pending").length;
 
   const profile = profileResult.data;
 
@@ -62,6 +68,9 @@ export default async function AccountPage() {
       cohostStatus={cohostStatusValue}
       cohostRejectionReason={profile?.cohost_rejection_reason ?? null}
       cohostAssignments={cohostAssignments}
+      cohostInvitations={cohostInvitations}
+      pendingCohostInvitationCount={pendingCohostInvitationCount}
+      notifications={userNotifications}
       savedListings={savedListings}
       initialTickets={initialTickets}
     />

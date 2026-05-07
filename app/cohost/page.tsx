@@ -16,9 +16,15 @@ export const metadata: Metadata = {
   description: "Browse verified co-hosts across Saudi Arabia to help manage your Bedouin listings.",
 };
 
-export default async function CoHostPage() {
+export default async function CoHostPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ listing?: string }>;
+}) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  const params = await searchParams;
+  const defaultListingId = params?.listing ?? null;
 
   const [dbCohosts, hostListings, hostInvitations, hostAssignments] = await Promise.all([
     fetchApprovedCohosts()
@@ -36,6 +42,7 @@ export default async function CoHostPage() {
       hostInvitations={hostInvitations}
       hostAssignments={hostAssignments}
       currentUserId={user?.id ?? null}
+      defaultListingId={defaultListingId}
       error={dbCohosts.error ?? undefined}
     />
   );

@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect, useRef, useCallback } from "react";
 import UserAvatar from "@/components/ui/UserAvatar";
-import { sendMessage, fetchThread, deleteMessage, hideConversation, type ThreadMessage } from "@/lib/actions/messages";
+import { sendMessage, fetchThread, deleteMessage, hideConversation, markThreadRead, type ThreadMessage } from "@/lib/actions/messages";
 import type { Conversation } from "@/lib/services/messages";
 
 interface MessagesPageProps {
@@ -162,13 +162,31 @@ function MessageBubble({
 
       <div className={`max-w-[72%] flex flex-col gap-0.5 ${isMine ? "items-end" : "items-start"}`}>
         <div
-          className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+          className="px-4 py-2.5 text-sm leading-relaxed"
+          style={
             msg.isDeleted
-              ? "bg-[#f1f2f3] text-[#a09080] italic border border-[#e8dfd4]"
+              ? {
+                  borderRadius: "14px",
+                  background: "#f4f1ee",
+                  color: "#a09080",
+                  fontStyle: "italic",
+                  border: "1px solid var(--border)",
+                }
               : isMine
-                ? "bg-[#461e00] text-white rounded-br-sm"
-                : "bg-white border border-[#e8dfd4] text-[#1a0e02] rounded-bl-sm"
-          }`}
+              ? {
+                  borderRadius: "18px 18px 4px 18px",
+                  background: "linear-gradient(145deg, #461e00 0%, #2d1208 100%)",
+                  color: "white",
+                  boxShadow: "0 2px 12px rgba(70,30,0,0.24)",
+                }
+              : {
+                  borderRadius: "18px 18px 18px 4px",
+                  background: "white",
+                  color: "#1a0e02",
+                  border: "1px solid var(--border)",
+                  boxShadow: "0 1px 6px rgba(70,30,0,0.06)",
+                }
+          }
         >
           {msg.isDeleted ? "This message was deleted." : msg.content}
         </div>
@@ -291,6 +309,7 @@ export default function MessagesPage({
           name:                 initialWithName ?? "User",
           lastMessage:          "",
           lastAt:               "",
+          unreadCount:          0,
           listingId:            initialListingId    ?? null,
           listingTitle:         initialListingTitle ?? null,
           bookingId:            initialBookingId    ?? null,
@@ -353,6 +372,12 @@ export default function MessagesPage({
     setShowThread(true);
     setInputText("");
     setSendError(null);
+    // Mark all incoming messages in this thread as read (fire-and-forget).
+    // Also clear the local unread count immediately so the badge doesn't lag.
+    markThreadRead(userId).catch(() => {});
+    setConvList((prev) =>
+      prev.map((c) => (c.userId === userId ? { ...c, unreadCount: 0 } : c))
+    );
   }
 
   function handleSend() {
@@ -447,18 +472,19 @@ export default function MessagesPage({
   }
 
   return (
-    <div className="flex h-[calc(100vh-72px)] bg-[#f4efe6]">
+    <div className="flex h-[calc(100vh-74px)]" style={{ background: "var(--bg-sand)" }}>
 
       {/* ── Left: conversation list ──────────────────────────────────── */}
       <aside
         className={[
-          "w-full sm:w-[300px] lg:w-[340px] shrink-0 bg-white border-r border-[#e8dfd4] flex flex-col",
+          "w-full sm:w-[300px] lg:w-[340px] shrink-0 flex flex-col",
           showThread ? "hidden sm:flex" : "flex",
         ].join(" ")}
+        style={{ background: "white", borderRight: "1px solid var(--border)" }}
       >
         {/* Header */}
-        <div className="px-5 py-4 border-b border-[#f0e8de]">
-          <h1 className="font-display font-bold text-[#1a0e02] text-lg">Messages</h1>
+        <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--border-light)" }}>
+          <h1 className="font-display font-bold text-[#1a0e02] text-[1.05rem]">Messages</h1>
           <p className="text-xs text-[#a09080] mt-0.5">Your conversations</p>
         </div>
 
@@ -493,14 +519,22 @@ export default function MessagesPage({
       {/* ── Right: thread ───────────────────────────────────────────── */}
       <main
         className={[
-          "flex-1 flex flex-col bg-[#faf7f4]",
+          "flex-1 flex flex-col",
           showThread ? "flex" : "hidden sm:flex",
         ].join(" ")}
+        style={{ background: "#faf7f3" }}
       >
         {activeId ? (
           <>
             {/* Thread header */}
-            <div className="flex items-center gap-3 px-5 py-3.5 bg-white border-b border-[#e8dfd4] shadow-[0_1px_4px_rgba(26,14,2,0.05)]">
+            <div
+              className="flex items-center gap-3 px-5 py-3.5"
+              style={{
+                background: "white",
+                borderBottom: "1px solid var(--border)",
+                boxShadow: "0 1px 8px rgba(70,30,0,0.05)",
+              }}
+            >
               {/* Mobile back button */}
               <button
                 onClick={() => setShowThread(false)}
@@ -601,7 +635,10 @@ export default function MessagesPage({
             </div>
 
             {/* Input */}
-            <div className="bg-white border-t border-[#e8dfd4] px-4 py-3 flex gap-2 items-end">
+            <div
+              className="px-4 py-3 flex gap-2 items-end"
+              style={{ background: "white", borderTop: "1px solid var(--border)" }}
+            >
               <textarea
                 value={inputText}
                 onChange={(e) => { setInputText(e.target.value); setSendError(null); }}
@@ -610,12 +647,37 @@ export default function MessagesPage({
                 }}
                 placeholder="Type a message…"
                 rows={1}
-                className="flex-1 resize-none px-4 py-2.5 border border-[#e8dfd4] rounded-2xl text-sm text-[#1a0e02] placeholder:text-[#a09080] focus:outline-none focus:border-[#8b5e38] transition-colors bg-[#faf7f4] max-h-32 overflow-y-auto"
+                className="flex-1 resize-none px-4 py-2.5 text-sm text-[#1a0e02] placeholder:text-[#a09080] outline-none max-h-32 overflow-y-auto transition-all"
+                style={{
+                  background: "#faf7f3",
+                  border: "1.5px solid var(--border)",
+                  borderRadius: "18px",
+                  boxShadow: "inset 0 1.5px 4px rgba(70,30,0,0.04)",
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = "rgba(196,154,79,0.60)";
+                  e.currentTarget.style.boxShadow = "0 0 0 3px rgba(196,154,79,0.10), inset 0 1.5px 4px rgba(70,30,0,0.04)";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = "var(--border)";
+                  e.currentTarget.style.boxShadow = "inset 0 1.5px 4px rgba(70,30,0,0.04)";
+                }}
               />
               <button
                 onClick={handleSend}
                 disabled={!inputText.trim() || sending}
-                className="w-10 h-10 bg-[#461e00] text-white rounded-2xl flex items-center justify-center hover:bg-[#5a2800] disabled:opacity-40 transition-colors shrink-0"
+                className="w-10 h-10 text-white rounded-2xl flex items-center justify-center disabled:opacity-40 transition-all shrink-0"
+                style={{
+                  background: "linear-gradient(145deg, #461e00 0%, #2d1208 100%)",
+                  boxShadow: "0 3px 12px rgba(70,30,0,0.28)",
+                }}
+                onMouseEnter={(e) => {
+                  if (!(e.currentTarget as HTMLButtonElement).disabled)
+                    (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 5px 18px rgba(70,30,0,0.38)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 3px 12px rgba(70,30,0,0.28)";
+                }}
               >
                 {sending ? (
                   <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">

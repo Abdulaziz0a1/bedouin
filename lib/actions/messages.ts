@@ -130,6 +130,28 @@ export async function deleteMessage(messageId: string): Promise<MessageActionRes
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// markThreadRead  — marks all messages in a thread as read for the current user
+// Called whenever the user opens a conversation in the inbox.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export async function markThreadRead(otherUserId: string): Promise<void> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await supabase
+      .from("messages")
+      .update({ is_read: true })
+      .eq("receiver_id", user.id)
+      .eq("sender_id",   otherUserId)
+      .eq("is_read",     false);
+  } catch {
+    // Non-critical — badge may be stale until next load, ignore silently.
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // hideConversation  — soft-hides a conversation for the current user only
 // ─────────────────────────────────────────────────────────────────────────────
 

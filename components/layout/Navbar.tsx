@@ -2,9 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useRef, useTransition, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useRef, useTransition, useEffect, useCallback } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthProvider";
+import { createClient } from "@/lib/supabase";
 import UserAvatar from "@/components/ui/UserAvatar";
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -108,8 +109,10 @@ export default function Navbar() {
   const [switchError,   setSwitchErr]     = useState<string | null>(null);
   const [isSigningOut,  setIsSigningOut]  = useState(false);
   const [scrolled,      setScrolled]      = useState(false);
+  const [unreadCount,   setUnreadCount]   = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
+  const router    = useRouter();
+  const pathname  = usePathname();
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -117,6 +120,27 @@ export default function Navbar() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  const refreshUnread = useCallback(async () => {
+    if (!user) { setUnreadCount(0); return; }
+    try {
+      const sb = createClient();
+      const { count } = await sb
+        .from("messages")
+        .select("id", { count: "exact", head: true })
+        .eq("receiver_id", user.id)
+        .eq("is_read", false)
+        .eq("is_deleted", false);
+      setUnreadCount(count ?? 0);
+    } catch {
+      // silent — badge stays at previous value
+    }
+  }, [user]);
+
+  // Refresh badge on mount, when user changes, and when navigating away from /messages
+  useEffect(() => {
+    refreshUnread();
+  }, [refreshUnread, pathname]);
 
   const handleDropdownRef = (el: HTMLDivElement | null) => {
     (dropdownRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
@@ -157,6 +181,10 @@ export default function Navbar() {
   const displayName = firstName || "Account";
   const fullName    = `${firstName} ${lastName}`.trim() || user?.email?.split("@")[0] || "User";
 
+  // Transparent overlay mode: only on the home page before scroll
+  const isHome = pathname === "/";
+  const transparent = isHome && !scrolled;
+
   return (
     <>
       {dropdownOpen && (
@@ -164,52 +192,106 @@ export default function Navbar() {
       )}
 
       <nav
-        className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
+        className="fixed top-0 left-0 right-0 z-50 transition-all duration-500"
         style={{
-          background: scrolled
-            ? "rgba(255,255,255,0.97)"
-            : "rgba(255,255,255,0.88)",
-          backdropFilter: "blur(20px) saturate(1.8)",
-          WebkitBackdropFilter: "blur(20px) saturate(1.8)",
-          borderBottom: scrolled
-            ? "1px solid rgba(232,223,212,0.9)"
-            : "1px solid rgba(232,223,212,0.55)",
-          boxShadow: scrolled
-            ? "0 4px 24px rgba(70,30,0,0.10), 0 1px 0 rgba(255,255,255,0.8)"
-            : "none",
+          background: transparent
+            ? "transparent"
+            : scrolled
+              ? "rgba(255,252,248,0.98)"
+              : "rgba(255,252,248,0.90)",
+          backdropFilter: transparent ? "none" : "blur(24px) saturate(2)",
+          WebkitBackdropFilter: transparent ? "none" : "blur(24px) saturate(2)",
+          borderBottom: transparent
+            ? "none"
+            : scrolled
+              ? "1px solid rgba(232,223,212,0.95)"
+              : "1px solid rgba(232,223,212,0.50)",
+          boxShadow: (transparent || !scrolled)
+            ? "none"
+            : "0 2px 20px rgba(70,30,0,0.09), 0 1px 0 rgba(255,255,255,0.9)",
         }}
       >
+        {/* Animated gold top bar — hidden when overlaying the hero */}
+        {!transparent && <div className="nav-gold-bar" />}
         <div className="max-w-[1440px] mx-auto px-6 lg:px-10 h-[72px] flex items-center justify-between gap-4">
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
-            <div className="w-10 h-10 rounded-full overflow-hidden border border-[#e8dfd4] shrink-0">
-              <Image src="/logo.png" alt="Bedouin" width={40} height={40} className="object-cover" priority />
+            <div
+              className="w-9 h-9 rounded-full overflow-hidden shrink-0 transition-shadow duration-200 group-hover:shadow-[0_0_0_2px_rgba(196,154,79,0.45)]"
+              style={{
+                border: transparent
+                  ? "1.5px solid rgba(255,255,255,0.22)"
+                  : "1.5px solid rgba(232,223,212,0.85)",
+              }}
+            >
+              <Image src="/images/bedouin-logo-symbol.jpeg" alt="Bedouin" width={36} height={36} className="object-cover scale-[1.42] origin-center" priority />
             </div>
-            <span className="font-display font-bold text-xl text-[#2b1a0e] tracking-tight leading-none group-hover:text-[#8b5e38] transition-colors">
+            <span
+              className="font-display font-extrabold text-[1.15rem] leading-none transition-all duration-500"
+              style={{
+                color: transparent ? "rgba(255,248,235,0.96)" : "#1a0e02",
+                letterSpacing: transparent ? "0.01em" : "-0.01em",
+                textShadow: transparent ? "0 1px 20px rgba(0,0,0,0.35)" : "none",
+              }}
+            >
               Bedouin
             </span>
           </Link>
 
           {/* Desktop nav links */}
-          <div className="hidden md:flex items-center gap-6 flex-1">
-            {PUBLIC_LINKS.map(({ href, label }) => (
-              <Link key={label} href={href} className="relative text-[#5a4a3a] text-sm font-medium hover:text-[#2b1a0e] transition-colors after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#c49a4f] after:transition-all after:duration-200 hover:after:w-full">
-                {label}
-              </Link>
-            ))}
+          <div className="hidden md:flex items-center gap-6 flex-1 pl-2">
+            {PUBLIC_LINKS.map(({ href, label }) => {
+              const isActive = pathname === href;
+              return (
+                <Link
+                  key={label}
+                  href={href}
+                  className={`relative text-[0.8125rem] font-semibold tracking-[0.01em] transition-all duration-200 after:absolute after:bottom-[-3px] after:left-0 after:h-[1.5px] after:bg-[#c49a4f] after:transition-all after:duration-300 hover:after:w-full ${
+                    isActive ? "after:w-full" : "after:w-0"
+                  } ${
+                    transparent
+                      ? "text-white/80 hover:text-white"
+                      : isActive
+                        ? "text-[#1a0e02]"
+                        : "text-[#5a4a3a] hover:text-[#1a0e02]"
+                  }`}
+                >
+                  {label}
+                </Link>
+              );
+            })}
             {user && !isAdmin && (
-              <Link href="/messages" className="text-[#5a4a3a] text-sm font-medium hover:text-[#2b1a0e] transition-colors">
+              <Link
+                href="/messages"
+                className={`relative text-[0.8125rem] font-semibold tracking-[0.01em] transition-all duration-200 flex items-center gap-1.5 after:absolute after:bottom-[-3px] after:left-0 after:w-0 after:h-[1.5px] after:bg-[#c49a4f] after:transition-all after:duration-300 hover:after:w-full ${
+                  transparent
+                    ? "text-white/80 hover:text-white"
+                    : "text-[#5a4a3a] hover:text-[#1a0e02]"
+                }`}
+              >
                 Messages
+                {unreadCount > 0 && (
+                  <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[#8b5e38] text-white text-[10px] font-bold leading-none">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
               </Link>
             )}
             {user && activeMode === "host" && !isAdmin && (
-              <Link href="/dashboard" className="text-[#5a4a3a] text-sm font-medium hover:text-[#2b1a0e] transition-colors">
+              <Link
+                href="/dashboard?tab=listings"
+                className={`relative text-[0.8125rem] font-semibold tracking-[0.01em] transition-all duration-200 after:absolute after:bottom-[-3px] after:left-0 after:w-0 after:h-[1.5px] after:bg-[#c49a4f] after:transition-all after:duration-300 hover:after:w-full ${
+                  transparent
+                    ? "text-white/80 hover:text-white"
+                    : "text-[#5a4a3a] hover:text-[#1a0e02]"
+                }`}
+              >
                 My Listings
               </Link>
             )}
             {user && isAdmin && (
-              <Link href="/admin" className="text-[#8b5e38] text-sm font-semibold hover:text-[#7a5030] transition-colors">
+              <Link href="/admin" className="text-[0.8125rem] font-bold tracking-[0.01em] text-[#8b5e38] hover:text-[#7a5030] transition-colors duration-200">
                 Admin Panel
               </Link>
             )}
@@ -220,7 +302,7 @@ export default function Navbar() {
             {user ? (
               <>
                 {loading ? (
-                  <div className="w-28 h-9 rounded-xl bg-[#f4efe6] animate-pulse shrink-0" />
+                  <div className={`w-28 h-9 rounded-xl animate-pulse shrink-0 ${transparent ? "bg-white/10" : "bg-[#f4efe6]"}`} />
                 ) : (
                   <ModeSwitchButton
                     activeMode={activeMode}
@@ -234,7 +316,7 @@ export default function Navbar() {
                 <div ref={handleDropdownRef} className="relative z-50">
                   <button
                     onClick={() => setDropdownOpen((v) => !v)}
-                    className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-[#f4efe6] transition-colors"
+                    className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl transition-colors ${transparent ? "hover:bg-white/10" : "hover:bg-[#f4efe6]"}`}
                     aria-label="Account menu"
                   >
                     <UserAvatar
@@ -246,17 +328,24 @@ export default function Navbar() {
                           ? "ring-[#461e00]"
                           : activeMode === "host"
                             ? "ring-[#8b5e38]"
-                            : "ring-[#dddfe3]"
+                            : transparent
+                              ? "ring-white/30"
+                              : "ring-[#dddfe3]"
                       }`}
                     />
-                    <span className="text-sm font-semibold text-[#1a0e02]">{displayName}</span>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-[#8b94a4] transition-transform ${dropdownOpen ? "rotate-180" : ""}`}>
+                    <span className={`text-sm font-semibold transition-colors duration-500 ${transparent ? "text-white/90" : "text-[#1a0e02]"}`}>{displayName}</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`transition-transform ${dropdownOpen ? "rotate-180" : ""} ${transparent ? "text-white/50" : "text-[#8b94a4]"}`}>
                       <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </button>
 
                   {dropdownOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl border border-[#e8dfd4] shadow-[0_8px_32px_rgba(0,0,0,0.10)] overflow-hidden z-50">
+                    <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl overflow-hidden z-50"
+                    style={{
+                      border: "1px solid rgba(232,223,212,0.90)",
+                      boxShadow: "0 12px 48px rgba(70,30,0,0.16), 0 4px 16px rgba(70,30,0,0.08), 0 0 0 0.5px rgba(232,223,212,0.60)",
+                    }}
+                  >
                       {/* User info */}
                       <div className="px-4 py-3 border-b border-[#f0e8de]">
                         <p className="text-xs font-bold text-[#1a0e02] truncate">{firstName} {lastName}</p>
@@ -285,7 +374,12 @@ export default function Navbar() {
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-[#8b5e38]">
                             <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
-                          Messages
+                          <span className="flex-1">Messages</span>
+                          {unreadCount > 0 && (
+                            <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[#8b5e38] text-white text-[10px] font-bold leading-none">
+                              {unreadCount > 99 ? "99+" : unreadCount}
+                            </span>
+                          )}
                         </Link>
                       )}
 
@@ -370,7 +464,7 @@ export default function Navbar() {
                 >
                   Login
                 </Link>
-                <button aria-label="Support" suppressHydrationWarning className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-[#f4efe6] transition-colors text-[#5a4a3a]">
+                <button aria-label="Support" suppressHydrationWarning className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${transparent ? "text-white/70 hover:bg-white/10" : "text-[#5a4a3a] hover:bg-[#f4efe6]"}`}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
                     <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
@@ -381,7 +475,7 @@ export default function Navbar() {
           </div>
 
           {/* Mobile hamburger */}
-          <button className="md:hidden p-2 text-[#2b1a0e] rounded-lg hover:bg-[#f4efe6] transition-colors" onClick={() => setOpen((v) => !v)} aria-label="Toggle menu">
+          <button className={`md:hidden p-2 rounded-lg transition-colors ${transparent ? "text-white hover:bg-white/10" : "text-[#2b1a0e] hover:bg-[#f4efe6]"}`} onClick={() => setOpen((v) => !v)} aria-label="Toggle menu">
             {open ? (
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                 <path d="M6 6l12 12M6 18L18 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -420,7 +514,14 @@ export default function Navbar() {
 
                   <Link href="/account"  onClick={() => setOpen(false)} className="py-2 text-sm font-medium text-[#5a4a3a]">My Account</Link>
                   {!isAdmin && (
-                    <Link href="/messages" onClick={() => setOpen(false)} className="py-2 text-sm font-medium text-[#5a4a3a]">Messages</Link>
+                    <Link href="/messages" onClick={() => setOpen(false)} className="py-2 text-sm font-medium text-[#5a4a3a] flex items-center gap-2">
+                      Messages
+                      {unreadCount > 0 && (
+                        <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[#8b5e38] text-white text-[10px] font-bold leading-none">
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </span>
+                      )}
+                    </Link>
                   )}
 
                   {(activeMode === "host" || isAdmin) && (

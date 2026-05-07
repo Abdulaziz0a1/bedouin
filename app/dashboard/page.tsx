@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
 import { fetchHostListings, fetchHostBookings } from "@/lib/services/host-dashboard";
 import { fetchHostInvitations, fetchHostAssignments } from "@/lib/services/cohost";
+import { fetchHostNotifications } from "@/lib/services/notifications";
 import HostDashboard from "@/components/dashboard/HostDashboard";
 
 // Always render fresh — never serve a cached RSC payload for the dashboard.
@@ -45,11 +46,12 @@ export default async function DashboardPage() {
   const hostAvatar = profile?.avatar_url ?? "";
 
   // ── Data ─────────────────────────────────────────────────────────────────────
-  const [listings, bookings, cohostAssignments, cohostInvitations] = await Promise.all([
+  const [listings, bookings, cohostAssignments, cohostInvitations, notifications] = await Promise.all([
     fetchHostListings(user.id),
     fetchHostBookings(user.id),
     fetchHostAssignments(user.id),
     fetchHostInvitations(user.id),
+    fetchHostNotifications(user.id),
   ]);
 
   return (
@@ -60,6 +62,7 @@ export default async function DashboardPage() {
       hostAvatar={hostAvatar}
       cohostAssignments={cohostAssignments}
       cohostInvitations={cohostInvitations}
+      notifications={notifications}
     />
   );
 }

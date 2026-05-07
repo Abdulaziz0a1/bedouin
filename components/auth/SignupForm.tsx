@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import PasswordInput from "@/components/ui/PasswordInput";
@@ -98,13 +99,19 @@ export default function SignupForm() {
   // ── Form state ───────────────────────────────────────────────────────────────
   return (
     <>
-      <div className="mb-6">
-        <h1 className="font-display font-extrabold text-[#1a0e02] text-2xl mb-1">
-          Create your account
-        </h1>
-        <p className="text-[#64707d] text-sm">
-          Join Bedouin and start exploring
-        </p>
+      {/* Brand mark */}
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-11 h-11 rounded-full overflow-hidden shrink-0" style={{ border: "1.5px solid rgba(196,154,79,0.30)" }}>
+          <Image src="/images/bedouin-logo-symbol.jpeg" alt="Bedouin" width={44} height={44} className="object-cover scale-[1.42] origin-center" />
+        </div>
+        <div>
+          <h1 className="font-display font-extrabold text-[#1a0e02] text-2xl mb-0.5">
+            Create your account
+          </h1>
+          <p className="text-[#64707d] text-sm">
+            Join Bedouin and start exploring
+          </p>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">

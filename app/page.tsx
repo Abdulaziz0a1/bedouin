@@ -14,14 +14,13 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#f4efe6]">
 
-      {/* Hero + search card overlap */}
-      <div className="pt-[72px]">
+      {/* Full-screen cinematic hero — navbar overlays from absolute top */}
+      <div className="relative h-screen min-h-[700px]">
         <HeroSection />
-      </div>
-
-      {/* SearchSection floats above the hero bottom */}
-      <div className="relative z-20 -mt-28 px-6 pb-12">
-        <SearchSection />
+        {/* Search card docked inside the hero, floating above the fold line */}
+        <div className="absolute bottom-0 left-0 right-0 z-20 px-4 sm:px-6 pb-14 sm:pb-16">
+          <SearchSection />
+        </div>
       </div>
 
       <main className="flex flex-col">

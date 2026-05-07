@@ -97,7 +97,7 @@ function BroadcastModal({
   const [customTitle,      setCustomTitle]      = useState("");
   const [message,          setMessage]          = useState("");
   const [sending,          setSending]          = useState(false);
-  const [done,             setDone]             = useState<{ sent: number; failed: number } | null>(null);
+  const [done,             setDone]             = useState<{ sent: number; failed: number; failedNames: string[] } | null>(null);
 
   const wordCount      = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
   const titleOverLimit = wordCount(customTitle) > 6;
@@ -132,12 +132,21 @@ function BroadcastModal({
     if (!fullContent || uniqueGuests.length === 0 || titleOverLimit) return;
     setSending(true);
     let sent = 0, failed = 0;
+    const failedNames: string[] = [];
     for (const b of uniqueGuests) {
-      const res = await sendMessage(b.guestId!, fullContent, b.listingId || undefined, b.id);
-      if (res.success) sent++; else failed++;
+      // listingId is a slug (text), not a UUID — pass undefined to avoid FK type error.
+      // The booking ID (b.id) is a UUID and safe to pass as related_booking_id.
+      const res = await sendMessage(b.guestId!, fullContent, undefined, b.id);
+      if (res.success) {
+        sent++;
+      } else {
+        failed++;
+        failedNames.push(b.guestName.split(" ")[0]);
+        console.error(`Broadcast failed for ${b.guestName}:`, res.error);
+      }
     }
     setSending(false);
-    setDone({ sent, failed });
+    setDone({ sent, failed, failedNames });
   };
 
   return (
@@ -159,19 +168,40 @@ function BroadcastModal({
 
         <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
           {done ? (
-            /* ── Success state ── */
+            /* ── Result state ── */
             <div className="flex flex-col items-center text-center gap-3 py-6">
-              <div className="w-12 h-12 rounded-2xl bg-[#f0faf5] flex items-center justify-center text-[#049153]">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                  <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
-                </svg>
-              </div>
+              {done.sent > 0 ? (
+                <div className="w-12 h-12 rounded-2xl bg-[#f0faf5] flex items-center justify-center text-[#049153]">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                    <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+                  </svg>
+                </div>
+              ) : (
+                <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center text-red-500">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+                    <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+                  </svg>
+                </div>
+              )}
               <p className="font-semibold text-[#1a0e02] text-sm">
-                Message sent to {done.sent} guest{done.sent !== 1 ? "s" : ""}
+                {done.sent > 0
+                  ? `Message sent to ${done.sent} guest${done.sent !== 1 ? "s" : ""}`
+                  : "No messages were sent"}
               </p>
-              {done.failed > 0 && (
+              {done.failed > 0 && done.sent > 0 && (
                 <p className="text-xs text-red-600">{done.failed} failed to send</p>
+              )}
+              {done.sent === 0 && done.failed > 0 && (
+                <p className="text-xs text-red-600">
+                  We could not send this message to {done.failed === 1 ? "the guest" : "the guests"}. Please try again.
+                </p>
+              )}
+              {done.failedNames.length > 0 && (
+                <p className="text-[11px] text-red-400">
+                  Failed: {done.failedNames.join(", ")}
+                </p>
               )}
               <button
                 onClick={onClose}
@@ -333,10 +363,16 @@ function BookingRow({ booking }: { booking: DashboardBooking }) {
     new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
   return (
-    <div className="bg-white border border-[#e8dfd4] rounded-2xl overflow-hidden">
+    <div
+      className="bg-white rounded-[18px] overflow-hidden transition-all duration-200"
+      style={{ border: "1px solid var(--border)", boxShadow: "0 2px 10px rgba(70,30,0,0.06)" }}
+    >
       {/* Collapsed row */}
       <button
-        className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-[#faf7f4] transition-colors"
+        className="w-full flex items-center gap-4 px-5 py-4 text-left transition-colors"
+        style={{ background: "transparent" }}
+        onMouseEnter={(e) => (e.currentTarget as HTMLButtonElement).style.background = "rgba(250,247,244,0.9)"}
+        onMouseLeave={(e) => (e.currentTarget as HTMLButtonElement).style.background = "transparent"}
         onClick={() => setExpanded(!expanded)}
       >
         <UserAvatar src={booking.guestAvatar} name={booking.guestName} size={40} />
@@ -365,7 +401,7 @@ function BookingRow({ booking }: { booking: DashboardBooking }) {
 
       {/* Expanded details */}
       {expanded && (
-        <div className="border-t border-[#f0e8de] px-5 pb-5 pt-4 flex flex-col gap-4">
+        <div className="px-5 pb-5 pt-4 flex flex-col gap-4" style={{ borderTop: "1px solid var(--border-light)" }}>
           <div className="flex items-start gap-4">
             <img
               src={booking.listingImage}
@@ -620,23 +656,31 @@ export default function BookingsSection({ bookings }: { bookings: DashboardBooki
 
       {/* ── Summary strip (past only) ── */}
       {tab === "past" && past.length > 0 && (
-        <div className="bg-white border border-[#e8dfd4] rounded-2xl p-5">
-          <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest mb-3">Summary</p>
+        <div
+          className="rounded-[18px] p-5"
+          style={{
+            background: "rgba(255,255,255,0.98)",
+            border: "1px solid var(--border)",
+            borderTop: "2px solid rgba(196,154,79,0.40)",
+            boxShadow: "0 2px 10px rgba(70,30,0,0.06)",
+          }}
+        >
+          <p className="text-eyebrow mb-3">Summary</p>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <p className="font-display font-extrabold text-[#1a0e02] text-xl">
+              <p className="font-display font-extrabold text-[#1a0e02] text-2xl leading-none mb-0.5">
                 {past.filter((b) => b.status === "completed").length}
               </p>
               <p className="text-xs text-[#64707d]">Completed</p>
             </div>
             <div>
-              <p className="font-display font-extrabold text-[#1a0e02] text-xl">
+              <p className="font-display font-extrabold text-[#1a0e02] text-2xl leading-none mb-0.5">
                 {past.filter((b) => b.status === "cancelled").length}
               </p>
               <p className="text-xs text-[#64707d]">Cancelled</p>
             </div>
             <div>
-              <p className="font-display font-extrabold text-[#8b5e38] text-xl">
+              <p className="font-display font-extrabold text-[#8b5e38] text-2xl leading-none mb-0.5">
                 SAR {totalRevenue.toLocaleString("en-US")}
               </p>
               <p className="text-xs text-[#64707d]">Total payout</p>

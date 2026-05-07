@@ -1,7 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import FadeInSection from "@/components/ui/FadeInSection";
+import { useAuth } from "@/context/AuthProvider";
 
 const stats = [
   { value: "850+",     label: "Active hosts",        sub: "across 12 regions" },
@@ -11,43 +13,35 @@ const stats = [
 ];
 
 export default function BecomeHostCTA() {
+  const { hostStatus } = useAuth();
+  // Approved hosts go straight to their dashboard overview; everyone else starts onboarding.
+  const hostCtaHref   = hostStatus === "approved" ? "/dashboard" : "/host/onboarding";
+  const hostCtaLabel  = hostStatus === "approved" ? "Go to Host Dashboard" : "Become a Host";
   return (
-    <section className="relative py-24 overflow-hidden"
-      style={{ background: "linear-gradient(135deg, #1a0e02 0%, #2d1a08 50%, #461e00 100%)" }}
-    >
-      {/* Background ambient light orbs */}
-      <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-        <div
-          className="absolute"
-          style={{
-            width: 600,
-            height: 600,
-            borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(196,154,79,0.09) 0%, transparent 65%)",
-            top: "-180px",
-            right: "-80px",
-          }}
-        />
-        <div
-          className="absolute"
-          style={{
-            width: 450,
-            height: 450,
-            borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(177,122,80,0.07) 0%, transparent 65%)",
-            bottom: "-120px",
-            left: "-60px",
-          }}
-        />
-        {/* Fine grain texture overlay */}
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.4) 2px, rgba(255,255,255,0.4) 3px)",
-          }}
+    <section className="relative py-24 overflow-hidden">
+
+      {/* ── Cinematic background: saudi hospitality scene ─────────────────── */}
+      <div className="absolute inset-0">
+        <Image
+          src="/images/saudi-hospitality-story.jpg"
+          alt=""
+          fill
+          className="object-cover object-center"
+          aria-hidden="true"
         />
       </div>
+      {/* Primary dark overlay — matches the deep warmth of the CSS gradient */}
+      <div
+        className="absolute inset-0"
+        style={{ background: "linear-gradient(135deg, rgba(26,14,2,0.90) 0%, rgba(45,26,8,0.86) 50%, rgba(70,30,0,0.82) 100%)" }}
+        aria-hidden="true"
+      />
+      {/* Extra left-side depth for text contrast */}
+      <div
+        className="absolute inset-0"
+        style={{ background: "linear-gradient(to right, rgba(8,4,0,0.38) 0%, transparent 65%)" }}
+        aria-hidden="true"
+      />
 
       {/* Gold top border accent */}
       <div
@@ -99,7 +93,7 @@ export default function BecomeHostCTA() {
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link
-                  href="/host"
+                  href={hostCtaHref}
                   className="inline-flex items-center justify-center gap-2 font-display font-bold px-8 py-4 rounded-xl text-sm transition-all duration-200 hover:-translate-y-px group"
                   style={{
                     background: "linear-gradient(135deg, #c49a4f 0%, #d4aa5f 60%, #b88e3e 100%)",
@@ -107,7 +101,7 @@ export default function BecomeHostCTA() {
                     boxShadow: "0 4px 20px rgba(196,154,79,0.40), inset 0 1px 0 rgba(255,255,255,0.25)",
                   }}
                 >
-                  Become a Host
+                  {hostCtaLabel}
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
                     className="transition-transform duration-200 group-hover:translate-x-0.5"
                   >

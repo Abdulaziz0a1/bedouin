@@ -31,27 +31,57 @@ function KPICard({
   delta?: number;
 }) {
   return (
-    <div className="bg-white border border-[#e8dfd4] rounded-2xl p-5 flex flex-col gap-3">
+    <div
+      className="relative bg-white rounded-[18px] p-5 flex flex-col gap-3 overflow-hidden transition-all duration-200 hover:-translate-y-0.5"
+      style={{
+        border: "1px solid var(--border)",
+        borderTop: "2px solid rgba(196,154,79,0.50)",
+        boxShadow: "0 2px 12px rgba(70,30,0,0.07), 0 1px 3px rgba(70,30,0,0.05)",
+      }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLDivElement).style.boxShadow =
+          "0 8px 28px rgba(70,30,0,0.11), 0 2px 8px rgba(70,30,0,0.06)";
+        (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(196,154,79,0.35)";
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLDivElement).style.boxShadow =
+          "0 2px 12px rgba(70,30,0,0.07), 0 1px 3px rgba(70,30,0,0.05)";
+        (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)";
+      }}
+    >
+      {/* Subtle inner glow */}
+      <div
+        className="absolute top-0 left-0 right-0 h-px pointer-events-none"
+        style={{ background: "linear-gradient(90deg, transparent, rgba(196,154,79,0.18), transparent)" }}
+        aria-hidden="true"
+      />
+
       <div className="flex items-start justify-between">
-        <div className="w-10 h-10 rounded-xl bg-[#fdf5ee] flex items-center justify-center text-[#8b5e38]">
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center text-[#8b5e38]"
+          style={{
+            background: "linear-gradient(135deg, #fdf5ee 0%, #f0e0c8 100%)",
+            boxShadow: "0 2px 10px rgba(139,94,60,0.14)",
+          }}
+        >
           {icon}
         </div>
         {delta !== undefined && (
           <span
-            className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-              delta >= 0
-                ? "bg-[#f0faf5] text-[#049153]"
-                : "bg-red-50 text-red-600"
-            }`}
+            className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+            style={{
+              background: delta >= 0 ? "var(--status-success-bg)" : "var(--status-error-bg)",
+              color: delta >= 0 ? "var(--status-success-text)" : "var(--status-error-text)",
+            }}
           >
-            {delta >= 0 ? "+" : ""}{delta}%
+            {delta >= 0 ? "↑" : "↓"} {Math.abs(delta)}%
           </span>
         )}
       </div>
       <div>
-        <p className="font-display font-extrabold text-[#1a0e02] text-2xl leading-tight">{value}</p>
-        {sub && <p className="text-xs text-[#64707d] mt-0.5">{sub}</p>}
-        <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest mt-1">{label}</p>
+        <p className="font-display font-extrabold text-[#1a0e02] text-[1.5rem] leading-tight">{value}</p>
+        {sub && <p className="text-xs text-[#8b9199] mt-0.5">{sub}</p>}
+        <p className="text-eyebrow mt-1.5">{label}</p>
       </div>
     </div>
   );
@@ -173,6 +203,44 @@ type OverviewKPIs = {
   earningsHistory: EarningsMonth[];
 };
 
+function BookingAnnouncementCard({
+  icon,
+  title,
+  subtitle,
+  href,
+  variant = "info",
+}: {
+  icon:     React.ReactNode;
+  title:    string;
+  subtitle: string;
+  href:     string;
+  variant?: "info" | "warning" | "success";
+}) {
+  const styles = {
+    info:    { bg: "bg-[#f0f4ff]", border: "border-[#c0d0ff]", color: "text-[#0046cc]", iconBg: "bg-[#dce8ff]" },
+    warning: { bg: "bg-[#fdf8ee]", border: "border-[#ead9a6]", color: "text-[#8b6a1f]", iconBg: "bg-[#faefc5]" },
+    success: { bg: "bg-[#f0faf5]", border: "border-[#c3e8d6]", color: "text-[#049153]", iconBg: "bg-[#d4f2e4]" },
+  }[variant];
+
+  return (
+    <a
+      href={href}
+      className={`flex items-center gap-4 px-5 py-4 rounded-2xl border ${styles.bg} ${styles.border} hover:opacity-90 transition-opacity`}
+    >
+      <div className={`w-10 h-10 rounded-xl ${styles.iconBg} flex items-center justify-center shrink-0 ${styles.color}`}>
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className={`text-sm font-semibold ${styles.color}`}>{title}</p>
+        <p className="text-xs text-[#64707d] mt-0.5">{subtitle}</p>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className={`shrink-0 ${styles.color}`}>
+        <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </a>
+  );
+}
+
 export default function OverviewSection({
   listings,
   bookings,
@@ -188,8 +256,57 @@ export default function OverviewSection({
 
   const chartData = kpis.earningsHistory.map((m) => ({ month: m.month, payout: m.payout }));
 
+  // ── Booking announcement cards ────────────────────────────────────────────────
+  const todayStr    = new Date().toISOString().split("T")[0];
+  const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split("T")[0];
+
+  const checkIns = bookings.filter((b) =>
+    b.status === "upcoming" && (b.checkIn === todayStr || b.checkIn === tomorrowStr)
+  );
+  // "new" bookings = upcoming created in last 24h. Status "upcoming" implies new requests.
+  const newRequests = bookings.filter(
+    (b) => b.status === "upcoming"
+  ).length;
+
   return (
     <div className="flex flex-col gap-6">
+
+      {/* ── Booking announcement cards ── */}
+      {(checkIns.length > 0 || newRequests > 0) && (
+        <div className="flex flex-col gap-3">
+          {checkIns.map((b) => {
+            const isToday = b.checkIn === todayStr;
+            return (
+              <BookingAnnouncementCard
+                key={b.id}
+                variant={isToday ? "warning" : "info"}
+                icon={
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.7" />
+                    <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                  </svg>
+                }
+                title={`${isToday ? "Guest check-in today" : "Guest check-in tomorrow"}: ${b.guestName}`}
+                subtitle={`${b.listingTitle} · ${b.nights} night${b.nights !== 1 ? "s" : ""}`}
+                href="/dashboard?tab=bookings"
+              />
+            );
+          })}
+          {newRequests > 0 && checkIns.length === 0 && (
+            <BookingAnnouncementCard
+              variant="success"
+              icon={
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M5 12l5 5 9-9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              }
+              title={`${newRequests} upcoming booking${newRequests !== 1 ? "s" : ""}`}
+              subtitle="View all upcoming guest arrivals in Bookings."
+              href="/dashboard?tab=bookings"
+            />
+          )}
+        </div>
+      )}
 
       {pendingListings.length > 0 && (
         <AlertBanner
@@ -262,16 +379,37 @@ export default function OverviewSection({
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
         {/* Upcoming bookings */}
-        <div className="lg:col-span-3 bg-white border border-[#e8dfd4] rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-[#f0e8de] flex items-center justify-between">
-            <h2 className="font-display font-semibold text-[#1a0e02]">Upcoming check-ins</h2>
-            <span className="text-[11px] font-bold text-[#8b5e38] bg-[#fdf5ee] px-2 py-0.5 rounded-full">
-              {kpis.upcomingCount} guests
+        <div
+          className="lg:col-span-3 bg-white rounded-[18px] overflow-hidden"
+          style={{ border: "1px solid var(--border)", boxShadow: "0 2px 12px rgba(70,30,0,0.06)" }}
+        >
+          <div
+            className="px-5 py-3.5 flex items-center justify-between"
+            style={{ borderBottom: "1px solid var(--border-light)" }}
+          >
+            <h2 className="font-display font-semibold text-[#1a0e02] text-[0.9375rem]">Upcoming check-ins</h2>
+            <span
+              className="text-[10px] font-bold text-[#8b5e38] px-2.5 py-1 rounded-full"
+              style={{ background: "linear-gradient(135deg,#fdf5ee 0%,#f0e0c8 100%)", border: "1px solid rgba(196,154,79,0.22)" }}
+            >
+              {kpis.upcomingCount} guest{kpis.upcomingCount !== 1 ? "s" : ""}
             </span>
           </div>
           <div className="px-5 py-2">
             {upcoming.length === 0 ? (
-              <p className="text-sm text-[#64707d] py-8 text-center">No upcoming check-ins.</p>
+              <div className="flex flex-col items-center gap-2 py-10 text-center">
+                <div
+                  className="w-11 h-11 rounded-full flex items-center justify-center mb-1"
+                  style={{ background: "linear-gradient(135deg, #f9f1e7 0%, #ede4d4 100%)", color: "#c4b8a8" }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.6"/>
+                    <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+                  </svg>
+                </div>
+                <p className="text-sm font-medium text-[#64707d]">No upcoming check-ins</p>
+                <p className="text-xs text-[#a09080]">New bookings will appear here.</p>
+              </div>
             ) : (
               upcoming.map((b) => <UpcomingRow key={b.id} booking={b} />)
             )}
@@ -279,33 +417,44 @@ export default function OverviewSection({
         </div>
 
         {/* Earnings mini chart */}
-        <div className="lg:col-span-2 bg-white border border-[#e8dfd4] rounded-2xl px-5 pt-5 pb-4 flex flex-col gap-3">
+        <div
+          className="lg:col-span-2 bg-white rounded-[18px] px-5 pt-5 pb-4 flex flex-col gap-3"
+          style={{ border: "1px solid var(--border)", boxShadow: "0 2px 12px rgba(70,30,0,0.06)" }}
+        >
           <div className="flex items-start justify-between">
             <div>
-              <h2 className="font-display font-semibold text-[#1a0e02]">Earnings trend</h2>
+              <h2 className="font-display font-semibold text-[#1a0e02] text-[0.9375rem]">Earnings trend</h2>
               <p className="text-xs text-[#a09080] mt-0.5">Last 6 months · SAR payout</p>
             </div>
             {kpis.earningsDelta !== 0 && (
-              <span className={`text-xs font-bold px-2 py-0.5 rounded-full mt-0.5 ${
-                kpis.earningsDelta >= 0
-                  ? "bg-[#f0faf5] text-[#049153]"
-                  : "bg-red-50 text-red-600"
-              }`}>
+              <span
+                className="text-[11px] font-bold px-2 py-0.5 rounded-full mt-0.5"
+                style={{
+                  background: kpis.earningsDelta >= 0 ? "var(--status-success-bg)" : "var(--status-error-bg)",
+                  color: kpis.earningsDelta >= 0 ? "var(--status-success-text)" : "var(--status-error-text)",
+                }}
+              >
                 {kpis.earningsDelta >= 0 ? "↑" : "↓"} {Math.abs(kpis.earningsDelta)}%
               </span>
             )}
           </div>
           <MiniBarChart data={chartData} />
-          <div className="flex items-center justify-between pt-3 border-t border-[#f0e8de]">
+          <div
+            className="flex items-center justify-between pt-3"
+            style={{ borderTop: "1px solid var(--border-light)" }}
+          >
             <div>
-              <p className="text-[10px] text-[#a09080] uppercase tracking-widest font-bold mb-0.5">This month</p>
-              <p className="font-display font-extrabold text-[#8b5e38] text-xl leading-none">
+              <p className="text-eyebrow mb-0.5">This month</p>
+              <p className="font-display font-extrabold text-[#8b5e38] text-[1.2rem] leading-none">
                 SAR {kpis.thisMonth.toLocaleString("en-US")}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-[10px] text-[#a09080] uppercase tracking-widest font-bold mb-0.5">vs last month</p>
-              <p className={`font-bold text-base leading-none ${kpis.earningsDelta >= 0 ? "text-[#049153]" : "text-red-500"}`}>
+              <p className="text-eyebrow mb-0.5">vs last month</p>
+              <p
+                className="font-bold text-base leading-none"
+                style={{ color: kpis.earningsDelta >= 0 ? "var(--status-success-text)" : "var(--status-error-text)" }}
+              >
                 {kpis.earningsDelta >= 0 ? "+" : ""}{kpis.earningsDelta}%
               </p>
             </div>
@@ -315,9 +464,15 @@ export default function OverviewSection({
       </div>
 
       {/* Listing status quick-view */}
-      <div className="bg-white border border-[#e8dfd4] rounded-2xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-[#f0e8de]">
-          <h2 className="font-display font-semibold text-[#1a0e02]">Listing status</h2>
+      <div
+        className="bg-white rounded-[18px] overflow-hidden"
+        style={{ border: "1px solid var(--border)", boxShadow: "0 2px 12px rgba(70,30,0,0.06)" }}
+      >
+        <div
+          className="px-5 py-3.5"
+          style={{ borderBottom: "1px solid var(--border-light)" }}
+        >
+          <h2 className="font-display font-semibold text-[#1a0e02] text-[0.9375rem]">Listing status</h2>
         </div>
         <div className="divide-y divide-[#f0e8de]">
           {listings

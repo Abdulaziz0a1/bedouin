@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import Image from "next/image";
 import ProductCard from "@/components/ui/ProductCard";
 import FadeInSection from "@/components/ui/FadeInSection";
 
@@ -52,33 +53,82 @@ export default function FarmsSection() {
     ref.current?.scrollBy({ left: dir === "right" ? 316 : -316, behavior: "smooth" });
 
   return (
-    <section className="bg-[#f4efe6] py-16">
-      <div className="max-w-[1232px] mx-auto px-6 lg:px-0 flex flex-col gap-8">
+    <section className="bg-[#f4efe6]">
 
-        {/* Header */}
-        <FadeInSection direction="up" delay={0}>
-          <div className="flex items-end justify-between">
-            <div className="flex flex-col gap-1.5">
-              <p className="text-[#c49a4f] text-xs font-bold uppercase tracking-[0.20em]">Farm stays</p>
-              <h2 className="font-display font-extrabold text-[#1a0e02] text-4xl leading-tight tracking-tight">
-                Farms Guests Love
-              </h2>
-              <p className="text-[#64707d] text-sm mt-0.5">
-                Handpicked farm experiences across the Kingdom.
-              </p>
-            </div>
-            <div className="flex gap-2 shrink-0 pb-1">
-              <ArrowBtn dir="left"  onClick={() => scroll("left")}  />
-              <ArrowBtn dir="right" onClick={() => scroll("right")} />
-            </div>
-          </div>
-        </FadeInSection>
+      {/* ── Cinematic header banner ─────────────────────────────────────────── */}
+      <div className="relative h-[320px] overflow-hidden">
+        <Image
+          src="/images/saudi-farm-story.jpg"
+          alt=""
+          fill
+          className="object-cover object-center"
+          aria-hidden="true"
+        />
+        {/* Dark overlay */}
+        <div
+          className="absolute inset-0"
+          style={{ background: "linear-gradient(to bottom, rgba(8,4,0,0.50) 0%, rgba(6,3,0,0.76) 100%)" }}
+          aria-hidden="true"
+        />
+        {/* Warm left wash */}
+        <div
+          className="absolute inset-0"
+          style={{ background: "linear-gradient(to right, rgba(20,8,0,0.32) 0%, transparent 55%)" }}
+          aria-hidden="true"
+        />
+        {/* Gold top accent */}
+        <div
+          className="absolute top-0 left-0 right-0 h-px"
+          style={{ background: "linear-gradient(90deg, transparent 0%, rgba(196,154,79,0.55) 30%, rgba(240,200,74,0.80) 50%, rgba(196,154,79,0.55) 70%, transparent 100%)" }}
+          aria-hidden="true"
+        />
+        {/* Gold bottom accent */}
+        <div
+          className="absolute bottom-0 left-0 right-0 h-px"
+          style={{ background: "linear-gradient(90deg, transparent 0%, rgba(196,154,79,0.28) 30%, rgba(196,154,79,0.28) 70%, transparent 100%)" }}
+          aria-hidden="true"
+        />
 
-        <FadeInSection direction="up" delay={80}>
-          <div ref={ref} className="scroll-row -mx-6 px-6 lg:mx-0 lg:px-0">
-            {farms.map((f) => <ProductCard key={f.id} {...f} />)}
-          </div>
-        </FadeInSection>
+        {/* Header text + nav arrows */}
+        <div className="relative h-full max-w-[1232px] mx-auto px-6 lg:px-0 flex items-end pb-10">
+          <FadeInSection direction="up" delay={0}>
+            <div className="flex items-end justify-between w-full">
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-3 mb-0.5">
+                  <div className="h-px w-8" style={{ background: "rgba(196,154,79,0.60)" }} />
+                  <p className="text-[#c49a4f] text-[0.65rem] font-bold uppercase tracking-[0.28em]">
+                    Farm stays
+                  </p>
+                  <div className="h-px w-8" style={{ background: "rgba(196,154,79,0.60)" }} />
+                </div>
+                <h2
+                  className="font-display font-extrabold text-white text-4xl leading-tight tracking-tight"
+                  style={{ textShadow: "0 2px 20px rgba(0,0,0,0.40)" }}
+                >
+                  Farms Guests Love
+                </h2>
+                <p className="text-white/58 text-sm mt-0.5">
+                  Handpicked farm experiences across the Kingdom.
+                </p>
+              </div>
+              <div className="flex gap-2 shrink-0 pb-1">
+                <ArrowBtn dir="left"  onClick={() => scroll("left")}  />
+                <ArrowBtn dir="right" onClick={() => scroll("right")} />
+              </div>
+            </div>
+          </FadeInSection>
+        </div>
+      </div>
+
+      {/* ── Product cards ────────────────────────────────────────────────────── */}
+      <div className="py-10">
+        <div className="max-w-[1232px] mx-auto px-6 lg:px-0">
+          <FadeInSection direction="up" delay={80}>
+            <div ref={ref} className="scroll-row -mx-6 px-6 lg:mx-0 lg:px-0">
+              {farms.map((f) => <ProductCard key={f.id} {...f} />)}
+            </div>
+          </FadeInSection>
+        </div>
       </div>
     </section>
   );

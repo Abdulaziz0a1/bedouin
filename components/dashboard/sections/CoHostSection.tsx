@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useMemo, useTransition } from "react";
 import Link from "next/link";
 import { SERVICE_LABELS } from "@/lib/data/cohost";
 import { cancelInvitation, removeAssignment, resolveWithdrawal } from "@/lib/actions/cohost";
 import type { CoHostAssignment, CoHostInvitation } from "@/lib/types/cohost";
+import type { DashboardListing } from "@/lib/data/dashboard";
 import UserAvatar from "@/components/ui/UserAvatar";
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -13,32 +14,18 @@ import UserAvatar from "@/components/ui/UserAvatar";
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest mb-3">
+    <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest mb-2.5">
       {children}
     </p>
   );
 }
 
-function EmptyState({ title, sub, cta }: { title: string; sub: string; cta?: React.ReactNode }) {
-  return (
-    <div className="flex flex-col items-center text-center py-12 px-6 bg-white rounded-2xl border border-[#e8dfd4]">
-      <div className="w-12 h-12 rounded-2xl bg-[#f0e8de] flex items-center justify-center text-[#8b5e38] mb-3">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.7" />
-          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-          <path d="M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-          <path d="M21 18c0-3.5-2.24-6-5-7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-        </svg>
-      </div>
-      <p className="font-display font-semibold text-[#1a0e02] text-sm mb-1">{title}</p>
-      <p className="text-xs text-[#64707d] max-w-xs leading-relaxed mb-4">{sub}</p>
-      {cta}
-    </div>
-  );
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// AssignmentCard
+// AssignmentCard — compact, no listing block (listing shown in group header)
 // ──────────────────────────────────────────────────────────────────────────────
 
 function AssignmentCard({
@@ -52,9 +39,6 @@ function AssignmentCard({
 }) {
   const [pending, startTransition] = useTransition();
   const [confirming, setConfirming] = useState(false);
-
-  const fmtDate = (iso: string) =>
-    new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
   const isWithdrawalPending = assignment.status === "withdrawal_requested";
 
@@ -76,22 +60,21 @@ function AssignmentCard({
       ) : (
         <div className="bg-[#f0faf5] border-b border-[#9edcbb] px-4 py-1.5 flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-[#049153] animate-pulse" />
-          <span className="text-[10px] font-bold text-[#049153] uppercase tracking-wide">Active co-host</span>
+          <span className="text-[10px] font-bold text-[#049153] uppercase tracking-wide">Active</span>
         </div>
       )}
 
-      <div className="p-4 flex items-start gap-4">
-        {/* Avatar */}
-        <UserAvatar name={assignment.coHostName} size={48} className="border-2 border-[#e8dfd4] shrink-0 rounded-xl" />
+      <div className="p-4 flex items-start gap-3">
+        <UserAvatar name={assignment.coHostName} size={44} className="border-2 border-[#e8dfd4] shrink-0 rounded-xl" />
 
-        {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="font-display font-semibold text-[#1a0e02] text-sm">{assignment.coHostName}</p>
               {assignment.coHostRegion && (
-                <p className="text-[11px] text-[#8b5e38] font-medium mb-2">📍 {assignment.coHostRegion}</p>
+                <p className="text-[11px] text-[#8b5e38] font-medium">📍 {assignment.coHostRegion}</p>
               )}
+              <p className="text-[10px] text-[#a09080] mt-0.5">Co-host since {fmtDate(assignment.assignedAt)}</p>
             </div>
             {!isWithdrawalPending && !confirming && (
               <button
@@ -103,26 +86,9 @@ function AssignmentCard({
             )}
           </div>
 
-          {/* Listing */}
-          <div className="flex items-center gap-2 bg-[#faf7f4] border border-[#f0e8de] rounded-xl p-2.5 mb-2.5">
-            {assignment.listingImage ? (
-              <img
-                src={assignment.listingImage}
-                alt={assignment.listingTitle}
-                className="w-9 h-7 rounded-lg object-cover shrink-0"
-              />
-            ) : (
-              <div className="w-9 h-7 rounded-lg bg-[#e8dfd4] shrink-0" />
-            )}
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-[#1a0e02] truncate">{assignment.listingTitle}</p>
-              <p className="text-[10px] text-[#a09080]">Since {fmtDate(assignment.assignedAt)}</p>
-            </div>
-          </div>
-
           {/* Services */}
           {assignment.services.length > 0 && (
-            <div className="flex flex-wrap gap-1 mb-2.5">
+            <div className="flex flex-wrap gap-1 mt-2 mb-2.5">
               {assignment.services.map((s) => (
                 <span key={s} className="text-[9px] font-semibold text-[#64707d] bg-[#f0e8de] px-1.5 py-0.5 rounded-md">
                   {SERVICE_LABELS[s]}
@@ -131,7 +97,6 @@ function AssignmentCard({
             </div>
           )}
 
-          {/* Message link */}
           <Link
             href={`/messages?with=${assignment.coHostId}${assignment.listingId ? `&listing=${assignment.listingId}` : ""}`}
             className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#8b5e38] hover:text-[#461e00] transition-colors"
@@ -139,12 +104,11 @@ function AssignmentCard({
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
               <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            Message co-host
+            Message
           </Link>
         </div>
       </div>
 
-      {/* Withdrawal request row — shown when co-host has requested to stop */}
       {isWithdrawalPending && (
         <div className="flex items-center gap-3 px-4 pb-4">
           <p className="text-xs text-[#8b6a1f] flex-1">Co-host requested to stop. Approve or reject?</p>
@@ -165,7 +129,6 @@ function AssignmentCard({
         </div>
       )}
 
-      {/* Remove confirm row — only for active assignments */}
       {!isWithdrawalPending && confirming && (
         <div className="flex items-center gap-3 px-4 pb-4">
           <p className="text-xs text-[#64707d] flex-1">Remove this co-host from the listing?</p>
@@ -192,7 +155,7 @@ function AssignmentCard({
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// InvitationCard
+// InvitationCard — compact (listing shown in group header)
 // ──────────────────────────────────────────────────────────────────────────────
 
 function InvitationCard({
@@ -203,30 +166,27 @@ function InvitationCard({
   onCancel:   (id: string) => Promise<void>;
 }) {
   const [pending, startTransition] = useTransition();
-  const fmtDate = (iso: string) =>
-    new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
   const statusConfig = {
     pending:  { label: "Awaiting response", cls: "bg-[#fdf8ee] text-[#8b6a1f] border-[#ead9a6]" },
     accepted: { label: "Accepted",          cls: "bg-[#eef3ff] text-[#0036a3] border-[#b3c8f5]" },
     declined: { label: "Declined",          cls: "bg-red-50    text-red-600   border-red-200"    },
   };
-  const cfg = statusConfig[invitation.status];
+  const cfg = statusConfig[invitation.status] ?? statusConfig.declined;
 
   return (
-    <div className="bg-white border border-[#e8dfd4] rounded-2xl p-4 flex items-start gap-4">
-      <UserAvatar name={invitation.coHostName} size={44} className="border-2 border-[#e8dfd4] shrink-0 rounded-xl" />
+    <div className="bg-white border border-[#e8dfd4] rounded-2xl p-4 flex items-start gap-3">
+      <UserAvatar name={invitation.coHostName} size={40} className="border-2 border-[#e8dfd4] shrink-0 rounded-xl" />
 
       <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-2 mb-0.5">
+        <div className="flex items-start justify-between gap-2 mb-1">
           <p className="font-semibold text-[#1a0e02] text-sm">{invitation.coHostName}</p>
           <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${cfg.cls}`}>
             {cfg.label}
           </span>
         </div>
-        <p className="text-[11px] text-[#64707d] mb-2">
-          For <span className="font-semibold text-[#8b5e38]">{invitation.listingTitle}</span>
-          {" · "}Sent {fmtDate(invitation.sentAt)}
+        <p className="text-[10px] text-[#a09080] mb-1.5">
+          Sent {new Date(invitation.sentAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
         </p>
         <p className="text-xs text-[#a09080] italic line-clamp-2">&ldquo;{invitation.message}&rdquo;</p>
 
@@ -245,13 +205,163 @@ function InvitationCard({
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// ListingCard — one listing with its co-host state + invite CTA
+// ──────────────────────────────────────────────────────────────────────────────
+
+function ListingCard({
+  listingId,
+  listingTitle,
+  listingImage,
+  assignments,
+  pendingInvitations,
+  declinedInvitations,
+  onRemove,
+  onWithdrawalResolved,
+  onCancelInvitation,
+}: {
+  listingId:           string;
+  listingTitle:        string;
+  listingImage:        string;
+  assignments:         CoHostAssignment[];
+  pendingInvitations:  CoHostInvitation[];
+  declinedInvitations: CoHostInvitation[];
+  onRemove:             (id: string) => Promise<void>;
+  onWithdrawalResolved: (id: string, decision: "approve" | "reject") => void;
+  onCancelInvitation:   (id: string) => Promise<void>;
+}) {
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  return (
+    <div className="border border-[#e8dfd4] rounded-2xl overflow-hidden">
+      {/* ── Listing header ─────────────────────────────────────────────── */}
+      <div className="flex items-center gap-4 px-5 py-4 bg-[#faf7f4] border-b border-[#e8dfd4]">
+        {listingImage ? (
+          <img src={listingImage} alt={listingTitle} className="w-14 h-10 rounded-xl object-cover shrink-0" />
+        ) : (
+          <div className="w-14 h-10 rounded-xl bg-[#e8dfd4] shrink-0 flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-[#a09080]">
+              <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+            </svg>
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="font-display font-semibold text-[#1a0e02] text-sm truncate">{listingTitle}</p>
+          <p className="text-[11px] text-[#64707d] mt-0.5">
+            {assignments.length > 0
+              ? `${assignments.length} active co-host${assignments.length !== 1 ? "s" : ""}`
+              : "No co-hosts yet"}
+            {pendingInvitations.length > 0 && ` · ${pendingInvitations.length} pending`}
+          </p>
+        </div>
+        {/* Primary invite CTA */}
+        <Link
+          href={`/cohost?listing=${listingId}`}
+          className="shrink-0 flex items-center gap-2 px-4 py-2 bg-[#8b5e38] text-white text-xs font-semibold rounded-xl hover:bg-[#7a5030] transition-colors"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+            <circle cx="11" cy="7" r="4" stroke="currentColor" strokeWidth="2" />
+            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <path d="M19 11v6M16 14h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          Invite co-host
+        </Link>
+      </div>
+
+      <div className="p-5 flex flex-col gap-5">
+        {/* ── Active co-hosts ─────────────────────────────────────────── */}
+        <div>
+          <SectionLabel>Active Co-hosts</SectionLabel>
+          {assignments.length === 0 ? (
+            <div className="flex items-center gap-4 p-4 rounded-xl border border-dashed border-[#e8dfd4] bg-[#faf7f4]">
+              <div className="w-9 h-9 rounded-xl bg-[#f0e8de] flex items-center justify-center text-[#c49a4f] shrink-0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.7" />
+                  <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-[#1a0e02]">No active co-host for this listing</p>
+                <p className="text-xs text-[#64707d] mt-0.5">
+                  {pendingInvitations.length > 0
+                    ? "An invitation is waiting for the co-host's response."
+                    : "Browse verified co-hosts and send an invitation to get started."}
+                </p>
+              </div>
+              {pendingInvitations.length === 0 && (
+                <Link
+                  href={`/cohost?listing=${listingId}`}
+                  className="shrink-0 text-xs font-semibold text-[#8b5e38] hover:text-[#461e00] transition-colors whitespace-nowrap"
+                >
+                  Browse co-hosts →
+                </Link>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {assignments.map((a) => (
+                <AssignmentCard
+                  key={a.id}
+                  assignment={a}
+                  onRemove={onRemove}
+                  onWithdrawalResolved={onWithdrawalResolved}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── Pending invitations ─────────────────────────────────────── */}
+        {pendingInvitations.length > 0 && (
+          <div>
+            <SectionLabel>Pending Invitations</SectionLabel>
+            <div className="flex flex-col gap-3">
+              {pendingInvitations.map((inv) => (
+                <InvitationCard key={inv.id} invitation={inv} onCancel={onCancelInvitation} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Invitation history (collapsed by default) ───────────────── */}
+        {declinedInvitations.length > 0 && (
+          <div>
+            <button
+              onClick={() => setHistoryOpen((o) => !o)}
+              className="flex items-center gap-1.5 text-[10px] font-bold text-[#a09080] uppercase tracking-widest hover:text-[#64707d] transition-colors"
+            >
+              <svg
+                width="10" height="10" viewBox="0 0 24 24" fill="none"
+                className={`transition-transform ${historyOpen ? "rotate-90" : ""}`}
+              >
+                <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Invitation history ({declinedInvitations.length})
+            </button>
+
+            {historyOpen && (
+              <div className="flex flex-col gap-3 mt-2.5">
+                {declinedInvitations.map((inv) => (
+                  <InvitationCard key={inv.id} invitation={inv} onCancel={onCancelInvitation} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 // Main section
 // ──────────────────────────────────────────────────────────────────────────────
 
 export default function CoHostSection({
+  listings:     rawListings,
   assignments:  initialAssignments,
   invitations:  initialInvitations,
 }: {
+  listings:    DashboardListing[];
   assignments: CoHostAssignment[];
   invitations: CoHostInvitation[];
 }) {
@@ -260,16 +370,12 @@ export default function CoHostSection({
 
   const handleRemoveAssignment = async (id: string) => {
     const result = await removeAssignment(id);
-    if (result.success) {
-      setAssignments((prev) => prev.filter((a) => a.id !== id));
-    }
+    if (result.success) setAssignments((prev) => prev.filter((a) => a.id !== id));
   };
 
   const handleCancelInvitation = async (id: string) => {
     const result = await cancelInvitation(id);
-    if (result.success) {
-      setInvitations((prev) => prev.filter((i) => i.id !== id));
-    }
+    if (result.success) setInvitations((prev) => prev.filter((i) => i.id !== id));
   };
 
   const handleWithdrawalResolved = (id: string, decision: "approve" | "reject") => {
@@ -280,20 +386,73 @@ export default function CoHostSection({
     }
   };
 
-  const hasAny = assignments.length > 0 || invitations.length > 0;
+  // ── Build per-listing groups ─────────────────────────────────────────────
+  // Start with all approved listings so every listing is shown even if empty.
+  // Then merge in any orphaned co-host data (e.g. listing no longer approved).
+  const listingGroups = useMemo(() => {
+    type Group = {
+      listingId:    string;
+      listingTitle: string;
+      listingImage: string;
+      assignments:  CoHostAssignment[];
+      pendingInvitations:  CoHostInvitation[];
+      declinedInvitations: CoHostInvitation[];
+    };
+
+    const map = new Map<string, Group>();
+
+    // Seed the map from all approved listings (in order)
+    for (const l of rawListings) {
+      if (l.status === "approved" && l.listingId) {
+        map.set(l.listingId, {
+          listingId:    l.listingId,
+          listingTitle: l.title,
+          listingImage: l.imageUrl,
+          assignments:  [],
+          pendingInvitations:  [],
+          declinedInvitations: [],
+        });
+      }
+    }
+
+    // Overlay co-host data (creates a group if listingId not in map — orphaned data)
+    for (const a of assignments) {
+      if (!map.has(a.listingId)) {
+        map.set(a.listingId, { listingId: a.listingId, listingTitle: a.listingTitle, listingImage: a.listingImage, assignments: [], pendingInvitations: [], declinedInvitations: [] });
+      }
+      map.get(a.listingId)!.assignments.push(a);
+    }
+    for (const inv of invitations) {
+      if (!map.has(inv.listingId)) {
+        map.set(inv.listingId, { listingId: inv.listingId, listingTitle: inv.listingTitle, listingImage: inv.listingImage, assignments: [], pendingInvitations: [], declinedInvitations: [] });
+      }
+      const group = map.get(inv.listingId)!;
+      if (inv.status === "pending") {
+        group.pendingInvitations.push(inv);
+      } else {
+        group.declinedInvitations.push(inv);
+      }
+    }
+
+    return Array.from(map.values());
+  }, [rawListings, assignments, invitations]);
+
+  const totalActive  = assignments.length;
+  const totalPending = invitations.filter((i) => i.status === "pending").length;
+  const hasListings  = listingGroups.length > 0;
 
   return (
     <div className="flex flex-col gap-8">
 
-      {/* Header */}
+      {/* ── Page header ──────────────────────────────────────────────────── */}
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="font-display font-bold text-[#1a0e02] text-xl mb-1">My Co-hosts</h2>
+          <h2 className="font-display font-bold text-[#1a0e02] text-xl mb-1">Co-host Management</h2>
           <p className="text-sm text-[#64707d]">
-            Manage the co-hosts working on your listings and track pending invitations.
+            Invite and manage co-hosts for each of your listings.
           </p>
         </div>
-        <a
+        <Link
           href="/cohost"
           className="flex items-center gap-2 px-5 py-2.5 bg-[#8b5e38] text-white text-sm font-semibold rounded-xl hover:bg-[#7a5030] transition-colors"
         >
@@ -302,17 +461,35 @@ export default function CoHostSection({
             <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             <path d="M19 11v6M16 14h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
-          Browse co-hosts
-        </a>
+          Browse all co-hosts
+        </Link>
       </div>
 
-      {/* Summary strip */}
-      {hasAny && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      {/* ── What is a co-host? ────────────────────────────────────────────── */}
+      <div className="flex items-start gap-3 bg-[#faf7f4] border border-[#e8dfd4] rounded-2xl px-4 py-4">
+        <div className="w-8 h-8 rounded-xl bg-[#f0e8de] flex items-center justify-center text-[#8b5e38] shrink-0 mt-0.5">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+            <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-[#1a0e02] mb-1">How co-hosting works</p>
+          <p className="text-xs text-[#64707d] leading-relaxed">
+            Each co-host is invited to a <span className="font-semibold text-[#1a0e02]">specific listing</span> — they help manage that property only.
+            Click <span className="font-semibold text-[#1a0e02]">"Invite co-host"</span> on the listing you want them to manage, browse verified co-hosts, send a personal note, and they appear here once they accept.
+            A co-host assigned to Listing A is not automatically assigned to Listing B — you invite them separately for each.
+          </p>
+        </div>
+      </div>
+
+      {/* ── Summary strip ────────────────────────────────────────────────── */}
+      {hasListings && (
+        <div className="grid grid-cols-3 gap-3">
           {[
-            { label: "Active co-hosts",     value: assignments.length,                                color: "text-[#049153]", bg: "bg-[#f0faf5]" },
-            { label: "Pending invitations",  value: invitations.filter((i) => i.status === "pending").length, color: "text-[#8b6a1f]", bg: "bg-[#fdf8ee]" },
-            { label: "Listings supported",  value: [...new Set(assignments.map((a) => a.listingId))].length, color: "text-[#1a0e02]", bg: "bg-[#f4f6f8]" },
+            { label: "Active co-hosts",     value: totalActive,         color: "text-[#049153]", bg: "bg-[#f0faf5]" },
+            { label: "Pending invitations",  value: totalPending,        color: "text-[#8b6a1f]", bg: "bg-[#fdf8ee]" },
+            { label: "Listings managed",    value: listingGroups.length, color: "text-[#1a0e02]", bg: "bg-[#f4f6f8]" },
           ].map(({ label, value, color, bg }) => (
             <div key={label} className={`flex items-center gap-3 px-4 py-3 rounded-xl ${bg} border border-[#e8dfd4]`}>
               <span className={`font-display font-extrabold text-2xl ${color}`}>{value}</span>
@@ -322,66 +499,44 @@ export default function CoHostSection({
         </div>
       )}
 
-      {/* Active assignments */}
-      <div>
-        <SectionLabel>Active co-hosts</SectionLabel>
-        {assignments.length === 0 ? (
-          <EmptyState
-            title="No active co-hosts yet"
-            sub="Once a co-host accepts your invitation, they'll appear here."
-            cta={
-              <a
-                href="/cohost"
-                className="flex items-center gap-2 px-5 py-2.5 bg-[#8b5e38] text-white text-sm font-semibold rounded-xl hover:bg-[#7a5030] transition-colors"
-              >
-                Browse co-hosts
-              </a>
-            }
-          />
-        ) : (
-          <div className="flex flex-col gap-3">
-            {assignments.map((a) => (
-              <AssignmentCard key={a.id} assignment={a} onRemove={handleRemoveAssignment} onWithdrawalResolved={handleWithdrawalResolved} />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Pending invitations */}
-      <div>
-        <SectionLabel>Invitations sent</SectionLabel>
-        {invitations.length === 0 ? (
-          <div className="text-sm text-[#a09080] bg-white border border-[#e8dfd4] rounded-2xl px-5 py-6 text-center">
-            No invitations sent yet.{" "}
-            <a href="/cohost" className="text-[#8b5e38] font-semibold underline">
-              Browse available co-hosts →
-            </a>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {invitations.map((inv) => (
-              <InvitationCard key={inv.id} invitation={inv} onCancel={handleCancelInvitation} />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* How it works */}
-      <div className="bg-[#1a0e02] rounded-2xl p-5 flex items-start gap-4">
-        <div className="w-10 h-10 rounded-xl bg-[#2e1a06] flex items-center justify-center text-[#c49a4f] shrink-0">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.7" />
-            <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
+      {/* ── Listing cards ─────────────────────────────────────────────────── */}
+      {hasListings ? (
+        <div className="flex flex-col gap-5">
+          {listingGroups.map((group) => (
+            <ListingCard
+              key={group.listingId}
+              listingId={group.listingId}
+              listingTitle={group.listingTitle}
+              listingImage={group.listingImage}
+              assignments={group.assignments}
+              pendingInvitations={group.pendingInvitations}
+              declinedInvitations={group.declinedInvitations}
+              onRemove={handleRemoveAssignment}
+              onWithdrawalResolved={handleWithdrawalResolved}
+              onCancelInvitation={handleCancelInvitation}
+            />
+          ))}
         </div>
-        <div>
-          <p className="font-display font-semibold text-white text-sm mb-1">How co-hosting works</p>
-          <p className="text-xs text-[#a09080] leading-relaxed">
-            Browse verified co-hosts, send an invitation with a note, and once accepted they are assigned to manage your listing.
-            You can remove a co-host at any time from this page.
+      ) : (
+        /* Host has no approved listings at all */
+        <div className="flex flex-col items-center text-center py-14 px-6 bg-white rounded-2xl border border-[#e8dfd4]">
+          <div className="w-14 h-14 rounded-2xl bg-[#f0e8de] flex items-center justify-center text-[#8b5e38] mb-4">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+              <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <p className="font-display font-semibold text-[#1a0e02] text-base mb-2">No approved listings yet</p>
+          <p className="text-sm text-[#64707d] max-w-xs leading-relaxed mb-5">
+            You need at least one approved listing before you can invite co-hosts. Submit a listing to get started.
           </p>
+          <Link
+            href="/host/new"
+            className="flex items-center gap-2 px-6 py-2.5 bg-[#8b5e38] text-white text-sm font-semibold rounded-xl hover:bg-[#7a5030] transition-colors"
+          >
+            Submit a listing
+          </Link>
         </div>
-      </div>
+      )}
     </div>
   );
 }

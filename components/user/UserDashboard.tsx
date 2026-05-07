@@ -2,17 +2,19 @@
 
 import { useState } from "react";
 import type { UserBooking, SavedListing } from "@/lib/types/user";
-import type { CohostAssignmentItem } from "@/lib/services/cohost";
+import type { CohostAssignmentItem, CohostInboxItem } from "@/lib/services/cohost";
+import type { AppNotification } from "@/lib/services/notifications";
 import type { SupportTicket } from "@/lib/types/support";
-import UserOverviewSection  from "./sections/UserOverviewSection";
-import UserBookingsSection  from "./sections/UserBookingsSection";
-import UserSavedSection     from "./sections/UserSavedSection";
-import UserActivitySection  from "./sections/UserActivitySection";
-import UserAccountSection   from "./sections/UserAccountSection";
-import UserCohostSection    from "./sections/UserCohostSection";
-import UserSupportSection   from "./sections/UserSupportSection";
+import UserOverviewSection   from "./sections/UserOverviewSection";
+import UserBookingsSection   from "./sections/UserBookingsSection";
+import UserSavedSection      from "./sections/UserSavedSection";
+import UserActivitySection   from "./sections/UserActivitySection";
+import UserAccountSection    from "./sections/UserAccountSection";
+import UserCohostSection     from "./sections/UserCohostSection";
+import UserSupportSection    from "./sections/UserSupportSection";
+import NotificationsSection  from "@/components/notifications/NotificationsSection";
 
-type Tab = "overview" | "bookings" | "saved" | "activity" | "account" | "cohost" | "support";
+type Tab = "overview" | "bookings" | "saved" | "activity" | "account" | "cohost" | "support" | "notifications";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   {
@@ -88,6 +90,16 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
       </svg>
     ),
   },
+  {
+    id: "notifications",
+    label: "Notifications",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M13.73 21a2 2 0 01-3.46 0" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
 ];
 
 type ApplicationStatus = "pending" | "approved" | "rejected" | null;
@@ -106,28 +118,34 @@ export default function UserDashboard({
   hostRejectionReason   = null,
   cohostStatus          = null,
   cohostRejectionReason = null,
-  cohostAssignments     = [],
-  savedListings         = [],
-  reviewedBookingIds    = [],
-  initialTickets        = [],
+  cohostAssignments               = [],
+  cohostInvitations               = [],
+  pendingCohostInvitationCount    = 0,
+  notifications                   = [],
+  savedListings                   = [],
+  reviewedBookingIds              = [],
+  initialTickets                  = [],
 }: {
-  bookings:               UserBooking[];
-  userName:               string;
-  userAvatar:             string;
-  userEmail?:             string;
-  userFirstName?:         string;
-  userLastName?:          string;
-  userPhone?:             string;
-  userNationality?:       string;
-  userJoinedAt?:          string;
-  hostStatus?:            ApplicationStatus;
-  hostRejectionReason?:   string | null;
-  cohostStatus?:          ApplicationStatus;
-  cohostRejectionReason?: string | null;
-  cohostAssignments?:     CohostAssignmentItem[];
-  savedListings?:         SavedListing[];
-  reviewedBookingIds?:    string[];
-  initialTickets?:        SupportTicket[];
+  bookings:                        UserBooking[];
+  userName:                        string;
+  userAvatar:                      string;
+  userEmail?:                      string;
+  userFirstName?:                  string;
+  userLastName?:                   string;
+  userPhone?:                      string;
+  userNationality?:                string;
+  userJoinedAt?:                   string;
+  hostStatus?:                     ApplicationStatus;
+  hostRejectionReason?:            string | null;
+  cohostStatus?:                   ApplicationStatus;
+  cohostRejectionReason?:          string | null;
+  cohostAssignments?:              CohostAssignmentItem[];
+  cohostInvitations?:              CohostInboxItem[];
+  pendingCohostInvitationCount?:   number;
+  notifications?:                  AppNotification[];
+  savedListings?:                  SavedListing[];
+  reviewedBookingIds?:             string[];
+  initialTickets?:                 SupportTicket[];
 }) {
   const [activeTab, setActiveTab]     = useState<Tab>("overview");
   const [mobileNavOpen, setMobileNav] = useState(false);
@@ -152,51 +170,74 @@ export default function UserDashboard({
   };
 
   return (
-    <div className="min-h-screen bg-[#f4efe6] pt-[72px]">
+    <div className="min-h-screen pt-[74px]" style={{ background: "var(--bg-sand)" }}>
 
       {/* ─── Tab bar (sticks below global Navbar) ─── */}
-      <header className="bg-white border-b border-[#e8dfd4] sticky top-[72px] z-[39]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16 gap-4">
+      <header
+        className="sticky top-[74px] z-[39]"
+        style={{
+          background: "rgba(255,254,252,0.97)",
+          backdropFilter: "blur(16px) saturate(1.6)",
+          WebkitBackdropFilter: "blur(16px) saturate(1.6)",
+          borderBottom: "1px solid var(--border)",
+          boxShadow: "0 1px 12px rgba(70,30,0,0.06)",
+        }}
+      >
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14 gap-4">
 
           {/* Desktop tabs */}
-          <nav className="hidden md:flex items-center gap-1 flex-1 justify-center">
+          <nav className="hidden md:flex items-center gap-0.5 flex-1 justify-center">
             {TABS.map((tab) => {
               let badge: number | undefined;
-              if (tab.id === "bookings") badge = kpis.upcomingCount + cohostAssignments.length;
-              if (tab.id === "saved")    badge = kpis.savedCount;
+              if (tab.id === "bookings")      badge = kpis.upcomingCount + cohostAssignments.length;
+              if (tab.id === "saved")         badge = kpis.savedCount;
+              if (tab.id === "cohost" && pendingCohostInvitationCount > 0) badge = pendingCohostInvitationCount;
+              if (tab.id === "notifications") badge = notifications.filter((n) => n.isNew).length || undefined;
 
-              const showCohostDot = tab.id === "cohost" && cohostStatus && activeTab !== "cohost";
+              const showCohostDot = tab.id === "cohost" && cohostStatus && activeTab !== "cohost" && !pendingCohostInvitationCount;
+              const isActive = activeTab === tab.id;
 
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={[
-                    "relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all",
-                    activeTab === tab.id
-                      ? "bg-[#1a0e02] text-white"
-                      : "text-[#64707d] hover:bg-[#f0e8de] hover:text-[#1a0e02]",
-                  ].join(" ")}
+                  className="relative flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[0.8125rem] font-semibold transition-all duration-150"
+                  style={{
+                    color: isActive ? "#1a0e02" : "#8b7b6a",
+                    background: isActive ? "rgba(196,154,79,0.10)" : "transparent",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = "rgba(70,30,0,0.05)";
+                    if (!isActive) (e.currentTarget as HTMLButtonElement).style.color = "#1a0e02";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+                    if (!isActive) (e.currentTarget as HTMLButtonElement).style.color = "#8b7b6a";
+                  }}
                 >
-                  {tab.icon}
+                  {isActive && (
+                    <span
+                      className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full"
+                      style={{ background: "linear-gradient(90deg, transparent, #c49a4f, transparent)" }}
+                    />
+                  )}
+                  <span style={{ opacity: isActive ? 1 : 0.7 }}>{tab.icon}</span>
                   {tab.label}
                   {badge !== undefined && badge > 0 && (
-                    <span className={[
-                      "text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full",
-                      activeTab === tab.id
-                        ? "bg-[#c49a4f] text-white"
-                        : "bg-[#8b5e38] text-white",
-                    ].join(" ")}>
+                    <span
+                      className="text-[9px] font-bold min-w-[16px] h-[16px] px-0.5 flex items-center justify-center rounded-full"
+                      style={{ background: "#8b5e38", color: "white" }}
+                    >
                       {badge}
                     </span>
                   )}
                   {showCohostDot && (
-                    <span className={[
-                      "w-2 h-2 rounded-full shrink-0",
-                      cohostStatus === "approved" ? "bg-[#049153]" :
-                      cohostStatus === "pending"  ? "bg-[#c49a4f]" :
-                                                    "bg-red-500",
-                    ].join(" ")} />
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{
+                        background: cohostStatus === "approved" ? "#049153" : cohostStatus === "pending" ? "#c49a4f" : "#ef4444",
+                      }}
+                    />
                   )}
                 </button>
               );
@@ -206,12 +247,15 @@ export default function UserDashboard({
           {/* Mobile burger */}
           <div className="md:hidden shrink-0">
             <button
-              className="p-2 rounded-lg hover:bg-[#f0e8de] transition-colors"
+              className="p-2 rounded-lg transition-colors"
+              style={{ color: "#1a0e02" }}
+              onMouseEnter={(e) => (e.currentTarget as HTMLButtonElement).style.background = "rgba(70,30,0,0.06)"}
+              onMouseLeave={(e) => (e.currentTarget as HTMLButtonElement).style.background = "transparent"}
               onClick={() => setMobileNav(!mobileNavOpen)}
               aria-label="Toggle menu"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M3 12h18M3 6h18M3 18h18" stroke="#1a0e02" strokeWidth="2" strokeLinecap="round" />
+                <path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
             </button>
           </div>
@@ -219,22 +263,27 @@ export default function UserDashboard({
 
         {/* Mobile nav drawer */}
         {mobileNavOpen && (
-          <div className="md:hidden border-t border-[#e8dfd4] bg-white px-4 py-3 flex flex-col gap-1">
-            {TABS.map((tab) => (
+          <div
+            className="md:hidden px-4 py-3 flex flex-col gap-0.5"
+            style={{ borderTop: "1px solid var(--border-light)" }}
+          >
+            {TABS.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
               <button
                 key={tab.id}
                 onClick={() => { setActiveTab(tab.id); setMobileNav(false); }}
-                className={[
-                  "flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all text-left",
-                  activeTab === tab.id
-                    ? "bg-[#1a0e02] text-white"
-                    : "text-[#64707d] hover:bg-[#f0e8de] hover:text-[#1a0e02]",
-                ].join(" ")}
+                className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all text-left"
+                style={{
+                  background: isActive ? "rgba(196,154,79,0.10)" : "transparent",
+                  color: isActive ? "#1a0e02" : "#8b7b6a",
+                }}
               >
                 {tab.icon}
                 {tab.label}
               </button>
-            ))}
+              );
+            })}
           </div>
         )}
       </header>
@@ -308,14 +357,17 @@ export default function UserDashboard({
           >
             <span className={[
               "w-2.5 h-2.5 rounded-full shrink-0",
-              cohostStatus === "approved" ? "bg-[#049153]" :
-              cohostStatus === "pending"  ? "bg-[#c49a4f] animate-pulse" :
-                                            "bg-red-500",
+              pendingCohostInvitationCount > 0 ? "bg-[#8b5e38] animate-pulse" :
+              cohostStatus === "approved"      ? "bg-[#049153]" :
+              cohostStatus === "pending"       ? "bg-[#c49a4f] animate-pulse" :
+                                                 "bg-red-500",
             ].join(" ")} />
             <p className="text-sm font-semibold text-[#1a0e02] flex-1">
-              {cohostStatus === "approved" ? "Your co-host profile is live" :
-               cohostStatus === "pending"  ? "Co-host application under review" :
-                                             "Co-host application: action required"}
+              {pendingCohostInvitationCount > 0
+                ? `${pendingCohostInvitationCount} pending co-host invitation${pendingCohostInvitationCount > 1 ? "s" : ""}`
+                : cohostStatus === "approved" ? "Your co-host profile is live"
+                : cohostStatus === "pending"  ? "Co-host application under review"
+                :                              "Co-host application: action required"}
             </p>
             <span className="text-xs font-semibold text-[#8b5e38] shrink-0">View →</span>
           </div>
@@ -349,10 +401,15 @@ export default function UserDashboard({
             cohostStatus={cohostStatus}
             cohostRejectionReason={cohostRejectionReason ?? null}
             assignments={cohostAssignments}
+            invitations={cohostInvitations}
+            pendingInvitationCount={pendingCohostInvitationCount}
           />
         )}
         {activeTab === "support" && (
           <UserSupportSection initialTickets={initialTickets} />
+        )}
+        {activeTab === "notifications" && (
+          <NotificationsSection notifications={notifications} />
         )}
 
       </main>

@@ -128,11 +128,14 @@ export async function fetchHostInvitations(
   try {
     const supabase = await createClient();
 
+    // Exclude 'accepted' — accepted invitations produce a cohost_assignments row
+    // shown as "Active co-host". Including them here creates a misleading
+    // "Accepted" entry in Invitation History alongside the active assignment card.
     const { data, error } = await supabase
       .from("cohost_invitations")
       .select("*, cohost_applications(user_id)")
       .eq("host_id", hostId)
-      .in("status", ["pending", "accepted", "declined"])
+      .in("status", ["pending", "declined"])
       .order("sent_at", { ascending: false });
 
     if (error || !data || data.length === 0) return [];
@@ -255,6 +258,7 @@ export interface CohostInboxItem {
   message:      string;
   sentAt:       string;
   status:       "pending" | "accepted" | "declined";
+  services:     CoHostService[]; // co-host's service types from their application
 }
 
 export interface CohostAssignmentItem {
@@ -276,7 +280,7 @@ export async function fetchCohostInvitations(userId: string): Promise<CohostInbo
 
     const { data, error } = await supabase
       .from("cohost_invitations")
-      .select("*")
+      .select("*, cohost_applications(service_types)")
       .eq("cohost_user_id", userId)
       .in("status", ["pending", "accepted", "declined"])
       .order("sent_at", { ascending: false });
@@ -300,6 +304,7 @@ export async function fetchCohostInvitations(userId: string): Promise<CohostInbo
       const hostName = h
         ? `${h.first_name ?? ""} ${h.last_name ?? ""}`.trim()
         : "A host";
+      const appData = row.cohost_applications as { service_types: string[] | null } | null;
 
       return {
         id:           row.id,
@@ -311,6 +316,7 @@ export async function fetchCohostInvitations(userId: string): Promise<CohostInbo
         message:      row.message,
         sentAt:       row.sent_at,
         status:       row.status as CohostInboxItem["status"],
+        services:     (appData?.service_types as CoHostService[]) ?? [],
       };
     });
   } catch {

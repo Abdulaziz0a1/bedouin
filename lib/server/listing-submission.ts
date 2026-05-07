@@ -95,12 +95,19 @@ function checkMeaningfulDifference(
   const PRIMARY_FIELDS = new Set(["title", "images", "price", "capacity", "category"]);
   const primaryChanged = changedFields.filter((f) => PRIMARY_FIELDS.has(f)).length;
 
-  if (changedFields.length >= 2 && primaryChanged >= 1) return null;
+  // Pass if at least 2 primary fields changed, OR at least 1 primary + 1 secondary changed.
+  // This allows a host who only changes photos + location to submit (previously blocked).
+  if (primaryChanged >= 2) return null;
+  if (primaryChanged >= 1 && changedFields.length >= 2) return null;
+
+  const changed = changedFields.length > 0
+    ? `So far only changed: ${changedFields.join(", ")}.`
+    : "No meaningful changes detected yet.";
 
   return (
-    "This draft is too similar to the original listing. " +
-    "Please update at least two key details such as the title, photos, price, " +
-    "capacity, or experience type before submitting it for review."
+    "This listing is too similar to the original template. " +
+    "Please update at least the photos plus one more detail (e.g. title, location, " +
+    "price, or capacity) before submitting for review. " + changed
   );
 }
 
@@ -208,6 +215,11 @@ export async function coreUpdateListing(
 
   const payloadError = validatePayload(draft);
   if (payloadError) return { success: false, error: payloadError };
+
+  // Required-field guard: location must be set before a submission enters the review queue.
+  if (!draft.location.trim()) {
+    return { success: false, error: "Please add a location (Step 3) before submitting for review." };
+  }
 
   // Verify the submission belongs to this host and is in an editable state
   const { data: existing, error: fetchError } = await supabase

@@ -5,6 +5,7 @@ export interface Conversation {
   name:            string;
   lastMessage:     string;
   lastAt:          string;
+  unreadCount:     number;          // messages sent TO myId that are unread in this thread
   // Context fields — null when not linked to a listing or booking
   listingId:       string | null;
   listingTitle:    string | null;
@@ -31,35 +32,44 @@ export async function fetchConversations(myId: string): Promise<Conversation[]> 
 
     const { data, error } = await supabase
       .from("messages")
-      .select("sender_id, receiver_id, content, created_at, related_listing_id, related_booking_id")
+      .select("sender_id, receiver_id, content, created_at, related_listing_id, related_booking_id, is_read, is_deleted")
       .or(`sender_id.eq.${myId},receiver_id.eq.${myId}`)
       .order("created_at", { ascending: false });
 
     if (error || !data || data.length === 0) return [];
 
-    // Group by the other party — newest message wins for lastMessage/lastAt.
+    // Group by the other party — newest non-deleted message wins for lastMessage/lastAt.
     // Continue scanning to fill in the first non-null listing/booking context.
+    // Also count unread messages (received by myId, not yet read).
     const map = new Map<string, {
-      lastMessage: string;
-      lastAt:      string;
-      listingId:   string | null;
-      bookingId:   string | null;
+      lastMessage:  string;
+      lastAt:       string;
+      listingId:    string | null;
+      bookingId:    string | null;
+      unreadCount:  number;
     }>();
 
     for (const row of data) {
-      const otherId = row.sender_id === myId ? row.receiver_id : row.sender_id;
+      const otherId    = row.sender_id === myId ? row.receiver_id : row.sender_id;
+      const isIncoming = row.receiver_id === myId;
+      const isUnread   = isIncoming && !row.is_read && !row.is_deleted;
+      const isVisible  = !row.is_deleted;
+
       if (!map.has(otherId)) {
         map.set(otherId, {
-          lastMessage: row.content,
-          lastAt:      row.created_at,
-          listingId:   row.related_listing_id  ?? null,
-          bookingId:   row.related_booking_id  ?? null,
+          lastMessage:  isVisible ? row.content : "[Message deleted]",
+          lastAt:       row.created_at,
+          listingId:    row.related_listing_id  ?? null,
+          bookingId:    row.related_booking_id  ?? null,
+          unreadCount:  isUnread ? 1 : 0,
         });
       } else {
-        // Fill in context from later (older) messages if still missing
         const entry = map.get(otherId)!;
+        // Fill in context from later (older) messages if still missing
         if (!entry.listingId && row.related_listing_id) entry.listingId = row.related_listing_id;
         if (!entry.bookingId && row.related_booking_id) entry.bookingId = row.related_booking_id;
+        // Accumulate unread count
+        if (isUnread) entry.unreadCount += 1;
       }
     }
 
@@ -147,7 +157,7 @@ export async function fetchConversations(myId: string): Promise<Conversation[]> 
 
     // ── Assemble final conversations ──────────────────────────────────────────
     return Array.from(map.entries()).map(([userId, conv]) => {
-      const { lastMessage, lastAt, listingId, bookingId } = conv;
+      const { lastMessage, lastAt, listingId, bookingId, unreadCount } = conv;
 
       const p    = pm[userId];
       const name = p ? `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() : "User";
@@ -191,6 +201,7 @@ export async function fetchConversations(myId: string): Promise<Conversation[]> 
         name:                 name || "User",
         lastMessage,
         lastAt,
+        unreadCount,
         listingId:            listingId  ?? null,
         listingTitle,
         bookingId:            bookingId  ?? null,
@@ -201,6 +212,25 @@ export async function fetchConversations(myId: string): Promise<Conversation[]> 
     });
   } catch {
     return [];
+  }
+}
+
+/**
+ * Returns the total number of unread messages sent to `myId`.
+ * Used for the Navbar badge.
+ */
+export async function fetchTotalUnreadCount(myId: string): Promise<number> {
+  try {
+    const supabase = await createClient();
+    const { count } = await supabase
+      .from("messages")
+      .select("id", { count: "exact", head: true })
+      .eq("receiver_id", myId)
+      .eq("is_read", false)
+      .eq("is_deleted", false);
+    return count ?? 0;
+  } catch {
+    return 0;
   }
 }
 

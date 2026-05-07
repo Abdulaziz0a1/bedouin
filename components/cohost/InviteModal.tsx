@@ -4,21 +4,26 @@ import { useState } from "react";
 import type { CoHost, InviteModalListing } from "@/lib/types/cohost";
 
 interface Props {
-  cohost:       CoHost;
-  listings:     InviteModalListing[];
-  onConfirm:    (listingId: string, listingTitle: string, listingImage: string, message: string) => void;
-  onCancel:     () => void;
-  isSubmitting: boolean;
+  cohost:           CoHost;
+  listings:         InviteModalListing[];
+  defaultListingId?: string | null;
+  onConfirm:        (listingId: string, listingTitle: string, listingImage: string, message: string) => void;
+  onCancel:         () => void;
+  isSubmitting:     boolean;
 }
 
 export default function InviteModal({
   cohost,
   listings,
+  defaultListingId = null,
   onConfirm,
   onCancel,
   isSubmitting,
 }: Props) {
-  const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
+  // Pre-select the listing if a specific one was linked from the dashboard
+  const [selectedListingId, setSelectedListingId] = useState<string | null>(
+    () => defaultListingId && listings.some((l) => l.id === defaultListingId) ? defaultListingId : null
+  );
   const [message, setMessage] = useState(
     `Salaam ${cohost.firstName}! I'm interested in working with you to co-host one of my listings. I'd love to discuss how we can collaborate.`
   );
@@ -32,10 +37,24 @@ export default function InviteModal({
       <div className="absolute inset-0 bg-[#1a0e02]/40 backdrop-blur-sm" onClick={onCancel} />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+      <div
+        className="relative bg-white w-full max-w-lg overflow-hidden"
+        style={{
+          borderRadius: "22px",
+          boxShadow: "0 24px 80px rgba(26,14,2,0.22), 0 8px 28px rgba(26,14,2,0.12)",
+          border: "1px solid rgba(232,223,212,0.70)",
+        }}
+      >
+        {/* Gold accent top bar */}
+        <div
+          className="h-[2px]"
+          style={{
+            background: "linear-gradient(90deg, transparent, rgba(196,154,79,0.70) 30%, rgba(240,200,74,0.90) 50%, rgba(196,154,79,0.70) 70%, transparent)",
+          }}
+        />
 
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-[#f0e8de]">
+        <div className="flex items-start justify-between gap-4 px-6 py-5" style={{ borderBottom: "1px solid var(--border-light)" }}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#f0e8de] flex items-center justify-center shrink-0 text-[#8b5e38] font-bold text-sm border-2 border-[#e8dfd4]">
               {cohost.firstName.charAt(0).toUpperCase()}
@@ -132,7 +151,8 @@ export default function InviteModal({
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={4}
-              className="w-full px-4 py-3 border border-[#e8dfd4] rounded-xl text-sm text-[#1a0e02] placeholder:text-[#a09080] focus:outline-none focus:border-[#8b5e38] resize-none transition-colors bg-white"
+              className="input-field resize-none"
+              style={{ borderRadius: "12px" }}
             />
             <p className="text-[10px] text-[#a09080] mt-1">{message.length} characters</p>
           </div>
@@ -160,7 +180,12 @@ export default function InviteModal({
                 );
               }
             }}
-            className="flex-[2] py-2.5 bg-[#8b5e38] text-white rounded-xl text-sm font-semibold hover:bg-[#7a5030] transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
+            className="flex-[2] py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2 transition-all duration-150"
+            style={{
+              background: "linear-gradient(135deg, #8b5e38 0%, #6a4428 100%)",
+              color: "white",
+              boxShadow: "0 4px 14px rgba(139,94,56,0.28)",
+            }}
           >
             {isSubmitting ? (
               <>

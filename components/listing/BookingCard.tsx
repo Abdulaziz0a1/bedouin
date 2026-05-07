@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import CalendarPopup from "@/components/ui/CalendarPopup";
 import { checkAvailability } from "@/lib/actions/availability";
+import { useAuth } from "@/context/AuthProvider";
 
 const SHORT_MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -52,6 +54,9 @@ export default function BookingCard({
   listingId,
   isOwnListing = false,
 }: BookingCardProps) {
+  const { user } = useAuth();
+  const router   = useRouter();
+
   const [checkIn, setCheckIn]   = useState<Date | null>(null);
   const [checkOut, setCheckOut] = useState<Date | null>(null);
   const [adults, setAdults]     = useState(1);
@@ -115,6 +120,15 @@ export default function BookingCard({
 
   const canReserve = !!checkIn && !!checkOut && nights >= minNights && !isUnavailable && !isChecking;
 
+  const handleReserve = useCallback(() => {
+    const bookingUrl = `/booking/${listingId}?checkIn=${checkIn?.toISOString().split("T")[0]}&checkOut=${checkOut?.toISOString().split("T")[0]}&adults=${adults}&children=${children}`;
+    if (!user) {
+      router.push(`/login?returnTo=${encodeURIComponent(bookingUrl)}`);
+    } else {
+      router.push(bookingUrl);
+    }
+  }, [user, router, listingId, checkIn, checkOut, adults, children]);
+
   const fieldCls =
     "flex-1 flex flex-col px-4 py-3 cursor-pointer select-none hover:bg-[#faf7f4] transition-colors";
   const labelCls = "text-[10px] font-bold text-[#64707d] uppercase tracking-widest mb-0.5";
@@ -124,7 +138,13 @@ export default function BookingCard({
   return (
     <div
       ref={cardRef}
-      className="bg-white border border-[#e8dfd4] rounded-3xl shadow-[0_8px_40px_rgba(26,14,2,0.14)] p-6 flex flex-col gap-5 sticky top-[88px]"
+      className="bg-white p-6 flex flex-col gap-5 sticky top-[88px]"
+      style={{
+        borderRadius: "24px",
+        border: "1px solid var(--border)",
+        borderTop: "2px solid rgba(196,154,79,0.45)",
+        boxShadow: "0 8px 40px rgba(26,14,2,0.12), 0 2px 10px rgba(26,14,2,0.06)",
+      }}
     >
       {/* Price header */}
       <div className="flex items-end justify-between">
@@ -343,24 +363,33 @@ export default function BookingCard({
 
           {/* CTA */}
           {canReserve ? (
-            <a
-              href={`/booking/${listingId}?checkIn=${checkIn?.toISOString().split("T")[0]}&checkOut=${checkOut?.toISOString().split("T")[0]}&adults=${adults}&children=${children}`}
-              className="w-full py-4 bg-[#8b5e38] text-white font-bold text-base rounded-2xl text-center hover:bg-[#7a5030] active:bg-[#6a4228] transition-colors shadow-sm"
-              style={{ color: "#fff" }}
+            <button
+              type="button"
+              onClick={handleReserve}
+              className="w-full py-3.5 font-bold text-base text-white rounded-xl text-center transition-all duration-200 hover:-translate-y-0.5"
+              style={{
+                background: "linear-gradient(135deg, #8b5e38 0%, #6a4428 100%)",
+                boxShadow: "0 6px 20px rgba(139,94,56,0.38), inset 0 1px 0 rgba(255,255,255,0.10)",
+              }}
             >
-              Reserve Now
-            </a>
+              {user ? "Reserve Now" : "Log in to Reserve"}
+            </button>
           ) : (
             <button
               type="button"
               disabled={isUnavailable}
               onClick={() => { if (!checkIn || !checkOut) setActive("checkin"); }}
-              className={[
-                "w-full py-4 font-bold text-base rounded-2xl text-center transition-colors shadow-sm",
+              className="w-full py-3.5 font-bold text-base rounded-xl text-center transition-all duration-200"
+              style={
                 isUnavailable
-                  ? "bg-[#e8dfd4] text-[#a09080] cursor-not-allowed"
-                  : "bg-[#8b5e38] text-white hover:bg-[#7a5030] active:bg-[#6a4228] cursor-pointer",
-              ].join(" ")}
+                  ? { background: "var(--bg-sand)", color: "#a09080", cursor: "not-allowed" }
+                  : {
+                      background: "linear-gradient(135deg, #8b5e38 0%, #6a4428 100%)",
+                      color: "white",
+                      boxShadow: "0 6px 20px rgba(139,94,56,0.38)",
+                      cursor: "pointer",
+                    }
+              }
             >
               {isUnavailable ? "Not Available" : "Check Availability"}
             </button>

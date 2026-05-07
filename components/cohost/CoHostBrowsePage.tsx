@@ -103,6 +103,7 @@ interface CoHostBrowsePageProps {
   hostInvitations: CoHostInvitation[];
   hostAssignments: CoHostAssignment[];
   currentUserId:   string | null;
+  defaultListingId?: string | null;
   error?:          string;
 }
 
@@ -112,6 +113,7 @@ export default function CoHostBrowsePage({
   hostInvitations,
   hostAssignments,
   currentUserId,
+  defaultListingId = null,
   error,
 }: CoHostBrowsePageProps) {
   const [cohosts,         ]           = useState<CoHost[]>(initialCohosts);
@@ -417,6 +419,7 @@ export default function CoHostBrowsePage({
         <InviteModal
           cohost={selectedCohost}
           listings={hostListings}
+          defaultListingId={defaultListingId}
           onConfirm={handleInviteConfirm}
           onCancel={() => { setShowInviteModal(false); setInviteError(null); }}
           isSubmitting={inviting}

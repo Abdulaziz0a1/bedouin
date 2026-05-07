@@ -165,6 +165,7 @@ export async function fetchHostListings(hostId: string): Promise<DashboardListin
         return {
           id:               row.id,
           listingSlug:      slug,
+          listingId:        (row.listing_id as string | null) ?? undefined,
           title:            row.title,
           category:         row.category,
           region:           row.region,

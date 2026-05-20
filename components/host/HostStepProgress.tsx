@@ -1,10 +1,14 @@
+"use client";
+
+import { useLanguage } from "@/context/LanguageProvider";
+
 const STEPS = [
-  { n: 1, label: "Type"      },
-  { n: 2, label: "About"     },
-  { n: 3, label: "Details"   },
-  { n: 4, label: "Amenities" },
-  { n: 5, label: "Pricing"   },
-  { n: 6, label: "Review"    },
+  { n: 1, labelKey: "host.step.type"      },
+  { n: 2, labelKey: "host.step.about"     },
+  { n: 3, labelKey: "host.step.details"   },
+  { n: 4, labelKey: "host.step.amenities" },
+  { n: 5, labelKey: "host.step.pricing"   },
+  { n: 6, labelKey: "host.step.review"    },
 ] as const;
 
 interface HostStepProgressProps {
@@ -14,6 +18,7 @@ interface HostStepProgressProps {
 }
 
 export default function HostStepProgress({ currentStep, rejectedSteps = [] }: HostStepProgressProps) {
+  const { t } = useLanguage();
   return (
     <div className="flex flex-col gap-3">
       {/* Desktop: circles + labels */}
@@ -69,9 +74,9 @@ export default function HostStepProgress({ currentStep, rejectedSteps = [] }: Ho
                     : "text-[#a09080]"
                   }`}
                 >
-                  {step.label}
+                  {t(step.labelKey)}
                   {rejected && (
-                    <span className="block text-[9px] text-red-400 font-bold">Fix needed</span>
+                    <span className="block text-[9px] text-red-400 font-bold">{t("host.step.fix")}</span>
                   )}
                 </span>
               </div>
@@ -84,13 +89,13 @@ export default function HostStepProgress({ currentStep, rejectedSteps = [] }: Ho
       <div className="sm:hidden flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <span className="text-sm font-semibold text-[#1a0e02]">
-            Step {currentStep} of {STEPS.length} — {STEPS[currentStep - 1].label}
+            {t("host.step.step")} {currentStep} {t("host.step.of")} {STEPS.length} — {t(STEPS[currentStep - 1].labelKey)}
             {rejectedSteps.includes(currentStep) && (
-              <span className="ml-1.5 text-xs font-bold text-red-500">Needs fix</span>
+              <span className="ml-1.5 text-xs font-bold text-red-500">{t("host.step.fix_needed")}</span>
             )}
           </span>
           <span className="text-xs text-[#64707d]">
-            {Math.round(((currentStep - 1) / STEPS.length) * 100)}% complete
+            {Math.round(((currentStep - 1) / STEPS.length) * 100)}{t("host.step.pct_complete")}
           </span>
         </div>
         <div className="w-full h-1.5 bg-[#e8dfd4] rounded-full overflow-hidden">

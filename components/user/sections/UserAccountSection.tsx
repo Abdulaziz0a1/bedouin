@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { updateProfile } from "@/lib/actions/profile";
+import { useLanguage } from "@/context/LanguageProvider";
 
 function FieldRow({ label, value }: { label: string; value: string }) {
   return (
@@ -31,6 +32,8 @@ export default function UserAccountSection({
   avatarUrl?:   string;
   joinedAt?:    string;
 }) {
+  const { t } = useLanguage();
+
   const [notifBooking, setNotifBooking] = useState(true);
   const [notifPromo,   setNotifPromo]   = useState(false);
   const [notifRemind,  setNotifRemind]  = useState(true);
@@ -121,8 +124,8 @@ export default function UserAccountSection({
 
       {/* Header */}
       <div>
-        <h2 className="font-display font-semibold text-[#1a0e02] text-lg">Account</h2>
-        <p className="text-xs text-[#64707d] mt-0.5">Manage your profile and preferences</p>
+        <h2 className="font-display font-semibold text-[#1a0e02] text-lg">{t("account.heading")}</h2>
+        <p className="text-xs text-[#64707d] mt-0.5">{t("account.subtitle")}</p>
       </div>
 
       {/* Profile card */}
@@ -145,7 +148,7 @@ export default function UserAccountSection({
             )}
             <button
               className="absolute -bottom-1 -right-1 w-6 h-6 bg-[#8b5e38] rounded-full flex items-center justify-center hover:bg-[#7a5030] transition-colors"
-              aria-label="Change photo"
+              aria-label={t("account.change_photo")}
             >
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
                 <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -155,14 +158,14 @@ export default function UserAccountSection({
           </div>
           <div>
             <h3 className="font-display font-semibold text-[#1a0e02] text-lg">{fullName}</h3>
-            <p className="text-xs text-[#64707d]">Member since {joinedDate}</p>
+            <p className="text-xs text-[#64707d]">{t("account.member_since")} {joinedDate}</p>
           </div>
           {!editing && (
             <button
               onClick={handleEdit}
               className="ml-auto px-4 py-2 border border-[#e8dfd4] rounded-xl text-sm font-semibold text-[#64707d] hover:border-[#8b5e38] hover:text-[#8b5e38] transition-colors shrink-0"
             >
-              Edit profile
+              {t("account.edit_profile")}
             </button>
           )}
         </div>
@@ -170,10 +173,10 @@ export default function UserAccountSection({
         {/* Fields — view mode */}
         {!editing && (
           <div className="px-6 py-2">
-            <FieldRow label="Full name"   value={fullName}      />
-            <FieldRow label="Email"       value={email}         />
-            <FieldRow label="Phone"       value={displayPhone}  />
-            <FieldRow label="Nationality" value={displayNat}    />
+            <FieldRow label={t("account.full_name")}   value={fullName}      />
+            <FieldRow label={t("account.email")}       value={email}         />
+            <FieldRow label={t("account.phone")}       value={displayPhone}  />
+            <FieldRow label={t("account.nationality")} value={displayNat}    />
           </div>
         )}
 
@@ -182,8 +185,8 @@ export default function UserAccountSection({
           <div className="px-6 py-4 flex flex-col gap-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
-                { label: "First name",  value: editFirst, onChange: setEditFirst },
-                { label: "Last name",   value: editLast,  onChange: setEditLast  },
+                { label: t("account.first_name"), value: editFirst, onChange: setEditFirst },
+                { label: t("account.last_name"),  value: editLast,  onChange: setEditLast  },
               ].map(({ label, value, onChange }) => (
                 <div key={label}>
                   <label className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest block mb-1">
@@ -199,7 +202,7 @@ export default function UserAccountSection({
               ))}
               <div>
                 <label className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest block mb-1">
-                  Phone
+                  {t("account.phone")}
                 </label>
                 <input
                   type="tel"
@@ -210,7 +213,7 @@ export default function UserAccountSection({
               </div>
               <div>
                 <label className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest block mb-1">
-                  Nationality
+                  {t("account.nationality")}
                 </label>
                 <input
                   type="text"
@@ -231,14 +234,14 @@ export default function UserAccountSection({
                 disabled={isPending}
                 className="px-5 py-2.5 bg-[#8b5e38] text-white text-sm font-semibold rounded-xl hover:bg-[#7a5030] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isPending ? "Saving…" : "Save changes"}
+                {isPending ? t("account.saving") : t("account.save")}
               </button>
               <button
                 onClick={() => setEditing(false)}
                 disabled={isPending}
                 className="px-5 py-2.5 border border-[#e8dfd4] text-sm font-semibold text-[#64707d] rounded-xl hover:border-[#8b5e38] hover:text-[#8b5e38] transition-colors disabled:opacity-50"
               >
-                Cancel
+                {t("account.cancel")}
               </button>
             </div>
           </div>
@@ -252,29 +255,29 @@ export default function UserAccountSection({
             <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
           </svg>
-          Profile updated successfully.
+          {t("account.saved_ok")}
         </div>
       )}
 
       {/* Notifications */}
       <div className="bg-white border border-[#e8dfd4] rounded-2xl overflow-hidden">
         <div className="px-6 py-4 border-b border-[#f0e8de]">
-          <h3 className="font-display font-semibold text-[#1a0e02]">Notifications</h3>
-          <p className="text-xs text-[#64707d] mt-0.5">Choose what you hear about</p>
+          <h3 className="font-display font-semibold text-[#1a0e02]">{t("account.notif.heading")}</h3>
+          <p className="text-xs text-[#64707d] mt-0.5">{t("account.notif.subtitle")}</p>
         </div>
         <div className="px-6 py-2">
           {[
-            { label: "Booking confirmations & updates", sub: "Get notified about your reservation status", value: notifBooking, onChange: setNotifBooking },
-            { label: "Trip reminders",                  sub: "Reminders 48h before check-in",             value: notifRemind,  onChange: setNotifRemind  },
-            { label: "Deals & promotions",              sub: "Occasional offers and new experiences",      value: notifPromo,   onChange: setNotifPromo   },
-          ].map(({ label, sub, value, onChange }) => (
+            { labelKey: "account.notif.booking", subKey: "account.notif.booking_sub", value: notifBooking, onChange: setNotifBooking },
+            { labelKey: "account.notif.remind",  subKey: "account.notif.remind_sub",  value: notifRemind,  onChange: setNotifRemind  },
+            { labelKey: "account.notif.promo",   subKey: "account.notif.promo_sub",   value: notifPromo,   onChange: setNotifPromo   },
+          ].map(({ labelKey, subKey, value, onChange }) => (
             <div
-              key={label}
+              key={labelKey}
               className="flex items-center justify-between gap-4 py-4 border-b last:border-0 border-[#f0e8de]"
             >
               <div>
-                <p className="text-sm font-semibold text-[#1a0e02]">{label}</p>
-                <p className="text-xs text-[#64707d] mt-0.5">{sub}</p>
+                <p className="text-sm font-semibold text-[#1a0e02]">{t(labelKey)}</p>
+                <p className="text-xs text-[#64707d] mt-0.5">{t(subKey)}</p>
               </div>
               <Toggle value={value} onChange={onChange} />
             </div>
@@ -285,12 +288,12 @@ export default function UserAccountSection({
       {/* Security */}
       <div className="bg-white border border-[#e8dfd4] rounded-2xl overflow-hidden">
         <div className="px-6 py-4 border-b border-[#f0e8de]">
-          <h3 className="font-display font-semibold text-[#1a0e02]">Security</h3>
+          <h3 className="font-display font-semibold text-[#1a0e02]">{t("account.security.heading")}</h3>
         </div>
         <div className="px-6 py-2">
           {[
-            { label: "Password",        sub: "Update your account password",    action: "Change" },
-            { label: "Linked accounts", sub: "Manage connected sign-in methods", action: "Manage" },
+            { label: t("account.password"),        sub: t("account.password_sub"),        action: t("account.change") },
+            { label: t("account.linked_accounts"), sub: t("account.linked_accounts_sub"), action: t("account.manage") },
           ].map(({ label, sub, action }) => (
             <div
               key={label}
@@ -311,13 +314,13 @@ export default function UserAccountSection({
       {/* Danger zone */}
       <div className="bg-red-50 border border-red-100 rounded-2xl px-6 py-5 flex items-center justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-red-700">Delete account</p>
+          <p className="text-sm font-semibold text-red-700">{t("account.danger.title")}</p>
           <p className="text-xs text-red-500 mt-0.5">
-            This will permanently remove your account and all data.
+            {t("account.danger.body")}
           </p>
         </div>
         <button className="px-4 py-2 border border-red-300 rounded-xl text-sm font-semibold text-red-600 hover:bg-red-100 transition-colors shrink-0">
-          Delete
+          {t("account.danger.button")}
         </button>
       </div>
     </div>

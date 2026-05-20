@@ -28,11 +28,15 @@ export interface AdminListing {
 
   /* Core content (mirrors ListingDraft) */
   title: string;
+  title_ar?: string;
   category: string;
   region: string;
   location: string;
+  location_ar?: string;
   description: string;
+  description_ar?: string;
   highlights: string[];
+  highlights_ar?: string[];
   amenities: string[];      // display labels
   houseRules: string[];
   imageUrls: string[];      // Firebase Storage URLs (or picsum for mock)

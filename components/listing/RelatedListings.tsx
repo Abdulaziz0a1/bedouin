@@ -1,13 +1,18 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import { Listing } from "@/lib/data/listings";
 import RatingBadge from "@/components/ui/RatingBadge";
+import { useLanguage } from "@/context/LanguageProvider";
+import { getListingText } from "@/lib/utils/listing-locale";
 
 interface RelatedListingsProps {
   listings: Listing[];
 }
 
 export default function RelatedListings({ listings }: RelatedListingsProps) {
+  const { t, lang } = useLanguage();
   if (listings.length === 0) return null;
 
   return (
@@ -41,20 +46,20 @@ export default function RelatedListings({ listings }: RelatedListingsProps) {
           <div className="flex flex-col gap-2 px-4 pt-3 pb-4 flex-1">
             <RatingBadge score={listing.score} reviewCount={listing.reviewCount} />
             <h3 className="font-display font-semibold text-[#1a0e02] text-sm leading-snug line-clamp-2 mt-0.5">
-              {listing.title}
+              {getListingText(listing.title, listing.title_ar, lang)}
             </h3>
             <div className="flex items-center gap-1 text-[#64707d] text-xs">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" className="shrink-0">
                 <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" fill="currentColor" />
               </svg>
-              <span className="truncate">{listing.location}</span>
+              <span className="truncate">{getListingText(listing.location, listing.location_ar, lang)}</span>
             </div>
             <div className="mt-auto pt-3 border-t border-[#f0e8de] flex items-baseline justify-end gap-1.5">
               {listing.originalPrice && (
                 <span className="text-[#a09080] text-xs line-through">SAR {listing.originalPrice}</span>
               )}
               <span className="font-display font-bold text-[#1a0e02] text-base">SAR {listing.price}</span>
-              <span className="text-[#64707d] text-xs">{listing.priceUnit ?? "/ person"}</span>
+              <span className="text-[#64707d] text-xs">{listing.priceUnit ?? t("listing.per_person")}</span>
             </div>
           </div>
         </Link>

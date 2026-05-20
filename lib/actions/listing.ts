@@ -118,7 +118,7 @@ export async function duplicateListing(
       price:          source.price,
       original_price: source.original_price  ?? null,
       price_unit:     source.price_unit,
-      title:          `Copy of ${source.title ?? "Untitled Listing"}`,
+      title:          source.title ? `Copy of ${source.title}` : "",
       location:       "",
       maps_url:       null,
       image_urls:     [],

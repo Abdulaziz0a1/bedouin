@@ -3,6 +3,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { SAUDI_REGIONS } from "@/lib/data/listings";
+import { REGION_KEY_MAP } from "@/lib/constants/regions";
+import { useLanguage } from "@/context/LanguageProvider";
+import type { Lang } from "@/lib/i18n/translations";
 
 /* ─── Constants ─────────────────────────────────────────────────────────────── */
 
@@ -16,7 +19,20 @@ const SHORT_MONTHS = [
 ];
 const DAY_LABELS = ["Su","Mo","Tu","We","Th","Fr","Sa"];
 
-function formatDate(d: Date): string {
+const AR_MONTHS = [
+  "يناير","فبراير","مارس","أبريل","مايو","يونيو",
+  "يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر",
+];
+const AR_SHORT_MONTHS = [
+  "يناير","فبراير","مارس","أبريل","مايو","يونيو",
+  "يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر",
+];
+const AR_DAY_LABELS = ["أح","اث","ث","أر","خ","ج","س"];
+
+function formatDate(d: Date, lang: Lang): string {
+  if (lang === "ar") {
+    return `${d.getDate()} ${AR_SHORT_MONTHS[d.getMonth()]}`;
+  }
   return `${SHORT_MONTHS[d.getMonth()]} ${d.getDate()}`;
 }
 
@@ -25,6 +41,13 @@ const today = () => {
   d.setHours(0, 0, 0, 0);
   return d;
 };
+
+function buildArabicGuestSummary(rooms: number, adults: number, children: number): string {
+  const r = rooms === 1 ? "غرفة واحدة" : `${rooms} غرف`;
+  const a = adults === 1 ? "بالغ واحد" : `${adults} بالغون`;
+  const c = children === 0 ? "بدون أطفال" : children === 1 ? "طفل واحد" : `${children} أطفال`;
+  return `${r}، ${a}، ${c}`;
+}
 
 /* ─── Category icons ─────────────────────────────────────────────────────────── */
 
@@ -71,14 +94,14 @@ const DomsIcon = () => (
   </svg>
 );
 
-const CATEGORIES = [
-  { id: "farms",      label: "Farms",       icon: <FarmIcon /> },
-  { id: "house",      label: "House",       icon: <HouseIcon /> },
-  { id: "guesthouse", label: "Guest House", icon: <GuestHouseIcon /> },
-  { id: "cabins",     label: "Cabins",      icon: <CabinIcon /> },
-  { id: "glamping",   label: "Glamping",    icon: <GlampingIcon /> },
-  { id: "doms",       label: "Doms",        icon: <DomsIcon /> },
-];
+const CATEGORY_DEFS = [
+  { id: "farms",      key: "search.cat.farms",      icon: <FarmIcon /> },
+  { id: "house",      key: "search.cat.house",      icon: <HouseIcon /> },
+  { id: "guesthouse", key: "search.cat.guesthouse", icon: <GuestHouseIcon /> },
+  { id: "cabins",     key: "search.cat.cabins",     icon: <CabinIcon /> },
+  { id: "glamping",   key: "search.cat.glamping",   icon: <GlampingIcon /> },
+  { id: "doms",       key: "search.cat.doms",       icon: <DomsIcon /> },
+] as const;
 
 /* ─── Popup style ────────────────────────────────────────────────────────────── */
 
@@ -98,18 +121,28 @@ const popupStyle: React.CSSProperties = {
 /* ─── Location popup ─────────────────────────────────────────────────────────── */
 
 function LocationPopover({
-  value, onChange, onClose,
-}: { value: string; onChange: (v: string) => void; onClose: () => void }) {
+  value, onChange, onClose, t, lang,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onClose: () => void;
+  t: (key: string) => string;
+  lang: Lang;
+}) {
   return (
-    <div className="absolute top-full mt-3 left-0 z-[100] py-2 w-[230px] max-h-[360px] overflow-y-auto" style={popupStyle}>
+    <div
+      className={`absolute top-full mt-3 ${lang === "ar" ? "right-0" : "left-0"} z-[100] py-2 w-[230px] max-h-[360px] overflow-y-auto`}
+      style={popupStyle}
+    >
       <button
         type="button"
         onClick={() => { onChange(""); onClose(); }}
         className={`w-full text-left px-4 py-2.5 text-[0.82rem] transition-colors ${
           !value ? "font-semibold text-[#8b5e38] bg-[#fdf0df]/60" : "text-[#5a3d1e] hover:bg-[#faf0e0]/50"
         }`}
+        style={{ textAlign: lang === "ar" ? "right" : "left" }}
       >
-        All regions
+        {t("search.all_regions")}
       </button>
       <div className="mx-3 my-1.5" style={{ height: "1px", background: "rgba(196,154,79,0.14)" }} />
       {SAUDI_REGIONS.map((r) => (
@@ -117,12 +150,13 @@ function LocationPopover({
           key={r}
           type="button"
           onClick={() => { onChange(r); onClose(); }}
-          className={`w-full text-left px-4 py-2.5 text-[0.82rem] transition-colors ${
+          className={`w-full px-4 py-2.5 text-[0.82rem] transition-colors ${
             value === r ? "font-semibold text-[#8b5e38] bg-[#fdf0df]/60" : "text-[#1a0e02] hover:bg-[#faf0e0]/50"
           }`}
+          style={{ textAlign: lang === "ar" ? "right" : "left" }}
         >
-          {r}
-        </button>
+          {t(REGION_KEY_MAP[r] ?? r)}
+</button>
       ))}
     </div>
   );
@@ -131,8 +165,14 @@ function LocationPopover({
 /* ─── Calendar popup ─────────────────────────────────────────────────────────── */
 
 function CalendarPopup({
-  value, onChange, minDate, onClose,
-}: { value: Date | null; onChange: (d: Date) => void; minDate?: Date; onClose: () => void }) {
+  value, onChange, minDate, onClose, lang,
+}: {
+  value: Date | null;
+  onChange: (d: Date) => void;
+  minDate?: Date;
+  onClose: () => void;
+  lang: Lang;
+}) {
   const effective = minDate ?? today();
   const [viewing, setViewing] = useState(() => {
     const base = value && value >= effective ? value : effective;
@@ -149,11 +189,16 @@ function CalendarPopup({
   while (cells.length % 7 !== 0) cells.push(null);
 
   const todayDate = today();
+  const months = lang === "ar" ? AR_MONTHS : MONTHS;
+  const dayLabels = lang === "ar" ? AR_DAY_LABELS : DAY_LABELS;
+
+  const goPrev = () => setViewing(new Date(year, month - 1, 1));
+  const goNext = () => setViewing(new Date(year, month + 1, 1));
 
   return (
     <div className="absolute top-full mt-3 left-1/2 -translate-x-1/2 z-[100] p-4 w-[306px]" style={popupStyle}>
       <div className="flex items-center justify-between mb-4">
-        <button type="button" onClick={() => setViewing(new Date(year, month - 1, 1))}
+        <button type="button" onClick={lang === "ar" ? goNext : goPrev}
           className="w-8 h-8 flex items-center justify-center rounded-lg text-[#7a5030] transition-colors"
           style={{ background: "rgba(196,154,79,0.08)" }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(196,154,79,0.16)"; }}
@@ -163,8 +208,8 @@ function CalendarPopup({
             <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
-        <span className="text-[0.82rem] font-bold text-[#1a0e02] tracking-wide">{MONTHS[month]} {year}</span>
-        <button type="button" onClick={() => setViewing(new Date(year, month + 1, 1))}
+        <span className="text-[0.82rem] font-bold text-[#1a0e02] tracking-wide">{months[month]} {year}</span>
+        <button type="button" onClick={lang === "ar" ? goPrev : goNext}
           className="w-8 h-8 flex items-center justify-center rounded-lg text-[#7a5030] transition-colors"
           style={{ background: "rgba(196,154,79,0.08)" }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(196,154,79,0.16)"; }}
@@ -176,7 +221,7 @@ function CalendarPopup({
         </button>
       </div>
       <div className="grid grid-cols-7 mb-2">
-        {DAY_LABELS.map((d) => (
+        {dayLabels.map((d) => (
           <div key={d} className="text-center text-[9px] font-bold text-[#b09070] py-1 uppercase tracking-[0.14em]">{d}</div>
         ))}
       </div>
@@ -214,22 +259,28 @@ function CalendarPopup({
 /* ─── Guests popup ───────────────────────────────────────────────────────────── */
 
 function GuestsPopover({
-  rooms, adults, children, setRooms, setAdults, setChildren, onClose,
+  rooms, adults, children, setRooms, setAdults, setChildren, onClose, t, lang,
 }: {
   rooms: number; adults: number; children: number;
   setRooms: React.Dispatch<React.SetStateAction<number>>;
   setAdults: React.Dispatch<React.SetStateAction<number>>;
   setChildren: React.Dispatch<React.SetStateAction<number>>;
   onClose: () => void;
+  t: (key: string) => string;
+  lang: Lang;
 }) {
   const rows = [
-    { label: "Rooms",    sub: "Bedrooms",  value: rooms,    set: setRooms,    min: 1 },
-    { label: "Adults",   sub: "Ages 13+",  value: adults,   set: setAdults,   min: 1 },
-    { label: "Children", sub: "Ages 2–12", value: children, set: setChildren, min: 0 },
+    { label: t("search.guest_rooms"),    sub: t("search.guest_rooms_sub"),  value: rooms,    set: setRooms,    min: 1 },
+    { label: t("search.guest_adult"),    sub: t("search.guest_adult_sub"),  value: adults,   set: setAdults,   min: 1 },
+    { label: t("search.guest_children"), sub: t("search.guest_child_sub"),  value: children, set: setChildren, min: 0 },
   ] as const;
 
   return (
-    <div className="absolute top-full mt-3 right-0 z-[100] p-5 w-[272px]" style={popupStyle} onClick={(e) => e.stopPropagation()}>
+    <div
+      className={`absolute top-full mt-3 ${lang === "ar" ? "left-0" : "right-0"} z-[100] p-5 w-[272px]`}
+      style={popupStyle}
+      onClick={(e) => e.stopPropagation()}
+    >
       {rows.map(({ label, sub, value, set, min }) => (
         <div key={label} className="flex items-center justify-between py-3.5"
           style={{ borderBottom: "1px solid rgba(196,154,79,0.12)" }}>
@@ -260,7 +311,7 @@ function GuestsPopover({
           background: "linear-gradient(135deg, rgba(196,154,79,0.90) 0%, rgba(150,108,36,0.94) 100%)",
           boxShadow: "0 4px 14px rgba(150,105,30,0.32), inset 0 1px 0 rgba(255,255,255,0.18)",
         }}
-      >Done</button>
+      >{t("search.done")}</button>
     </div>
   );
 }
@@ -271,6 +322,7 @@ type Picker = "location" | "checkin" | "checkout" | "guests" | null;
 
 export default function SearchSection() {
   const router = useRouter();
+  const { t, lang } = useLanguage();
 
   const [category, setCategory] = useState("farms");
   const [location, setLocation] = useState("");
@@ -297,7 +349,9 @@ export default function SearchSection() {
     []
   );
 
-  const guestsSummary = `${rooms} ${rooms === 1 ? "room" : "rooms"}, ${adults} ${adults === 1 ? "adult" : "adults"}, ${children} ${children === 1 ? "child" : "children"}`;
+  const guestsSummary = lang === "ar"
+    ? buildArabicGuestSummary(rooms, adults, children)
+    : `${rooms} ${rooms === 1 ? "room" : "rooms"}, ${adults} ${adults === 1 ? "adult" : "adults"}, ${children} ${children === 1 ? "child" : "children"}`;
 
   const handleSearch = () => {
     const p = new URLSearchParams({ category });
@@ -344,10 +398,11 @@ export default function SearchSection() {
           WebkitBackdropFilter: "blur(28px) saturate(1.55)",
           border: "1px solid rgba(205,168,95,0.26)",
           boxShadow: [
-            "0 28px 64px rgba(8,4,0,0.44)",
-            "0 10px 28px rgba(8,4,0,0.22)",
-            "0 3px 10px rgba(8,4,0,0.16)",
-            "inset 0 1px 0 rgba(255,245,210,0.18)",
+            "0 40px 90px rgba(6,3,0,0.58)",
+            "0 20px 44px rgba(6,3,0,0.32)",
+            "0 8px 18px rgba(6,3,0,0.20)",
+            "0 0 0 1px rgba(196,154,79,0.14)",
+            "inset 0 1px 0 rgba(255,245,210,0.22)",
           ].join(", "),
         }}
       >
@@ -364,7 +419,7 @@ export default function SearchSection() {
               border: "1px solid rgba(196,154,79,0.09)",
             }}
           >
-            {CATEGORIES.map((cat) => {
+            {CATEGORY_DEFS.map((cat) => {
               const active = category === cat.id;
               return (
                 <button
@@ -402,7 +457,7 @@ export default function SearchSection() {
                   }}
                 >
                   <span style={{ opacity: active ? 0.92 : 0.55 }}>{cat.icon}</span>
-                  {cat.label}
+                  {t(cat.key)}
                 </button>
               );
             })}
@@ -431,12 +486,12 @@ export default function SearchSection() {
             onClick={() => toggle("location")}
           >
             <Separator />
-            <label className={labelCls} style={labelStyle}>Where to</label>
+            <label className={labelCls} style={labelStyle}>{t("search.where_to")}</label>
             <span className={valueCls(!!location)} style={valueStyle(!!location)}>
-              {location || "Any region"}
+              {location || t("search.any_region")}
             </span>
             {open === "location" && (
-              <LocationPopover value={location} onChange={setLocation} onClose={() => setOpen(null)} />
+              <LocationPopover value={location} onChange={setLocation} onClose={() => setOpen(null)} t={t} lang={lang} />
             )}
           </div>
 
@@ -450,9 +505,9 @@ export default function SearchSection() {
             onClick={() => toggle("checkin")}
           >
             <Separator />
-            <label className={labelCls} style={labelStyle}>Check In</label>
+            <label className={labelCls} style={labelStyle}>{t("search.checkin_label")}</label>
             <span className={valueCls(!!checkIn)} style={valueStyle(!!checkIn)}>
-              {checkIn ? formatDate(checkIn) : "Add dates"}
+              {checkIn ? formatDate(checkIn, lang) : t("search.add_dates")}
             </span>
             {open === "checkin" && (
               <CalendarPopup
@@ -460,6 +515,7 @@ export default function SearchSection() {
                 onChange={(d) => { setCheckIn(d); if (checkOut && d >= checkOut) setCheckOut(null); }}
                 minDate={today()}
                 onClose={() => setOpen(null)}
+                lang={lang}
               />
             )}
           </div>
@@ -474,9 +530,9 @@ export default function SearchSection() {
             onClick={() => toggle("checkout")}
           >
             <Separator />
-            <label className={labelCls} style={labelStyle}>Check Out</label>
+            <label className={labelCls} style={labelStyle}>{t("search.checkout_label")}</label>
             <span className={valueCls(!!checkOut)} style={valueStyle(!!checkOut)}>
-              {checkOut ? formatDate(checkOut) : "Add dates"}
+              {checkOut ? formatDate(checkOut, lang) : t("search.add_dates")}
             </span>
             {open === "checkout" && (
               <CalendarPopup
@@ -484,6 +540,7 @@ export default function SearchSection() {
                 onChange={setCheckOut}
                 minDate={checkIn ? new Date(checkIn.getTime() + 86400000) : today()}
                 onClose={() => setOpen(null)}
+                lang={lang}
               />
             )}
           </div>
@@ -498,7 +555,7 @@ export default function SearchSection() {
             onClick={() => toggle("guests")}
           >
             <Separator />
-            <label className={labelCls} style={labelStyle}>Rooms & Guests</label>
+            <label className={labelCls} style={labelStyle}>{t("search.rooms_guests")}</label>
             <span className={valueCls(true)} style={{ ...valueStyle(true), fontSize: "0.82rem" }}>
               {guestsSummary}
             </span>
@@ -507,6 +564,8 @@ export default function SearchSection() {
                 rooms={rooms} adults={adults} children={children}
                 setRooms={setRooms} setAdults={setAdults} setChildren={setChildren}
                 onClose={() => setOpen(null)}
+                t={t}
+                lang={lang}
               />
             )}
           </div>
@@ -555,7 +614,7 @@ export default function SearchSection() {
               <circle cx="11" cy="11" r="7.5" stroke="rgba(255,250,225,0.85)" strokeWidth="2.2" />
               <path d="M20 20l-3.8-3.8" stroke="rgba(255,250,225,0.85)" strokeWidth="2.2" strokeLinecap="round" />
             </svg>
-            <span className="relative z-10">Search</span>
+            <span className="relative z-10">{t("search.button")}</span>
           </button>
 
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useLanguage } from "@/context/LanguageProvider";
 
 const PRICE_UNITS = ["per person", "per night", "per group"];
 
@@ -21,14 +22,15 @@ export default function Step5Pricing({
   onChangePrice, onChangeOriginal, onChangePriceUnit,
   onNext, onBack, isRejected,
 }: Step5PricingProps) {
+  const { t } = useLanguage();
   const [errors, setErrors] = useState<{ price?: string; originalPrice?: string }>({});
 
   const validate = (): boolean => {
     const e: typeof errors = {};
     if (!price || price < 10)
-      e.price = "Please set a price of at least SAR 10.";
+      e.price = t("host.step5.err.price");
     if (originalPrice > 0 && originalPrice <= price)
-      e.originalPrice = "Original price must be higher than the current price.";
+      e.originalPrice = t("host.step5.err.original");
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -46,12 +48,12 @@ export default function Step5Pricing({
     <div className="flex flex-col gap-7">
       {/* Heading */}
       <div>
-        <p className="text-[#c49a4f] text-xs font-bold uppercase tracking-[0.16em] mb-2">Step 5 of 6</p>
+        <p className="text-[#c49a4f] text-xs font-bold uppercase tracking-[0.16em] mb-2">{t("host.step5.eyebrow")}</p>
         <h1 className="font-display font-extrabold text-[#1a0e02] text-3xl mb-1">
-          Set your price
+          {t("host.step5.heading")}
         </h1>
         <p className="text-[#64707d] text-sm">
-          You can always change your pricing later. We'll never charge guests without your approval.
+          {t("host.step5.subtitle")}
         </p>
       </div>
 
@@ -63,13 +65,13 @@ export default function Step5Pricing({
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
               <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            Please update this section based on admin feedback.
+            {t("host.admin_feedback")}
           </div>
         )}
 
         {/* Price unit */}
         <div>
-          <label className={labelCls}>Price applies</label>
+          <label className={labelCls}>{t("host.step5.unit_label")}</label>
           <div className="flex gap-2">
             {PRICE_UNITS.map((unit) => (
               <button
@@ -92,7 +94,7 @@ export default function Step5Pricing({
         {/* Current price */}
         <div>
           <label className={labelCls}>
-            Your price (SAR) <span className="text-red-500">*</span>
+            {t("host.step5.price_label")} <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#64707d]">
@@ -111,18 +113,18 @@ export default function Step5Pricing({
           </div>
           {errors.price && <p className="text-xs text-red-600 mt-1">{errors.price}</p>}
           <p className="text-[10px] text-[#a09080] mt-1.5">
-            You keep 92% · Bedouin earns 8% · Guests pay a 12% service fee on top
+            {t("host.step5.payout")}
           </p>
         </div>
 
         {/* Original price (optional discount) */}
         <div>
           <label className={labelCls}>
-            Original / crossed-out price{" "}
-            <span className="text-[#a09080] normal-case tracking-normal font-normal">(optional)</span>
+            {t("host.step5.original_label")}{" "}
+            <span className="text-[#a09080] normal-case tracking-normal font-normal">{t("host.step5.original_sub")}</span>
           </label>
           <p className="text-[10px] text-[#a09080] mb-1.5">
-            If set higher than your price, guests will see a discount badge on your listing.
+            {t("host.step5.original_hint")}
           </p>
           <div className="relative">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#64707d]">
@@ -148,7 +150,7 @@ export default function Step5Pricing({
         {price > 0 && (
           <div className="bg-[#faf7f4] border border-[#f0e8de] rounded-xl p-4">
             <p className="text-xs font-bold text-[#64707d] uppercase tracking-widest mb-3">
-              How guests will see your price
+              {t("host.step5.preview_label")}
             </p>
             <div className="flex items-center gap-3">
               {discountPct > 0 && (
@@ -164,7 +166,7 @@ export default function Step5Pricing({
             </div>
             {price > 0 && (
               <p className="text-xs text-[#64707d] mt-2">
-                Your payout: <span className="font-semibold text-[#1a0e02]">SAR {Math.round(price * 0.92)}</span> per booking
+                {t("host.step5.payout_label")} <span className="font-semibold text-[#1a0e02]">SAR {Math.round(price * 0.92)}</span> {t("host.step5.per_booking")}
               </p>
             )}
           </div>
@@ -175,12 +177,12 @@ export default function Step5Pricing({
       <div className="flex flex-col sm:flex-row gap-3">
         <button type="button" onClick={onBack}
           className="flex-1 py-3.5 border border-[#1a0e02] text-[#1a0e02] font-semibold text-sm rounded-2xl hover:bg-[#1a0e02] hover:text-white transition-colors">
-          ← Back
+          {t("host.back")}
         </button>
         <button type="button" onClick={() => { if (validate()) onNext(); }}
           className="flex-[2] py-4 bg-[#8b5e38] font-bold text-base rounded-2xl hover:bg-[#7a5030] transition-colors shadow-sm"
           style={{ color: "#fff" }}>
-          Continue →
+          {t("host.continue")}
         </button>
       </div>
     </div>

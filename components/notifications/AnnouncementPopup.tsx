@@ -5,7 +5,10 @@ import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthProvider";
+import { useLanguage } from "@/context/LanguageProvider";
 import type { AppNotification, NotificationType } from "@/lib/services/notifications";
+
+type TFn = (key: string) => string;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Routes where the popup must never appear
@@ -78,7 +81,7 @@ function tomorrowStr() { const d = new Date(); d.setDate(d.getDate() + 1); retur
 function daysAgoIso(n: number) { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString(); }
 function isNew(iso: string | null) { return !!iso && Date.now() - new Date(iso).getTime() < 72 * 60 * 60 * 1000; }
 
-async function fetchUrgentNotifications(userId: string, activeMode: string): Promise<AppNotification[]> {
+async function fetchUrgentNotifications(userId: string, activeMode: string, t: TFn): Promise<AppNotification[]> {
   const supabase = createClient();
   const today    = todayStr();
   const tomorrow = tomorrowStr();
@@ -138,20 +141,19 @@ async function fetchUrgentNotifications(userId: string, activeMode: string): Pro
 
     for (const row of submRes.data ?? []) {
       if (row.status === "rejected") {
-        // Count issues from step-level rejection data; default to 1 if unavailable
         const issueCount = Array.isArray(row.rejected_steps) && row.rejected_steps.length > 0
           ? row.rejected_steps.length
           : row.rejected_step ? 1 : 1;
-        const needVerb = issueCount === 1 ? "needs" : "need";
+        const descKey = issueCount === 1 ? "notif.desc.listing_rejected_one" : "notif.desc.listing_rejected_many";
         results.push({
           id:           `listing_rejected_${row.id}`,
           type:         "listing_rejected",
-          title:        "Listing needs changes",
-          description:  `"${row.title}" was not approved. ${issueCount} issue${issueCount !== 1 ? "s" : ""} ${needVerb} your attention.`,
+          title:        t("notif.title.listing_needs_changes"),
+          description:  t(descKey).replace("{title}", row.title).replace("{count}", String(issueCount)),
           date:         row.reviewed_at,
           isNew:        isNew(row.reviewed_at),
           isUrgent:     true,
-          actionLabel:  "Review feedback",
+          actionLabel:  t("notif.action.review_feedback"),
           actionHref:   "/dashboard?tab=listings",
           relatedTitle: row.title,
         });
@@ -160,12 +162,12 @@ async function fetchUrgentNotifications(userId: string, activeMode: string): Pro
         results.push({
           id:           `listing_approved_${row.id}`,
           type:         "listing_approved",
-          title:        "Listing approved",
-          description:  `"${row.title}" is now live on Bedouin.`,
+          title:        t("notif.title.listing_approved"),
+          description:  t("notif.desc.listing_approved").replace("{title}", row.title),
           date:         row.reviewed_at,
           isNew:        isNew(row.reviewed_at),
           isUrgent:     false,
-          actionLabel:  "View listing",
+          actionLabel:  t("notif.action.view_listing"),
           actionHref:   slug ? `/listing/${slug}` : "/dashboard",
           relatedTitle: row.title,
         });
@@ -178,12 +180,15 @@ async function fetchUrgentNotifications(userId: string, activeMode: string): Pro
       results.push({
         id:           `booking_checkin_${row.id}`,
         type:         isToday ? "booking_checkin_today" : "booking_checkin_tomorrow",
-        title:        isToday ? "Guest checking in today" : "Guest checking in tomorrow",
-        description:  `${row.guest_name} is arriving at "${row.listing_title}" — ref ${row.reference}.`,
+        title:        isToday ? t("notif.title.host_checkin_today") : t("notif.title.host_checkin_tomorrow"),
+        description:  t("notif.desc.host_checkin")
+          .replace("{guest}", row.guest_name)
+          .replace("{listing}", row.listing_title)
+          .replace("{ref}", row.reference),
         date:         row.check_in + "T00:00:00.000Z",
         isNew:        true,
         isUrgent:     isToday,
-        actionLabel:  "View booking",
+        actionLabel:  t("notif.action.view_booking"),
         actionHref:   "/dashboard?tab=bookings",
         relatedTitle: row.listing_title,
       });
@@ -194,12 +199,15 @@ async function fetchUrgentNotifications(userId: string, activeMode: string): Pro
       results.push({
         id:           `booking_new_${row.id}`,
         type:         "booking_new",
-        title:        "New booking received",
-        description:  `${row.guest_name} booked "${row.listing_title}" checking in ${row.check_in}.`,
+        title:        t("notif.title.booking_new"),
+        description:  t("notif.desc.booking_new")
+          .replace("{guest}", row.guest_name)
+          .replace("{listing}", row.listing_title)
+          .replace("{date}", row.check_in),
         date:         row.created_at,
         isNew:        isNew(row.created_at),
         isUrgent:     false,
-        actionLabel:  "View booking",
+        actionLabel:  t("notif.action.view_booking"),
         actionHref:   "/dashboard?tab=bookings",
         relatedTitle: row.listing_title,
       });
@@ -224,12 +232,14 @@ async function fetchUrgentNotifications(userId: string, activeMode: string): Pro
         results.push({
           id:           `cohost_accepted_${row.id}`,
           type:         "cohost_invitation_accepted",
-          title:        "Co-host invitation accepted",
-          description:  `${name} accepted your invitation to co-host "${row.listing_title}".`,
+          title:        t("notif.title.cohost_accepted"),
+          description:  t("notif.desc.cohost_accepted")
+            .replace("{name}", name)
+            .replace("{listing}", row.listing_title),
           date:         responded,
           isNew:        isNew(responded),
           isUrgent:     false,
-          actionLabel:  "View co-hosts",
+          actionLabel:  t("notif.action.view_cohosts"),
           actionHref:   "/dashboard?tab=cohosts",
           relatedTitle: row.listing_title,
         });
@@ -237,12 +247,14 @@ async function fetchUrgentNotifications(userId: string, activeMode: string): Pro
         results.push({
           id:           `cohost_declined_${row.id}`,
           type:         "cohost_invitation_declined",
-          title:        "Co-host invitation declined",
-          description:  `${name} declined your invitation for "${row.listing_title}".`,
+          title:        t("notif.title.cohost_declined"),
+          description:  t("notif.desc.cohost_declined")
+            .replace("{name}", name)
+            .replace("{listing}", row.listing_title),
           date:         responded,
           isNew:        isNew(responded),
           isUrgent:     false,
-          actionLabel:  "Browse co-hosts",
+          actionLabel:  t("notif.action.browse_cohosts"),
           actionHref:   "/cohost",
           relatedTitle: row.listing_title,
         });
@@ -272,12 +284,14 @@ async function fetchUrgentNotifications(userId: string, activeMode: string): Pro
       results.push({
         id:           `guest_checkin_${row.id}`,
         type:         isToday ? "booking_checkin_today" : "booking_checkin_tomorrow",
-        title:        isToday ? "Your check-in is today" : "Your check-in is tomorrow",
-        description:  `You're checking in to "${row.listing_title}" — booking ref ${row.reference}.`,
+        title:        isToday ? t("notif.title.guest_checkin_today") : t("notif.title.guest_checkin_tomorrow"),
+        description:  t("notif.desc.guest_checkin")
+          .replace("{listing}", row.listing_title)
+          .replace("{ref}", row.reference),
         date:         row.check_in + "T00:00:00.000Z",
         isNew:        true,
         isUrgent:     isToday,
-        actionLabel:  "View booking",
+        actionLabel:  t("notif.action.view_booking"),
         actionHref:   "/account?tab=bookings",
         relatedTitle: row.listing_title,
       });
@@ -299,12 +313,14 @@ async function fetchUrgentNotifications(userId: string, activeMode: string): Pro
       results.push({
         id:           `cohost_invite_${row.id}`,
         type:         "cohost_invitation_pending",
-        title:        "Co-host invitation pending",
-        description:  `${hostName} invited you to co-host "${row.listing_title}". Accept or decline.`,
+        title:        t("notif.title.cohost_pending"),
+        description:  t("notif.desc.cohost_pending")
+          .replace("{host}", hostName)
+          .replace("{listing}", row.listing_title),
         date:         row.sent_at,
         isNew:        isNew(row.sent_at),
         isUrgent:     true,
-        actionLabel:  "View invitation",
+        actionLabel:  t("notif.action.view_invitation"),
         actionHref:   "/cohost/invitations",
         relatedTitle: row.listing_title,
       });
@@ -407,6 +423,7 @@ const TYPE_META: Record<NotificationType, {
 
 export default function AnnouncementPopup() {
   const { user, loading, activeMode } = useAuth();
+  const { t } = useLanguage();
   const pathname = usePathname();
   const router   = useRouter();
 
@@ -447,7 +464,7 @@ export default function AnnouncementPopup() {
 
     let cancelled = false;
 
-    fetchUrgentNotifications(user.id, activeMode)
+    fetchUrgentNotifications(user.id, activeMode, t)
       .then((all) => {
         if (cancelled) return;
         const dismissed = loadDismissed(user.id);
@@ -461,7 +478,7 @@ export default function AnnouncementPopup() {
       .catch(() => { /* silent — popup is non-critical */ });
 
     return () => { cancelled = true; };
-  }, [user?.id, activeMode, pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.id, activeMode, pathname, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const current = queue[currentIndex];
   if (!current || !visible) return null;

@@ -5,45 +5,47 @@ import type { DashboardBooking } from "@/lib/data/dashboard";
 import UserAvatar from "@/components/ui/UserAvatar";
 import DashboardEmptyState from "../shared/DashboardEmptyState";
 import { sendMessage } from "@/lib/actions/messages";
+import { useLanguage } from "@/context/LanguageProvider";
+import { getListingText } from "@/lib/utils/listing-locale";
 
 type Tab        = "upcoming" | "past";
 type DateFilter = "all" | "30" | "60" | "90";
 
-const PAYMENT_LABELS: Record<string, string> = {
-  card:      "Credit / Debit Card",
-  mada:      "Mada",
-  apple_pay: "Apple Pay",
+// Maps payment method → translation key
+const PAYMENT_KEY: Record<string, string> = {
+  card:      "dash.payment.card",
+  mada:      "dash.payment.mada",
+  apple_pay: "dash.payment.apple_pay",
 };
 
-// Templates for past-guest broadcasts (retention, offers)
-const PAST_TEMPLATES: { label: string; text: string }[] = [
+// Template label → translation key (text stays in English — it's message content for guests)
+const PAST_TEMPLATES: { tKey: string; text: string }[] = [
   {
-    label: "Thank you",
-    text:  "Thank you for staying with us! It was a pleasure hosting you and we hope you had a wonderful experience. We'd love to welcome you back anytime.",
+    tKey: "dash.tpl.thank_you",
+    text: "Thank you for staying with us! It was a pleasure hosting you and we hope you had a wonderful experience. We'd love to welcome you back anytime.",
   },
   {
-    label: "Special offer",
-    text:  "As one of our valued past guests, we'd like to offer you a special returning-guest discount on your next stay. Reply to this message and we'll share the details!",
+    tKey: "dash.tpl.special_offer",
+    text: "As one of our valued past guests, we'd like to offer you a special returning-guest discount on your next stay. Reply to this message and we'll share the details!",
   },
   {
-    label: "New experience",
-    text:  "We're excited to share that we've added a new experience to our listing. As a past guest, we wanted you to hear about it first!",
+    tKey: "dash.tpl.new_experience",
+    text: "We're excited to share that we've added a new experience to our listing. As a past guest, we wanted you to hear about it first!",
   },
 ];
 
-// Templates for upcoming-guest broadcasts (check-in, instructions)
-const UPCOMING_TEMPLATES: { label: string; text: string }[] = [
+const UPCOMING_TEMPLATES: { tKey: string; text: string }[] = [
   {
-    label: "Check-in info",
-    text:  "We're looking forward to welcoming you! Here are your check-in details: [add your address and entry instructions here]. Please reach out if you have any questions before your arrival.",
+    tKey: "dash.tpl.checkin_info",
+    text: "We're looking forward to welcoming you! Here are your check-in details: [add your address and entry instructions here]. Please reach out if you have any questions before your arrival.",
   },
   {
-    label: "Welcome",
-    text:  "We're so excited to have you staying with us soon! If there's anything we can do to make your stay more comfortable, don't hesitate to get in touch.",
+    tKey: "dash.tpl.welcome",
+    text: "We're so excited to have you staying with us soon! If there's anything we can do to make your stay more comfortable, don't hesitate to get in touch.",
   },
   {
-    label: "Reminder",
-    text:  "Your stay is coming up soon — just a friendly reminder to review the house rules before your arrival. We look forward to hosting you!",
+    tKey: "dash.tpl.reminder",
+    text: "Your stay is coming up soon — just a friendly reminder to review the house rules before your arrival. We look forward to hosting you!",
   },
 ];
 
@@ -56,13 +58,15 @@ function StatusChip({
   status:             DashboardBooking["status"];
   cancellationType?:  string;
 }) {
+  const { t } = useLanguage();
+
   const label =
     status === "cancelled" && cancellationType === "by_tourist"
-      ? "Cancelled by guest"
-      : status === "cancelled"   ? "Cancelled"
-      : status === "upcoming"    ? "Upcoming"
-      : status === "active"      ? "Active"
-      : "Completed";
+      ? t("dash.chip.cancelled_guest")
+      : status === "cancelled"   ? t("dash.chip.cancelled")
+      : status === "upcoming"    ? t("dash.chip.upcoming")
+      : status === "active"      ? t("dash.chip.active")
+      : t("dash.chip.completed");
 
   const cls =
     status === "cancelled"  ? "bg-red-50 text-red-600 border-red-200"
@@ -77,7 +81,7 @@ function StatusChip({
   );
 }
 
-// ── BroadcastModal — generic, reusable for all three message scopes ───────────
+// ── BroadcastModal ────────────────────────────────────────────────────────────
 
 function BroadcastModal({
   bookings,
@@ -88,10 +92,11 @@ function BroadcastModal({
 }: {
   bookings:        DashboardBooking[];
   title:           string;
-  templates:       { label: string; text: string }[];
+  templates:       { tKey: string; text: string }[];
   showDateFilter?: boolean;
   onClose:         () => void;
 }) {
+  const { t } = useLanguage();
   const [filter,           setFilter]          = useState<DateFilter>("all");
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [customTitle,      setCustomTitle]      = useState("");
@@ -118,7 +123,6 @@ function BroadcastModal({
     return new Date(b.checkOut) >= cutoffs[filter as Exclude<DateFilter, "all">];
   });
 
-  // One message per unique guest — keep their most-recent booking for context IDs
   const uniqueGuests = Object.values(
     eligible.reduce<Record<string, DashboardBooking>>((acc, b) => {
       if (!acc[b.guestId!] || b.checkOut > acc[b.guestId!].checkOut) {
@@ -134,8 +138,6 @@ function BroadcastModal({
     let sent = 0, failed = 0;
     const failedNames: string[] = [];
     for (const b of uniqueGuests) {
-      // listingId is a slug (text), not a UUID — pass undefined to avoid FK type error.
-      // The booking ID (b.id) is a UUID and safe to pass as related_booking_id.
       const res = await sendMessage(b.guestId!, fullContent, undefined, b.id);
       if (res.success) {
         sent++;
@@ -148,6 +150,13 @@ function BroadcastModal({
     setSending(false);
     setDone({ sent, failed, failedNames });
   };
+
+  const dateFilterOptions: { id: DateFilter; tKey: string }[] = [
+    { id: "all", tKey: "dash.broadcast.all_past" },
+    { id: "30",  tKey: "dash.broadcast.last_30"  },
+    { id: "60",  tKey: "dash.broadcast.last_60"  },
+    { id: "90",  tKey: "dash.broadcast.last_90"  },
+  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4 pb-4 sm:pb-0">
@@ -168,7 +177,6 @@ function BroadcastModal({
 
         <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
           {done ? (
-            /* ── Result state ── */
             <div className="flex flex-col items-center text-center gap-3 py-6">
               {done.sent > 0 ? (
                 <div className="w-12 h-12 rounded-2xl bg-[#f0faf5] flex items-center justify-center text-[#049153]">
@@ -187,42 +195,43 @@ function BroadcastModal({
               )}
               <p className="font-semibold text-[#1a0e02] text-sm">
                 {done.sent > 0
-                  ? `Message sent to ${done.sent} guest${done.sent !== 1 ? "s" : ""}`
-                  : "No messages were sent"}
+                  ? (done.sent === 1
+                      ? t("dash.broadcast.sent_singular").replace("{count}", String(done.sent))
+                      : t("dash.broadcast.sent_plural").replace("{count}", String(done.sent)))
+                  : t("dash.broadcast.none_sent")}
               </p>
               {done.failed > 0 && done.sent > 0 && (
-                <p className="text-xs text-red-600">{done.failed} failed to send</p>
+                <p className="text-xs text-red-600">
+                  {t("dash.broadcast.failed_n").replace("{count}", String(done.failed))}
+                </p>
               )}
               {done.sent === 0 && done.failed > 0 && (
                 <p className="text-xs text-red-600">
-                  We could not send this message to {done.failed === 1 ? "the guest" : "the guests"}. Please try again.
+                  {done.failed === 1
+                    ? t("dash.broadcast.error_one")
+                    : t("dash.broadcast.error_many")}
                 </p>
               )}
               {done.failedNames.length > 0 && (
                 <p className="text-[11px] text-red-400">
-                  Failed: {done.failedNames.join(", ")}
+                  {t("dash.broadcast.failed_list").replace("{names}", done.failedNames.join(", "))}
                 </p>
               )}
               <button
                 onClick={onClose}
                 className="mt-2 px-5 py-2 bg-[#461e00] text-white text-sm font-semibold rounded-xl hover:bg-[#5a2900] transition-colors"
               >
-                Done
+                {t("dash.broadcast.done")}
               </button>
             </div>
           ) : (
             <>
-              {/* Recipient filter — only relevant for past-guest date scoping */}
+              {/* Recipient filter */}
               {showDateFilter && (
                 <div className="flex flex-col gap-2">
-                  <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest">Recipients</p>
+                  <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest">{t("dash.broadcast.recipients")}</p>
                   <div className="flex gap-2 flex-wrap">
-                    {([
-                      { id: "all", label: "All past guests" },
-                      { id: "30",  label: "Last 30 days"    },
-                      { id: "60",  label: "Last 60 days"    },
-                      { id: "90",  label: "Last 90 days"    },
-                    ] as { id: DateFilter; label: string }[]).map(({ id, label }) => (
+                    {dateFilterOptions.map(({ id, tKey }) => (
                       <button
                         key={id}
                         type="button"
@@ -234,7 +243,7 @@ function BroadcastModal({
                             : "bg-white text-[#64707d] border-[#e8dfd4] hover:border-[#8b5e38]",
                         ].join(" ")}
                       >
-                        {label}
+                        {t(tKey)}
                       </button>
                     ))}
                   </div>
@@ -242,26 +251,28 @@ function BroadcastModal({
               )}
 
               <p className="text-xs text-[#64707d]">
-                {uniqueGuests.length} unique guest{uniqueGuests.length !== 1 ? "s" : ""} will receive this message
+                {uniqueGuests.length === 1
+                  ? t("dash.broadcast.recipients_singular").replace("{count}", String(uniqueGuests.length))
+                  : t("dash.broadcast.recipients_plural").replace("{count}", String(uniqueGuests.length))}
               </p>
 
               {/* Templates */}
               <div className="flex flex-col gap-2">
-                <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest">Templates</p>
+                <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest">{t("dash.broadcast.templates")}</p>
                 <div className="flex gap-2 flex-wrap">
-                  {templates.map((t) => (
+                  {templates.map((tpl) => (
                     <button
-                      key={t.label}
+                      key={tpl.tKey}
                       type="button"
-                      onClick={() => { setSelectedTemplate(t.label); setMessage(t.text); setCustomTitle(""); }}
+                      onClick={() => { setSelectedTemplate(tpl.tKey); setMessage(tpl.text); setCustomTitle(""); }}
                       className={[
                         "px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors",
-                        selectedTemplate === t.label
+                        selectedTemplate === tpl.tKey
                           ? "bg-[#8b5e38] text-white border-[#8b5e38]"
                           : "bg-white text-[#64707d] border-[#e8dfd4] hover:border-[#8b5e38] hover:text-[#1a0e02]",
                       ].join(" ")}
                     >
-                      {t.label}
+                      {t(tpl.tKey)}
                     </button>
                   ))}
                   <button
@@ -274,7 +285,7 @@ function BroadcastModal({
                         : "bg-white text-[#64707d] border-[#e8dfd4] hover:border-[#8b5e38] hover:text-[#1a0e02]",
                     ].join(" ")}
                   >
-                    Custom
+                    {t("dash.broadcast.custom")}
                   </button>
                 </div>
 
@@ -284,7 +295,7 @@ function BroadcastModal({
                       type="text"
                       value={customTitle}
                       onChange={(e) => { if (e.target.value.length <= 40) setCustomTitle(e.target.value); }}
-                      placeholder="Message title…"
+                      placeholder={t("dash.broadcast.msg_title_ph")}
                       className={[
                         "w-full border rounded-xl px-3 py-2 text-sm text-[#1a0e02] placeholder:text-[#a09080] focus:outline-none transition-colors",
                         titleOverLimit
@@ -293,13 +304,13 @@ function BroadcastModal({
                       ].join(" ")}
                     />
                     <div className="flex items-center justify-between px-0.5">
-                      <p className="text-[10px] text-[#a09080]">Keep it short and clear.</p>
+                      <p className="text-[10px] text-[#a09080]">{t("dash.broadcast.title_hint")}</p>
                       <p className={`text-[10px] font-semibold ${titleOverLimit ? "text-red-500" : "text-[#a09080]"}`}>
                         {customTitle.length}/40 · {wordCount(customTitle)}/6 words
                       </p>
                     </div>
                     {titleOverLimit && (
-                      <p className="text-[10px] text-red-500 px-0.5">Title must be 6 words or fewer.</p>
+                      <p className="text-[10px] text-red-500 px-0.5">{t("dash.broadcast.title_over")}</p>
                     )}
                   </div>
                 )}
@@ -307,12 +318,12 @@ function BroadcastModal({
 
               {/* Message textarea */}
               <div className="flex flex-col gap-1.5">
-                <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest">Message</p>
+                <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest">{t("dash.broadcast.message")}</p>
                 <textarea
                   rows={5}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Write your message…"
+                  placeholder={t("dash.broadcast.msg_ph")}
                   className="w-full border border-[#e8dfd4] rounded-xl px-3 py-2.5 text-sm text-[#1a0e02] placeholder:text-[#a09080] focus:outline-none focus:border-[#8b5e38] resize-none transition-colors"
                 />
               </div>
@@ -328,10 +339,12 @@ function BroadcastModal({
                     <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
                       <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeDasharray="31.4" strokeDashoffset="15" />
                     </svg>
-                    Sending…
+                    {t("dash.broadcast.sending")}
                   </>
                 ) : (
-                  `Send to ${uniqueGuests.length} guest${uniqueGuests.length !== 1 ? "s" : ""}`
+                  uniqueGuests.length === 1
+                    ? t("dash.broadcast.send_singular").replace("{count}", String(uniqueGuests.length))
+                    : t("dash.broadcast.send_plural").replace("{count}", String(uniqueGuests.length))
                 )}
               </button>
             </>
@@ -342,7 +355,7 @@ function BroadcastModal({
   );
 }
 
-// ── MsgIcon — shared SVG to avoid repetition ─────────────────────────────────
+// ── MsgIcon ───────────────────────────────────────────────────────────────────
 
 function MsgIcon({ size = 13 }: { size?: number }) {
   return (
@@ -358,9 +371,20 @@ function MsgIcon({ size = 13 }: { size?: number }) {
 // ── BookingRow ────────────────────────────────────────────────────────────────
 
 function BookingRow({ booking }: { booking: DashboardBooking }) {
+  const { t, lang } = useLanguage();
+  const displayTitle = getListingText(booking.listingTitle, booking.listingTitle_ar, lang);
   const [expanded, setExpanded] = useState(false);
   const fmtDate = (iso: string) =>
     new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+
+  const adultsLabel = booking.adults === 1
+    ? t("dash.booking.adult")
+    : t("dash.booking.adults").replace("{count}", String(booking.adults));
+  const childrenLabel = booking.children > 0
+    ? (booking.children === 1
+        ? `, ${t("dash.booking.child")}`
+        : `, ${t("dash.booking.children").replace("{count}", String(booking.children))}`)
+    : "";
 
   return (
     <div
@@ -381,15 +405,15 @@ function BookingRow({ booking }: { booking: DashboardBooking }) {
             <p className="text-sm font-semibold text-[#1a0e02]">{booking.guestName}</p>
             <p className="text-xs text-[#a09080]">{booking.guestNationality}</p>
           </div>
-          <p className="text-xs text-[#64707d] truncate mt-0.5">{booking.listingTitle}</p>
+          <p className="text-xs text-[#64707d] truncate mt-0.5">{displayTitle}</p>
           <p className="text-xs text-[#a09080] mt-0.5">
-            {fmtDate(booking.checkIn)} → {fmtDate(booking.checkOut)} · {booking.nights} nights
+            {fmtDate(booking.checkIn)} → {fmtDate(booking.checkOut)} · {booking.nights} {t("dash.bookings.nights")}
           </p>
         </div>
         <div className="text-right shrink-0 flex flex-col items-end gap-1.5">
           <StatusChip status={booking.status} cancellationType={booking.cancellationType} />
           <p className="font-display font-bold text-[#1a0e02] text-sm">SAR {booking.hostPayout.toLocaleString("en-US")}</p>
-          <p className="text-[10px] text-[#a09080]">payout</p>
+          <p className="text-[10px] text-[#a09080]">{t("dash.bookings.payout_label")}</p>
         </div>
         <svg
           width="16" height="16" viewBox="0 0 24 24" fill="none"
@@ -405,54 +429,54 @@ function BookingRow({ booking }: { booking: DashboardBooking }) {
           <div className="flex items-start gap-4">
             <img
               src={booking.listingImage}
-              alt={booking.listingTitle}
+              alt={displayTitle}
               className="w-24 h-16 rounded-xl object-cover shrink-0"
             />
             <div className="flex-1">
-              <p className="text-xs font-bold text-[#64707d] uppercase tracking-widest mb-2">Booking details</p>
+              <p className="text-xs font-bold text-[#64707d] uppercase tracking-widest mb-2">{t("dash.booking.details")}</p>
               <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
                 <div>
-                  <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">Reference</p>
+                  <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">{t("dash.booking.reference")}</p>
                   <p className="text-xs font-mono font-semibold text-[#1a0e02]">{booking.reference}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">Guests</p>
+                  <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">{t("dash.booking.guests")}</p>
                   <p className="text-xs font-semibold text-[#1a0e02]">
-                    {booking.adults} adults{booking.children > 0 ? `, ${booking.children} children` : ""}
+                    {adultsLabel}{childrenLabel}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">Total charged</p>
+                  <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">{t("dash.booking.total_charged")}</p>
                   <p className="text-xs font-semibold text-[#1a0e02]">SAR {booking.totalPrice.toLocaleString("en-US")}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">Your payout</p>
+                  <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">{t("dash.booking.your_payout")}</p>
                   <p className="text-xs font-semibold text-[#049153]">SAR {booking.hostPayout.toLocaleString("en-US")}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">Payment</p>
-                  <p className="text-xs font-semibold text-[#1a0e02]">{PAYMENT_LABELS[booking.paymentMethod]}</p>
+                  <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">{t("dash.booking.payment")}</p>
+                  <p className="text-xs font-semibold text-[#1a0e02]">
+                    {t(PAYMENT_KEY[booking.paymentMethod] ?? "dash.payment.card")}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">Booked on</p>
+                  <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">{t("dash.booking.booked_on")}</p>
                   <p className="text-xs font-semibold text-[#1a0e02]">{fmtDate(booking.createdAt)}</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* ── Feature 1: Message guest — available for ALL bookings with a known guestId */}
           {booking.guestId && (
             <a
               href={`/messages?with=${booking.guestId}&booking=${booking.id}&listing=${booking.listingId}`}
               className="inline-flex items-center gap-2 self-start px-4 py-2 rounded-xl border border-[#e8dfd4] bg-white text-sm font-semibold text-[#1a0e02] hover:bg-[#faf7f4] hover:border-[#8b5e38] transition-colors"
             >
               <MsgIcon size={14} />
-              Message {booking.guestName.split(" ")[0]}
+              {t("dash.booking.message_guest").replace("{name}", booking.guestName.split(" ")[0])}
             </a>
           )}
 
-          {/* Cancellation details */}
           {booking.status === "cancelled" && (
             <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3">
               <div className="flex items-center gap-1.5 mb-1.5">
@@ -461,21 +485,25 @@ function BookingRow({ booking }: { booking: DashboardBooking }) {
                   <path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 </svg>
                 <p className="text-[10px] font-bold text-red-600 uppercase tracking-widest">
-                  {booking.cancellationType === "by_tourist" ? "Cancelled by guest" : "Booking cancelled"}
+                  {booking.cancellationType === "by_tourist"
+                    ? t("dash.cancelled.by_guest")
+                    : t("dash.cancelled.booking")}
                 </p>
               </div>
               {booking.cancelledAt && (
                 <p className="text-xs text-red-700 mb-1">
-                  Cancelled on {fmtDate(booking.cancelledAt.slice(0, 10))}
+                  {t("dash.cancelled.on").replace("{date}", fmtDate(booking.cancelledAt.slice(0, 10)))}
                 </p>
               )}
               {booking.cancellationReason ? (
                 <>
-                  <p className="text-[10px] text-red-500 font-bold uppercase tracking-widest mb-0.5 mt-2">Guest&apos;s reason</p>
+                  <p className="text-[10px] text-red-500 font-bold uppercase tracking-widest mb-0.5 mt-2">
+                    {t("dash.cancelled.guest_reason")}
+                  </p>
                   <p className="text-xs text-red-700 leading-relaxed">{booking.cancellationReason}</p>
                 </>
               ) : (
-                <p className="text-xs text-red-500 italic">No reason provided by the guest.</p>
+                <p className="text-xs text-red-500 italic">{t("dash.cancelled.no_reason")}</p>
               )}
             </div>
           )}
@@ -488,12 +516,10 @@ function BookingRow({ booking }: { booking: DashboardBooking }) {
 // ── BookingsSection ───────────────────────────────────────────────────────────
 
 export default function BookingsSection({ bookings }: { bookings: DashboardBooking[] }) {
-  const [tab,             setTab]             = useState<Tab>("upcoming");
-  // past-guest broadcast
+  const { t, lang } = useLanguage();
+  const [tab,              setTab]             = useState<Tab>("upcoming");
   const [showPastBulk,    setShowPastBulk]    = useState(false);
-  // per-listing broadcast (upcoming)
   const [listingMsg,      setListingMsg]      = useState<{ listingId: string; listingTitle: string } | null>(null);
-  // broadcast to ALL guests across all bookings
   const [showAllBroadcast, setShowAllBroadcast] = useState(false);
 
   const upcoming = bookings.filter((b) => b.status === "upcoming" || b.status === "active");
@@ -503,22 +529,21 @@ export default function BookingsSection({ bookings }: { bookings: DashboardBooki
   const messagablePastGuests  = past.filter((b) => b.guestId).length;
   const messagableAllGuests   = bookings.filter((b) => b.guestId).length;
 
-  // ── Feature 2: group upcoming bookings by listing ────────────────────────
   const upcomingGroups = useMemo(() => {
-    const map = new Map<string, { listingTitle: string; bookings: DashboardBooking[] }>();
+    const map = new Map<string, { listingTitle: string; listingTitle_ar?: string; bookings: DashboardBooking[] }>();
     for (const b of upcoming) {
-      if (!map.has(b.listingId)) map.set(b.listingId, { listingTitle: b.listingTitle, bookings: [] });
+      if (!map.has(b.listingId)) map.set(b.listingId, { listingTitle: b.listingTitle, listingTitle_ar: b.listingTitle_ar, bookings: [] });
       map.get(b.listingId)!.bookings.push(b);
     }
-    return Array.from(map.entries()).map(([listingId, { listingTitle, bookings: bkgs }]) => ({
+    return Array.from(map.entries()).map(([listingId, { listingTitle, listingTitle_ar, bookings: bkgs }]) => ({
       listingId,
       listingTitle,
+      listingTitle_ar,
       bookings:   bkgs,
       guestCount: new Set(bkgs.map(b => b.guestId).filter(Boolean)).size,
     }));
   }, [upcoming]);
 
-  // Bookings for the active listing-scoped modal
   const listingMsgBookings = listingMsg
     ? upcoming.filter((b) => b.listingId === listingMsg.listingId)
     : [];
@@ -529,13 +554,12 @@ export default function BookingsSection({ bookings }: { bookings: DashboardBooki
       {/* ── Header ── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="font-display font-semibold text-[#1a0e02] text-lg">Bookings</h2>
+          <h2 className="font-display font-semibold text-[#1a0e02] text-lg">{t("dash.bookings.title")}</h2>
           <p className="text-xs text-[#64707d] mt-0.5">
-            {upcoming.length} upcoming · SAR {totalRevenue.toLocaleString("en-US")} earned to date
+            {upcoming.length} {t("dash.bookings.tab_upcoming").toLowerCase()} · SAR {totalRevenue.toLocaleString("en-US")} {t("dash.bookings.earned_to_date")}
           </p>
         </div>
 
-        {/* Feature 3: Broadcast to ALL guests button */}
         {messagableAllGuests > 0 && (
           <button
             type="button"
@@ -545,32 +569,31 @@ export default function BookingsSection({ bookings }: { bookings: DashboardBooki
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
               <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.4 10.8a19.79 19.79 0 01-3.07-8.67A2 2 0 012.3 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            Broadcast to all guests
+            {t("dash.bookings.broadcast_all")}
           </button>
         )}
       </div>
 
-      {/* ── Tabs + per-tab actions ── */}
+      {/* ── Tabs ── */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex gap-1 bg-[#f0e8de] rounded-xl p-1">
-          {(["upcoming", "past"] as Tab[]).map((t) => (
+          {(["upcoming", "past"] as Tab[]).map((tabId) => (
             <button
-              key={t}
-              onClick={() => setTab(t)}
+              key={tabId}
+              onClick={() => setTab(tabId)}
               className={[
                 "px-5 py-2 rounded-lg text-sm font-semibold transition-all",
-                tab === t ? "bg-white text-[#1a0e02] shadow-sm" : "text-[#64707d] hover:text-[#1a0e02]",
+                tab === tabId ? "bg-white text-[#1a0e02] shadow-sm" : "text-[#64707d] hover:text-[#1a0e02]",
               ].join(" ")}
             >
-              {t === "upcoming" ? "Upcoming" : "Past"}
-              <span className={`ml-1.5 text-xs ${tab === t ? "text-[#8b5e38]" : "text-[#a09080]"}`}>
-                {t === "upcoming" ? upcoming.length : past.length}
+              {tabId === "upcoming" ? t("dash.bookings.tab_upcoming") : t("dash.bookings.tab_past")}
+              <span className={`ml-1.5 text-xs ${tab === tabId ? "text-[#8b5e38]" : "text-[#a09080]"}`}>
+                {tabId === "upcoming" ? upcoming.length : past.length}
               </span>
             </button>
           ))}
         </div>
 
-        {/* Past tab: broadcast to past guests */}
         {tab === "past" && messagablePastGuests > 0 && (
           <button
             type="button"
@@ -578,7 +601,7 @@ export default function BookingsSection({ bookings }: { bookings: DashboardBooki
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#e8dfd4] bg-white text-xs font-semibold text-[#64707d] hover:border-[#8b5e38] hover:text-[#1a0e02] transition-colors"
           >
             <MsgIcon />
-            Message past guests
+            {t("dash.bookings.msg_past")}
           </button>
         )}
       </div>
@@ -593,31 +616,32 @@ export default function BookingsSection({ bookings }: { bookings: DashboardBooki
                 <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               </svg>
             }
-            title="No upcoming bookings"
-            description="When guests book your listings, they'll appear here."
+            title={t("dash.bookings.no_upcoming")}
+            description={t("dash.bookings.no_upcoming_desc")}
           />
         ) : (
           <div className="flex flex-col gap-8">
             {upcomingGroups.map((group) => (
               <div key={group.listingId}>
-                {/* ── Feature 2: listing group header with "Message all guests" ── */}
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <p className="text-xs font-bold text-[#1a0e02] uppercase tracking-widest">
-                      {group.listingTitle}
+                      {getListingText(group.listingTitle, group.listingTitle_ar, lang)}
                     </p>
                     <p className="text-[10px] text-[#a09080] mt-0.5">
-                      {group.bookings.length} booking{group.bookings.length !== 1 ? "s" : ""}
+                      {group.bookings.length === 1
+                        ? t("dash.bookings.group_count").replace("{count}", String(group.bookings.length))
+                        : t("dash.bookings.group_count_plural").replace("{count}", String(group.bookings.length))}
                     </p>
                   </div>
                   {group.guestCount > 0 && (
                     <button
                       type="button"
-                      onClick={() => setListingMsg({ listingId: group.listingId, listingTitle: group.listingTitle })}
+                      onClick={() => setListingMsg({ listingId: group.listingId, listingTitle: getListingText(group.listingTitle, group.listingTitle_ar, lang) })}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#e8dfd4] bg-white text-xs font-semibold text-[#64707d] hover:border-[#8b5e38] hover:text-[#1a0e02] transition-colors"
                     >
                       <MsgIcon />
-                      Message all guests
+                      {t("dash.bookings.msg_all_guests")}
                     </button>
                   )}
                 </div>
@@ -642,8 +666,8 @@ export default function BookingsSection({ bookings }: { bookings: DashboardBooki
                 <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               </svg>
             }
-            title="No past bookings"
-            description="Completed and cancelled reservations will appear here."
+            title={t("dash.bookings.no_past")}
+            description={t("dash.bookings.no_past_desc")}
           />
         ) : (
           <div className="flex flex-col gap-3">
@@ -665,25 +689,25 @@ export default function BookingsSection({ bookings }: { bookings: DashboardBooki
             boxShadow: "0 2px 10px rgba(70,30,0,0.06)",
           }}
         >
-          <p className="text-eyebrow mb-3">Summary</p>
+          <p className="text-eyebrow mb-3">{t("dash.bookings.summary_label")}</p>
           <div className="grid grid-cols-3 gap-4">
             <div>
               <p className="font-display font-extrabold text-[#1a0e02] text-2xl leading-none mb-0.5">
                 {past.filter((b) => b.status === "completed").length}
               </p>
-              <p className="text-xs text-[#64707d]">Completed</p>
+              <p className="text-xs text-[#64707d]">{t("dash.bookings.completed")}</p>
             </div>
             <div>
               <p className="font-display font-extrabold text-[#1a0e02] text-2xl leading-none mb-0.5">
                 {past.filter((b) => b.status === "cancelled").length}
               </p>
-              <p className="text-xs text-[#64707d]">Cancelled</p>
+              <p className="text-xs text-[#64707d]">{t("dash.bookings.cancelled")}</p>
             </div>
             <div>
               <p className="font-display font-extrabold text-[#8b5e38] text-2xl leading-none mb-0.5">
                 SAR {totalRevenue.toLocaleString("en-US")}
               </p>
-              <p className="text-xs text-[#64707d]">Total payout</p>
+              <p className="text-xs text-[#64707d]">{t("dash.bookings.total_payout")}</p>
             </div>
           </div>
         </div>
@@ -691,31 +715,28 @@ export default function BookingsSection({ bookings }: { bookings: DashboardBooki
 
       {/* ── Modals ── */}
 
-      {/* Feature 3: Broadcast to all guests */}
       {showAllBroadcast && (
         <BroadcastModal
           bookings={bookings}
-          title="Broadcast to all guests"
+          title={t("dash.bookings.broadcast_all")}
           templates={UPCOMING_TEMPLATES}
           onClose={() => setShowAllBroadcast(false)}
         />
       )}
 
-      {/* Feature 2: Message all guests of a specific listing */}
       {listingMsg && (
         <BroadcastModal
           bookings={listingMsgBookings}
-          title={`Message guests — ${listingMsg.listingTitle}`}
+          title={`${t("dash.bookings.msg_all_guests")} — ${listingMsg.listingTitle}`}
           templates={UPCOMING_TEMPLATES}
           onClose={() => setListingMsg(null)}
         />
       )}
 
-      {/* Existing: Message past guests */}
       {showPastBulk && (
         <BroadcastModal
           bookings={past}
-          title="Message past guests"
+          title={t("dash.bookings.msg_past")}
           templates={PAST_TEMPLATES}
           showDateFilter
           onClose={() => setShowPastBulk(false)}

@@ -3,13 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { AppNotification, NotificationType } from "@/lib/services/notifications";
+import { useLanguage } from "@/context/LanguageProvider";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Type metadata
+// Type metadata (visual only — labels resolved via translation keys)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const TYPE_CONFIG: Record<NotificationType, {
-  label:     string;
+  tKey:      string;
   bg:        string;
   border:    string;
   textColor: string;
@@ -17,7 +18,7 @@ const TYPE_CONFIG: Record<NotificationType, {
   icon:      React.ReactNode;
 }> = {
   listing_approved: {
-    label:     "Listing approved",
+    tKey:      "notif.type.listing_approved",
     bg:        "bg-[#f0faf5]",
     border:    "border-[#9edcbb]",
     textColor: "text-[#049153]",
@@ -29,7 +30,7 @@ const TYPE_CONFIG: Record<NotificationType, {
     ),
   },
   listing_rejected: {
-    label:     "Action required",
+    tKey:      "notif.type.listing_rejected",
     bg:        "bg-red-50",
     border:    "border-red-200",
     textColor: "text-red-600",
@@ -42,7 +43,7 @@ const TYPE_CONFIG: Record<NotificationType, {
     ),
   },
   booking_new: {
-    label:     "New booking",
+    tKey:      "notif.type.booking_new",
     bg:        "bg-[#eef3ff]",
     border:    "border-[#b3c8f5]",
     textColor: "text-[#0036a3]",
@@ -55,7 +56,7 @@ const TYPE_CONFIG: Record<NotificationType, {
     ),
   },
   booking_checkin_today: {
-    label:     "Check-in today",
+    tKey:      "notif.type.booking_checkin_today",
     bg:        "bg-[#fdf8ee]",
     border:    "border-[#ead9a6]",
     textColor: "text-[#8b6a1f]",
@@ -68,7 +69,7 @@ const TYPE_CONFIG: Record<NotificationType, {
     ),
   },
   booking_checkin_tomorrow: {
-    label:     "Check-in tomorrow",
+    tKey:      "notif.type.booking_checkin_tomorrow",
     bg:        "bg-[#faf7f4]",
     border:    "border-[#e8dfd4]",
     textColor: "text-[#64707d]",
@@ -81,7 +82,7 @@ const TYPE_CONFIG: Record<NotificationType, {
     ),
   },
   cohost_invitation_pending: {
-    label:     "Invitation pending",
+    tKey:      "notif.type.cohost_invitation_pending",
     bg:        "bg-[#fdf8ee]",
     border:    "border-[#ead9a6]",
     textColor: "text-[#8b6a1f]",
@@ -94,7 +95,7 @@ const TYPE_CONFIG: Record<NotificationType, {
     ),
   },
   cohost_invitation_accepted: {
-    label:     "Co-host accepted",
+    tKey:      "notif.type.cohost_invitation_accepted",
     bg:        "bg-[#f0faf5]",
     border:    "border-[#9edcbb]",
     textColor: "text-[#049153]",
@@ -108,7 +109,7 @@ const TYPE_CONFIG: Record<NotificationType, {
     ),
   },
   cohost_invitation_declined: {
-    label:     "Co-host declined",
+    tKey:      "notif.type.cohost_invitation_declined",
     bg:        "bg-red-50",
     border:    "border-red-200",
     textColor: "text-red-600",
@@ -127,18 +128,21 @@ const TYPE_CONFIG: Record<NotificationType, {
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-function relativeTime(iso: string): string {
+type TFn = (key: string) => string;
+
+function relativeTime(iso: string, t: TFn, lang: string): string {
   const diffMs  = Date.now() - new Date(iso).getTime();
   const diffMin = Math.floor(diffMs / 60_000);
-  if (diffMin < 2)   return "Just now";
-  if (diffMin < 60)  return `${diffMin}m ago`;
+  if (diffMin < 2)   return t("notif.time.just_now");
+  if (diffMin < 60)  return t("notif.time.m_ago").replace("{n}", String(diffMin));
   const diffH = Math.floor(diffMin / 60);
-  if (diffH < 24)    return `${diffH}h ago`;
+  if (diffH < 24)    return t("notif.time.h_ago").replace("{n}", String(diffH));
   const diffD = Math.floor(diffH / 24);
-  if (diffD === 1)   return "Yesterday";
-  if (diffD < 7)     return `${diffD} days ago`;
-  if (diffD < 30)    return `${Math.floor(diffD / 7)}w ago`;
-  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  if (diffD === 1)   return t("notif.time.yesterday");
+  if (diffD < 7)     return t("notif.time.d_ago").replace("{n}", String(diffD));
+  if (diffD < 30)    return t("notif.time.w_ago").replace("{n}", String(Math.floor(diffD / 7)));
+  const locale = lang === "ar" ? "ar-SA" : "en-GB";
+  return new Date(iso).toLocaleDateString(locale, { day: "numeric", month: "short" });
 }
 
 type FilterValue = "all" | "urgent" | "listings" | "bookings" | "cohosts";
@@ -152,19 +156,28 @@ function matchesFilter(n: AppNotification, filter: FilterValue): boolean {
   return true;
 }
 
-const FILTER_OPTIONS: { value: FilterValue; label: string }[] = [
-  { value: "all",      label: "All"      },
-  { value: "urgent",   label: "Urgent"   },
-  { value: "listings", label: "Listings" },
-  { value: "bookings", label: "Bookings" },
-  { value: "cohosts",  label: "Co-hosts" },
+const FILTER_OPTIONS: { value: FilterValue; tKey: string }[] = [
+  { value: "all",      tKey: "notif.filter.all"      },
+  { value: "urgent",   tKey: "notif.filter.urgent"   },
+  { value: "listings", tKey: "notif.filter.listings" },
+  { value: "bookings", tKey: "notif.filter.bookings" },
+  { value: "cohosts",  tKey: "notif.filter.cohosts"  },
 ];
+
+const NO_FILTER_KEY: Record<FilterValue, string> = {
+  all:      "notif.no_all",
+  urgent:   "notif.no_urgent",
+  listings: "notif.no_listings",
+  bookings: "notif.no_bookings",
+  cohosts:  "notif.no_cohosts",
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // NotificationCard
 // ─────────────────────────────────────────────────────────────────────────────
 
 function NotificationCard({ n }: { n: AppNotification }) {
+  const { t, lang } = useLanguage();
   const cfg = TYPE_CONFIG[n.type];
 
   return (
@@ -188,19 +201,19 @@ function NotificationCard({ n }: { n: AppNotification }) {
               <p className="font-semibold text-[#1a0e02] text-sm leading-tight">{n.title}</p>
               {n.isNew && (
                 <span className="text-[9px] font-bold uppercase tracking-wide text-white bg-[#8b5e38] px-1.5 py-0.5 rounded-full leading-none shrink-0">
-                  New
+                  {t("notif.new_badge")}
                 </span>
               )}
             </div>
             <span className="text-[10px] text-[#a09080] shrink-0 mt-0.5 whitespace-nowrap">
-              {relativeTime(n.date)}
+              {relativeTime(n.date, t, lang)}
             </span>
           </div>
 
           {/* Type chip */}
           <span className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md border mb-1.5 ${cfg.bg} ${cfg.textColor} ${cfg.border}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${cfg.dotColor}`} />
-            {cfg.label}
+            {t(cfg.tKey)}
           </span>
 
           {/* Description */}
@@ -245,11 +258,22 @@ export default function NotificationsSection({
   notifications: AppNotification[];
   error?:        string;
 }) {
+  const { t } = useLanguage();
   const [activeFilter, setActiveFilter] = useState<FilterValue>("all");
 
   const newCount    = notifications.filter((n) => n.isNew).length;
   const urgentCount = notifications.filter((n) => n.isUrgent).length;
   const visible     = notifications.filter((n) => matchesFilter(n, activeFilter));
+
+  const countLabel = notifications.length === 0
+    ? t("notif.no_yet")
+    : notifications.length === 1
+      ? t("notif.count_one")
+      : t("notif.count_many").replace("{count}", String(notifications.length));
+
+  const newSuffix = newCount > 0
+    ? t("notif.new_suffix").replace("{count}", String(newCount))
+    : "";
 
   return (
     <div className="flex flex-col gap-6">
@@ -257,19 +281,17 @@ export default function NotificationsSection({
       {/* Header */}
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="font-display font-bold text-[#1a0e02] text-xl mb-1">Notifications</h2>
-          <p className="text-sm text-[#64707d]">
-            {notifications.length === 0
-              ? "No notifications yet."
-              : `${notifications.length} notification${notifications.length !== 1 ? "s" : ""}${newCount > 0 ? ` · ${newCount} new` : ""}`}
-          </p>
+          <h2 className="font-display font-bold text-[#1a0e02] text-xl mb-1">{t("notif.title")}</h2>
+          <p className="text-sm text-[#64707d]">{countLabel}{newSuffix}</p>
         </div>
 
         {urgentCount > 0 && (
           <div className="flex items-center gap-2 px-3 py-1.5 bg-[#fdf8ee] border border-[#ead9a6] rounded-xl">
             <span className="w-2 h-2 rounded-full bg-[#c49a4f] animate-pulse" />
             <span className="text-xs font-semibold text-[#8b6a1f]">
-              {urgentCount} urgent item{urgentCount !== 1 ? "s" : ""}
+              {urgentCount === 1
+                ? t("notif.urgent_one").replace("{count}", String(urgentCount))
+                : t("notif.urgent_many").replace("{count}", String(urgentCount))}
             </span>
           </div>
         )}
@@ -289,7 +311,7 @@ export default function NotificationsSection({
                   : "text-[#64707d] border-[#e8dfd4] hover:border-[#8b5e38] bg-white",
               ].join(" ")}
             >
-              {opt.label}
+              {t(opt.tKey)}
             </button>
           ))}
         </div>
@@ -315,9 +337,9 @@ export default function NotificationsSection({
               <path d="M13.73 21a2 2 0 01-3.46 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
-          <h3 className="font-display font-semibold text-[#1a0e02] text-lg mb-2">All caught up</h3>
+          <h3 className="font-display font-semibold text-[#1a0e02] text-lg mb-2">{t("notif.empty.title")}</h3>
           <p className="text-sm text-[#64707d] max-w-xs leading-relaxed">
-            Important updates — listing decisions, upcoming check-ins, and co-host activity — will appear here.
+            {t("notif.empty.desc")}
           </p>
         </div>
       )}
@@ -325,9 +347,7 @@ export default function NotificationsSection({
       {/* No results for current filter */}
       {!error && notifications.length > 0 && visible.length === 0 && (
         <div className="text-center py-10">
-          <p className="text-sm text-[#a09080]">
-            No {activeFilter === "all" ? "" : activeFilter} notifications.
-          </p>
+          <p className="text-sm text-[#a09080]">{t(NO_FILTER_KEY[activeFilter])}</p>
         </div>
       )}
 
@@ -343,7 +363,7 @@ export default function NotificationsSection({
       {/* Footer note */}
       {notifications.length > 0 && (
         <p className="text-[10px] text-center text-[#a09080]">
-          Notifications are derived from your account activity. Listing decisions shown for the past 60 days, new bookings for 7 days.
+          {t("notif.footer")}
         </p>
       )}
     </div>

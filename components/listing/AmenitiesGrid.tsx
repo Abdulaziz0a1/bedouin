@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Amenity } from "@/lib/data/listing-details";
+import { useLanguage } from "@/context/LanguageProvider";
 
 interface AmenitiesGridProps {
   amenities: Amenity[];
@@ -42,6 +43,7 @@ function resolveIcon(icon: string): string {
 }
 
 export default function AmenitiesGrid({ amenities }: AmenitiesGridProps) {
+  const { t } = useLanguage();
   const [showAll, setShowAll] = useState(false);
 
   const visible = showAll ? amenities : amenities.slice(0, 8);
@@ -68,8 +70,8 @@ export default function AmenitiesGrid({ amenities }: AmenitiesGridProps) {
           className="self-start px-5 py-2.5 border border-[#1a0e02] text-[#1a0e02] text-sm font-semibold rounded-xl hover:bg-[#1a0e02] hover:text-white transition-colors"
         >
           {showAll
-            ? "Show less"
-            : `Show all ${amenities.length} amenities`}
+            ? t("amenity.show_less")
+            : t("amenity.show_all").replace("{count}", String(amenities.length))}
         </button>
       )}
     </div>

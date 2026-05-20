@@ -7,15 +7,17 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthProvider";
 import { createClient } from "@/lib/supabase";
 import UserAvatar from "@/components/ui/UserAvatar";
+import { useLanguage } from "@/context/LanguageProvider";
+import LanguageSwitcher from "@/components/ui/LanguageSwitcher";
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Nav links visible to everyone
+// Nav links visible to everyone (translation keys resolved at render time)
 // ──────────────────────────────────────────────────────────────────────────────
 
-const PUBLIC_LINKS = [
-  { href: "/explore", label: "Explore" },
-  { href: "/faq",     label: "Help"    },
-];
+const PUBLIC_LINK_DEFS = [
+  { href: "/explore", key: "nav.explore" },
+  { href: "/faq",     key: "nav.help"    },
+] as const;
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Mode-switch button
@@ -27,12 +29,14 @@ function ModeSwitchButton({
   isAdmin,
   onSwitch,
   isPending,
+  t,
 }: {
   activeMode: "tourist" | "host";
   hostStatus: "pending" | "approved" | "rejected" | null;
   isAdmin:    boolean;
   onSwitch:   () => void;
   isPending:  boolean;
+  t:          (key: string) => string;
 }) {
   if (isAdmin) return null;
 
@@ -48,7 +52,7 @@ function ModeSwitchButton({
           <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
           <path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
         </svg>
-        {isPending ? "Switching…" : "Switch to Travelling"}
+        {isPending ? t("nav.switching") : t("nav.switch_to_travelling")}
       </button>
     );
   }
@@ -61,7 +65,7 @@ function ModeSwitchButton({
           <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
           <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
-        Host Application Pending
+        {t("nav.pending_review")}
       </span>
     );
   }
@@ -78,7 +82,7 @@ function ModeSwitchButton({
           <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
           <path d="M9 22V12h6v10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        {isPending ? "Switching…" : "Switch to Hosting"}
+        {isPending ? t("nav.switching") : t("nav.switch_to_hosting")}
       </button>
     );
   }
@@ -93,7 +97,7 @@ function ModeSwitchButton({
         <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
         <path d="M9 22V12h6v10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      {hostStatus === "rejected" ? "Re-apply as Host" : "Become a Host"}
+      {hostStatus === "rejected" ? t("nav.reapply_host") : t("nav.become_host")}
     </Link>
   );
 }
@@ -104,6 +108,7 @@ function ModeSwitchButton({
 
 export default function Navbar() {
   const { user, loading, activeMode, isAdmin, hostStatus, signOut, switchMode } = useAuth();
+  const { t } = useLanguage();
   const [open,          setOpen]          = useState(false);
   const [dropdownOpen,  setDropdownOpen]  = useState(false);
   const [switchError,   setSwitchErr]     = useState<string | null>(null);
@@ -197,8 +202,8 @@ export default function Navbar() {
           background: transparent
             ? "transparent"
             : scrolled
-              ? "rgba(255,252,248,0.98)"
-              : "rgba(255,252,248,0.90)",
+              ? "rgba(242,237,227,0.98)"
+              : "rgba(242,237,227,0.93)",
           backdropFilter: transparent ? "none" : "blur(24px) saturate(2)",
           WebkitBackdropFilter: transparent ? "none" : "blur(24px) saturate(2)",
           borderBottom: transparent
@@ -235,19 +240,19 @@ export default function Navbar() {
                 textShadow: transparent ? "0 1px 20px rgba(0,0,0,0.35)" : "none",
               }}
             >
-              Bedouin
+              {t("brand.name")}
             </span>
           </Link>
 
           {/* Desktop nav links */}
           <div className="hidden md:flex items-center gap-6 flex-1 pl-2">
-            {PUBLIC_LINKS.map(({ href, label }) => {
+            {PUBLIC_LINK_DEFS.map(({ href, key }) => {
               const isActive = pathname === href;
               return (
                 <Link
-                  key={label}
+                  key={key}
                   href={href}
-                  className={`relative text-[0.8125rem] font-semibold tracking-[0.01em] transition-all duration-200 after:absolute after:bottom-[-3px] after:left-0 after:h-[1.5px] after:bg-[#c49a4f] after:transition-all after:duration-300 hover:after:w-full ${
+                  className={`relative shrink-0 whitespace-nowrap text-[0.8125rem] font-semibold tracking-[0.01em] transition-all duration-200 after:content-[''] after:absolute after:bottom-[-3px] after:left-0 after:h-[1.5px] after:bg-[#c49a4f] after:transition-all after:duration-300 hover:after:w-full ${
                     isActive ? "after:w-full" : "after:w-0"
                   } ${
                     transparent
@@ -257,20 +262,20 @@ export default function Navbar() {
                         : "text-[#5a4a3a] hover:text-[#1a0e02]"
                   }`}
                 >
-                  {label}
+                  {t(key)}
                 </Link>
               );
             })}
             {user && !isAdmin && (
               <Link
                 href="/messages"
-                className={`relative text-[0.8125rem] font-semibold tracking-[0.01em] transition-all duration-200 flex items-center gap-1.5 after:absolute after:bottom-[-3px] after:left-0 after:w-0 after:h-[1.5px] after:bg-[#c49a4f] after:transition-all after:duration-300 hover:after:w-full ${
+                className={`relative shrink-0 whitespace-nowrap text-[0.8125rem] font-semibold tracking-[0.01em] transition-all duration-200 flex items-center gap-1.5 after:content-[''] after:absolute after:bottom-[-3px] after:left-0 after:w-0 after:h-[1.5px] after:bg-[#c49a4f] after:transition-all after:duration-300 hover:after:w-full ${
                   transparent
                     ? "text-white/80 hover:text-white"
                     : "text-[#5a4a3a] hover:text-[#1a0e02]"
                 }`}
               >
-                Messages
+                {t("nav.messages")}
                 {unreadCount > 0 && (
                   <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[#8b5e38] text-white text-[10px] font-bold leading-none">
                     {unreadCount > 99 ? "99+" : unreadCount}
@@ -281,24 +286,26 @@ export default function Navbar() {
             {user && activeMode === "host" && !isAdmin && (
               <Link
                 href="/dashboard?tab=listings"
-                className={`relative text-[0.8125rem] font-semibold tracking-[0.01em] transition-all duration-200 after:absolute after:bottom-[-3px] after:left-0 after:w-0 after:h-[1.5px] after:bg-[#c49a4f] after:transition-all after:duration-300 hover:after:w-full ${
+                className={`relative shrink-0 whitespace-nowrap text-[0.8125rem] font-semibold tracking-[0.01em] transition-all duration-200 after:content-[''] after:absolute after:bottom-[-3px] after:left-0 after:w-0 after:h-[1.5px] after:bg-[#c49a4f] after:transition-all after:duration-300 hover:after:w-full ${
                   transparent
                     ? "text-white/80 hover:text-white"
                     : "text-[#5a4a3a] hover:text-[#1a0e02]"
                 }`}
               >
-                My Listings
+                {t("nav.host_dashboard")}
               </Link>
             )}
             {user && isAdmin && (
               <Link href="/admin" className="text-[0.8125rem] font-bold tracking-[0.01em] text-[#8b5e38] hover:text-[#7a5030] transition-colors duration-200">
-                Admin Panel
+                {t("nav.admin_panel")}
               </Link>
             )}
           </div>
 
           {/* Desktop auth area */}
           <div className="hidden md:flex items-center gap-2 shrink-0">
+            <LanguageSwitcher transparent={transparent} />
+
             {user ? (
               <>
                 {loading ? (
@@ -310,6 +317,7 @@ export default function Navbar() {
                     isAdmin={isAdmin}
                     onSwitch={handleSwitch}
                     isPending={isPending}
+                    t={t}
                   />
                 )}
 
@@ -340,16 +348,17 @@ export default function Navbar() {
                   </button>
 
                   {dropdownOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl overflow-hidden z-50"
+                    <div className="absolute right-0 top-full mt-2.5 w-58 bg-white rounded-[18px] overflow-hidden z-50"
                     style={{
-                      border: "1px solid rgba(232,223,212,0.90)",
-                      boxShadow: "0 12px 48px rgba(70,30,0,0.16), 0 4px 16px rgba(70,30,0,0.08), 0 0 0 0.5px rgba(232,223,212,0.60)",
+                      width: "228px",
+                      border: "1px solid rgba(232,223,212,0.85)",
+                      boxShadow: "0 16px 56px rgba(70,30,0,0.16), 0 6px 20px rgba(70,30,0,0.08), 0 2px 6px rgba(70,30,0,0.05), inset 0 1px 0 rgba(255,255,255,0.90)",
                     }}
                   >
                       {/* User info */}
-                      <div className="px-4 py-3 border-b border-[#f0e8de]">
-                        <p className="text-xs font-bold text-[#1a0e02] truncate">{firstName} {lastName}</p>
-                        <p className="text-[11px] text-[#8b94a4] truncate">{user.email}</p>
+                      <div className="px-4 py-3.5 border-b border-[#f0e8de]">
+                        <p className="text-[0.8125rem] font-bold text-[#1a0e02] truncate" style={{ letterSpacing: "-0.01em" }}>{firstName} {lastName}</p>
+                        <p className="text-[11px] text-[#a09080] truncate mt-0.5">{user.email}</p>
                         <span className={`inline-flex items-center gap-1 mt-1.5 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
                           isAdmin
                             ? "bg-[#f4efe6] text-[#461e00]"
@@ -357,24 +366,24 @@ export default function Navbar() {
                               ? "bg-[#fdf5ee] text-[#8b5e38]"
                               : "bg-[#f0f9ff] text-[#0046cc]"
                         }`}>
-                          {isAdmin ? "Admin" : activeMode === "host" ? "Host mode" : "Tourist mode"}
+                          {isAdmin ? t("nav.mode.admin") : activeMode === "host" ? t("nav.mode.host") : t("nav.mode.tourist")}
                         </span>
                       </div>
 
-                      <Link href="/account" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-sm text-[#1a0e02] hover:bg-[#f4efe6] transition-colors">
+                      <Link href="/account" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-sm text-[#1a0e02] hover:bg-[#faf5ee] transition-colors duration-150">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-[#8b5e38]">
                           <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.8" />
                           <path d="M4 20c0-4 3.58-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                         </svg>
-                        My Account
+                        {t("nav.my_account")}
                       </Link>
 
                       {!isAdmin && (
-                        <Link href="/messages" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-sm text-[#1a0e02] hover:bg-[#f4efe6] transition-colors">
+                        <Link href="/messages" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-sm text-[#1a0e02] hover:bg-[#faf5ee] transition-colors duration-150">
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-[#8b5e38]">
                             <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
-                          <span className="flex-1">Messages</span>
+                          <span className="flex-1">{t("nav.messages")}</span>
                           {unreadCount > 0 && (
                             <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[#8b5e38] text-white text-[10px] font-bold leading-none">
                               {unreadCount > 99 ? "99+" : unreadCount}
@@ -384,23 +393,23 @@ export default function Navbar() {
                       )}
 
                       {(activeMode === "host" || isAdmin) && (
-                        <Link href="/dashboard" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-sm text-[#1a0e02] hover:bg-[#f4efe6] transition-colors">
+                        <Link href="/dashboard" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-sm text-[#1a0e02] hover:bg-[#faf5ee] transition-colors duration-150">
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-[#8b5e38]">
                             <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
                             <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
                             <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
                             <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
                           </svg>
-                          Host Dashboard
+                          {t("nav.host_dashboard")}
                         </Link>
                       )}
 
                       {activeMode === "host" && !isAdmin && (
-                        <Link href="/host/new" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-sm text-[#1a0e02] hover:bg-[#f4efe6] transition-colors">
+                        <Link href="/host/new" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-4 py-3 text-sm text-[#1a0e02] hover:bg-[#faf5ee] transition-colors duration-150">
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-[#8b5e38]">
                             <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
                           </svg>
-                          Add Listing
+                          {t("nav.add_listing")}
                         </Link>
                       )}
 
@@ -409,7 +418,7 @@ export default function Navbar() {
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-[#8b5e38]">
                             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
                           </svg>
-                          Admin Panel
+                          {t("nav.admin_panel")}
                         </Link>
                       )}
 
@@ -430,7 +439,7 @@ export default function Navbar() {
                             <path d="M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
                         )}
-                        {isSigningOut ? "Signing out…" : "Log Out"}
+                        {isSigningOut ? t("nav.signing_out") : t("nav.log_out")}
                       </button>
                     </div>
                   )}
@@ -446,30 +455,35 @@ export default function Navbar() {
               <>
                 <Link
                   href="/host"
-                  className="px-4 py-2 text-sm font-semibold text-[#1a0e02] rounded-xl transition-all duration-200 hover:-translate-y-px shadow-sm"
+                  className="px-4 py-2 text-[0.8125rem] font-semibold text-[#1a0e02] rounded-xl transition-all duration-200 hover:-translate-y-px"
                   style={{
-                    background: "linear-gradient(135deg, #c49a4f 0%, #d4aa5f 100%)",
-                    boxShadow: "0 2px 10px rgba(196,154,79,0.30)",
+                    background: "linear-gradient(150deg, #d4aa5f 0%, #c49a4f 50%, #a87c38 100%)",
+                    boxShadow: "0 2px 12px rgba(196,154,79,0.36), inset 0 1px 0 rgba(255,255,255,0.30)",
+                    letterSpacing: "0.01em",
                   }}
                 >
-                  Become A Bedouin
+                  {t("nav.become_bedouin")}
                 </Link>
                 <Link
                   href="/login"
-                  className="px-4 py-2 text-sm font-semibold text-white rounded-xl transition-all duration-200 hover:-translate-y-px shadow-sm"
-                  style={{
-                    background: "linear-gradient(135deg, #9b6a42 0%, #7a4e2c 100%)",
-                    boxShadow: "0 2px 10px rgba(139,94,56,0.30)",
-                  }}
+                  className="px-4 py-2 text-[0.8125rem] font-semibold rounded-xl transition-all duration-200 hover:-translate-y-px"
+                  style={
+                    transparent
+                      ? {
+                          color: "rgba(255,248,235,0.90)",
+                          border: "1.5px solid rgba(255,255,255,0.22)",
+                          background: "rgba(255,255,255,0.06)",
+                        }
+                      : {
+                          color: "#3a2510",
+                          border: "1.5px solid rgba(232,223,212,0.95)",
+                          background: "rgba(255,255,255,0.80)",
+                          boxShadow: "0 1px 4px rgba(70,30,0,0.06)",
+                        }
+                  }
                 >
-                  Login
+                  {t("nav.login")}
                 </Link>
-                <button aria-label="Support" suppressHydrationWarning className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${transparent ? "text-white/70 hover:bg-white/10" : "text-[#5a4a3a] hover:bg-[#f4efe6]"}`}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
-                    <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
-                  </svg>
-                </button>
               </>
             )}
           </div>
@@ -491,11 +505,16 @@ export default function Navbar() {
         {/* Mobile dropdown */}
         {open && (
           <div className="md:hidden bg-white border-t border-[#e8dfd4] px-6 py-4 flex flex-col gap-3">
-            {PUBLIC_LINKS.map(({ href, label }) => (
-              <Link key={label} href={href} onClick={() => setOpen(false)} className="text-sm font-medium text-[#5a4a3a] py-1">
-                {label}
+            {PUBLIC_LINK_DEFS.map(({ href, key }) => (
+              <Link key={key} href={href} onClick={() => setOpen(false)} className="text-sm font-medium text-[#5a4a3a] py-1">
+                {t(key)}
               </Link>
             ))}
+
+            {/* Language switcher */}
+            <div className="pt-1">
+              <LanguageSwitcher transparent={false} />
+            </div>
 
             <div className="flex flex-col gap-2 pt-3 border-t border-[#e8dfd4]">
               {user ? (
@@ -507,15 +526,15 @@ export default function Navbar() {
                       <span className={`ml-2 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full ${
                         isAdmin ? "bg-[#f4efe6] text-[#461e00]" : activeMode === "host" ? "bg-[#fdf5ee] text-[#8b5e38]" : "bg-[#f0f9ff] text-[#0046cc]"
                       }`}>
-                        {isAdmin ? "Admin" : activeMode === "host" ? "Host" : "Tourist"}
+                        {isAdmin ? t("nav.mode.admin") : activeMode === "host" ? t("nav.mode.host_short") : t("nav.mode.tourist_short")}
                       </span>
                     </div>
                   </div>
 
-                  <Link href="/account"  onClick={() => setOpen(false)} className="py-2 text-sm font-medium text-[#5a4a3a]">My Account</Link>
+                  <Link href="/account"  onClick={() => setOpen(false)} className="py-2 text-sm font-medium text-[#5a4a3a]">{t("nav.my_account")}</Link>
                   {!isAdmin && (
                     <Link href="/messages" onClick={() => setOpen(false)} className="py-2 text-sm font-medium text-[#5a4a3a] flex items-center gap-2">
-                      Messages
+                      {t("nav.messages")}
                       {unreadCount > 0 && (
                         <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[#8b5e38] text-white text-[10px] font-bold leading-none">
                           {unreadCount > 99 ? "99+" : unreadCount}
@@ -525,13 +544,13 @@ export default function Navbar() {
                   )}
 
                   {(activeMode === "host" || isAdmin) && (
-                    <Link href="/dashboard" onClick={() => setOpen(false)} className="py-2 text-sm font-medium text-[#5a4a3a]">Host Dashboard</Link>
+                    <Link href="/dashboard" onClick={() => setOpen(false)} className="py-2 text-sm font-medium text-[#5a4a3a]">{t("nav.host_dashboard")}</Link>
                   )}
                   {activeMode === "host" && !isAdmin && (
-                    <Link href="/host/new" onClick={() => setOpen(false)} className="py-2 text-sm font-medium text-[#5a4a3a]">Add Listing</Link>
+                    <Link href="/host/new" onClick={() => setOpen(false)} className="py-2 text-sm font-medium text-[#5a4a3a]">{t("nav.add_listing")}</Link>
                   )}
                   {isAdmin && (
-                    <Link href="/admin" onClick={() => setOpen(false)} className="py-2 text-sm font-semibold text-[#8b5e38]">Admin Panel</Link>
+                    <Link href="/admin" onClick={() => setOpen(false)} className="py-2 text-sm font-semibold text-[#8b5e38]">{t("nav.admin_panel")}</Link>
                   )}
 
                   {/* Mode switch */}
@@ -543,13 +562,13 @@ export default function Navbar() {
                           disabled={isPending}
                           className="text-left py-2 text-sm font-semibold text-[#0046cc] disabled:opacity-60"
                         >
-                          {isPending ? "Switching…" : "Switch to Travelling"}
+                          {isPending ? t("nav.switching") : t("nav.switch_to_travelling")}
                         </button>
                       )
                       : hostStatus === "pending"
                         ? (
                           <span className="py-2 text-sm text-[#b17a50] font-semibold">
-                            Host Application Pending
+                            {t("nav.pending_review")}
                           </span>
                         )
                         : hostStatus === "approved"
@@ -559,7 +578,7 @@ export default function Navbar() {
                               disabled={isPending}
                               className="text-left py-2 text-sm font-semibold text-[#461e00] disabled:opacity-60"
                             >
-                              {isPending ? "Switching…" : "Switch to Hosting"}
+                              {isPending ? t("nav.switching") : t("nav.switch_to_hosting")}
                             </button>
                           )
                           : (
@@ -568,7 +587,7 @@ export default function Navbar() {
                               onClick={() => setOpen(false)}
                               className="py-2 text-sm font-semibold text-[#461e00]"
                             >
-                              {hostStatus === "rejected" ? "Re-apply as Host" : "Become a Host"}
+                              {hostStatus === "rejected" ? t("nav.reapply_host") : t("nav.become_host")}
                             </Link>
                           )
                   )}
@@ -578,13 +597,13 @@ export default function Navbar() {
                     disabled={isSigningOut}
                     className="text-left py-2 text-sm font-semibold text-red-600 disabled:opacity-50"
                   >
-                    {isSigningOut ? "Signing out…" : "Log Out"}
+                    {isSigningOut ? t("nav.signing_out") : t("nav.log_out")}
                   </button>
                 </>
               ) : (
                 <div className="flex gap-3">
-                  <Link href="/login"  onClick={() => setOpen(false)} className="flex-1 text-center py-2.5 text-sm font-semibold text-white bg-[#8b5e38] rounded-xl">Login</Link>
-                  <Link href="/signup" onClick={() => setOpen(false)} className="flex-1 text-center py-2.5 text-sm font-semibold text-white bg-[#8b5e38] rounded-xl">Sign up</Link>
+                  <Link href="/login"  onClick={() => setOpen(false)} className="flex-1 text-center py-2.5 text-sm font-semibold text-white bg-[#8b5e38] rounded-xl">{t("nav.login")}</Link>
+                  <Link href="/signup" onClick={() => setOpen(false)} className="flex-1 text-center py-2.5 text-sm font-semibold text-white bg-[#8b5e38] rounded-xl">{t("nav.signup")}</Link>
                 </div>
               )}
             </div>

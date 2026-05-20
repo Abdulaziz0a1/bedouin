@@ -1,7 +1,42 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useLanguage } from "@/context/LanguageProvider";
+
+const COLUMNS = [
+  {
+    titleKey: "footer.company",
+    links: [
+      { href: "/about",    labelKey: "footer.link.about" },
+      { href: "/careers",  labelKey: "footer.link.careers" },
+      { href: "/press",    labelKey: "footer.link.press" },
+      { href: "/blog",     labelKey: "footer.link.blog" },
+    ],
+  },
+  {
+    titleKey: "footer.hosting",
+    links: [
+      { href: "/host/onboarding", labelKey: "footer.link.host_home" },
+      { href: "/host",            labelKey: "footer.link.host_resources" },
+      { href: "/cohost",          labelKey: "footer.link.cohost" },
+      { href: "/provide-service", labelKey: "footer.link.provide" },
+    ],
+  },
+  {
+    titleKey: "footer.support",
+    links: [
+      { href: "/faq", labelKey: "footer.link.help" },
+      { href: "/faq", labelKey: "footer.link.safety" },
+      { href: "/faq", labelKey: "footer.link.cancellation" },
+      { href: "/",    labelKey: "footer.link.contact" },
+    ],
+  },
+];
 
 export default function Footer() {
+  const { t } = useLanguage();
+
   return (
     <footer
       className="relative text-[#f0f3f4] pt-16 pb-8 overflow-hidden"
@@ -42,57 +77,29 @@ export default function Footer() {
                 Bedouin
               </span>
             </div>
-            <p className="text-sm text-[#6b5640] leading-relaxed max-w-[200px]">
-              Connecting tourists with authentic Saudi farm and desert experiences.
+            <p className="text-sm text-[#8b7055] leading-relaxed max-w-[210px]" style={{ lineHeight: "1.7" }}>
+              {t("footer.tagline")}
             </p>
             {/* Gold accent line */}
             <div
-              className="mt-6 h-[2px] w-10 rounded-full"
-              style={{ background: "linear-gradient(90deg, #c49a4f, #f0c84a)" }}
+              className="mt-6 h-[1.5px] w-12 rounded-full"
+              style={{ background: "linear-gradient(90deg, #c49a4f, rgba(196,154,79,0.20))" }}
             />
           </div>
 
-          {[
-            {
-              title: "Explore",
-              links: [
-                { href: "/explore", label: "Browse Experiences" },
-                { href: "/explore", label: "Farm Stays" },
-                { href: "/explore", label: "Desert Activities" },
-                { href: "/explore", label: "Camel Herding" },
-              ],
-            },
-            {
-              title: "Hosting",
-              links: [
-                { href: "/host",     label: "Become a Host" },
-                { href: "/dashboard",label: "Host Dashboard" },
-                { href: "/host/new", label: "Add a Listing" },
-                { href: "/host",     label: "Co-host Program" },
-              ],
-            },
-            {
-              title: "Support",
-              links: [
-                { href: "/faq", label: "Help Center" },
-                { href: "/faq", label: "Safety Info" },
-                { href: "/",   label: "Contact Us" },
-                { href: "/",   label: "Privacy Policy" },
-              ],
-            },
-          ].map(({ title, links }) => (
-            <div key={title}>
-              <h4 className="text-[10px] font-bold text-[#c49a4f] uppercase tracking-[0.20em] mb-5">
-                {title}
+          {COLUMNS.map(({ titleKey, links }) => (
+            <div key={titleKey}>
+              <h4 className="text-[10px] font-bold text-[#c49a4f] uppercase tracking-[0.22em] mb-5">
+                {t(titleKey)}
               </h4>
-              <ul className="space-y-3 text-sm text-[#6b5640]">
-                {links.map(({ href, label }) => (
-                  <li key={label}>
+              <ul className="space-y-3.5">
+                {links.map(({ href, labelKey }) => (
+                  <li key={labelKey}>
                     <Link
                       href={href}
-                      className="hover:text-[#c4b49a] transition-colors duration-200"
+                      className="text-sm text-[#9b8470] hover:text-[#c4b49a] transition-colors duration-200"
                     >
-                      {label}
+                      {t(labelKey)}
                     </Link>
                   </li>
                 ))}
@@ -102,21 +109,21 @@ export default function Footer() {
         </div>
 
         {/* Bottom row */}
-        <div className="pt-7 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-[#4a3020]">
-            &copy; {new Date().getFullYear()} Bedouin. All rights reserved.
+        <div className="pt-7 flex flex-col md:flex-row items-center justify-between gap-5">
+          <p className="text-xs text-[#6b5440]">
+            {t("footer.copy")}
           </p>
 
           {/* Payment pills */}
-          <div className="flex items-center gap-2 flex-wrap justify-center">
-            {["VISA", "MC", "Apple Pay", "PayPal", "mada"].map((m) => (
+          <div className="flex items-center gap-1.5 flex-wrap justify-center">
+            {["Visa", "Mastercard", "Apple Pay", "PayPal", "mada"].map((m) => (
               <div
                 key={m}
-                className="h-6 px-2.5 rounded text-[10px] font-semibold flex items-center"
+                className="h-[22px] px-2.5 rounded-[5px] text-[9.5px] font-semibold flex items-center tracking-wide"
                 style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  color: "#6b5640",
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.09)",
+                  color: "#8b7055",
                 }}
               >
                 {m}
@@ -124,12 +131,12 @@ export default function Footer() {
             ))}
           </div>
 
-          <div className="flex items-center gap-4 text-xs text-[#4a3020]">
-            <Link href="/" className="hover:text-[#c49a4f] transition-colors">Terms</Link>
+          <div className="flex items-center gap-4 text-xs text-[#6b5440]">
+            <Link href="/" className="hover:text-[#c49a4f] transition-colors duration-200">{t("footer.terms")}</Link>
             <span className="text-[#3a2010]">&middot;</span>
-            <Link href="/" className="hover:text-[#c49a4f] transition-colors">Privacy</Link>
+            <Link href="/" className="hover:text-[#c49a4f] transition-colors duration-200">{t("footer.privacy")}</Link>
             <span className="text-[#3a2010]">&middot;</span>
-            <Link href="/" className="hover:text-[#c49a4f] transition-colors">Sitemap</Link>
+            <Link href="/" className="hover:text-[#c49a4f] transition-colors duration-200">{t("footer.sitemap")}</Link>
           </div>
         </div>
       </div>

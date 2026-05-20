@@ -1,22 +1,69 @@
+"use client";
+
 import Link from "next/link";
 import FadeInSection from "@/components/ui/FadeInSection";
+import { useLanguage } from "@/context/LanguageProvider";
+
+const KeyIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="7.5" cy="15.5" r="4.5"/>
+    <path d="M21 2l-9.6 9.6"/>
+    <path d="M15.5 7.5L17 6l2 2-1.5 1.5"/>
+  </svg>
+);
+
+const BrushIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"/>
+    <path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1 1 2.26 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z"/>
+  </svg>
+);
+
+const MapIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
+    <line x1="9" y1="3" x2="9" y2="18"/>
+    <line x1="15" y1="6" x2="15" y2="21"/>
+  </svg>
+);
+
+const CameraIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+    <circle cx="12" cy="13" r="4"/>
+  </svg>
+);
+
+const WrenchIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+  </svg>
+);
+
+const ChatIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+  </svg>
+);
 
 const SERVICES = [
-  { icon: "🔑", label: "Check-in & Check-out" },
-  { icon: "🧹", label: "Cleaning & Prep"      },
-  { icon: "🗺️", label: "Local Area Guide"     },
-  { icon: "📷", label: "Photography"           },
-  { icon: "🔧", label: "Maintenance"           },
-  { icon: "💬", label: "Guest Support"         },
+  { icon: <KeyIcon />,    labelKey: "service_cta.svc.checkin" },
+  { icon: <BrushIcon />,  labelKey: "service_cta.svc.cleaning" },
+  { icon: <MapIcon />,    labelKey: "service_cta.svc.guide" },
+  { icon: <CameraIcon />, labelKey: "service_cta.svc.photography" },
+  { icon: <WrenchIcon />, labelKey: "service_cta.svc.maintenance" },
+  { icon: <ChatIcon />,   labelKey: "service_cta.svc.support" },
 ];
 
-const points = [
-  "Apply once — work with multiple hosts",
-  "Admin-reviewed profile for quality assurance",
-  "Set your own fee model and availability",
+const POINT_KEYS = [
+  "service_cta.point1",
+  "service_cta.point2",
+  "service_cta.point3",
 ];
 
 export default function ProvideServiceCTA() {
+  const { t } = useLanguage();
+
   return (
     <section className="py-20 relative overflow-hidden" style={{ background: "#ffffff" }}>
       {/* Top subtle border */}
@@ -36,7 +83,7 @@ export default function ProvideServiceCTA() {
                   style={{ background: "linear-gradient(90deg, transparent, #c49a4f)" }}
                 />
                 <span className="text-[#c49a4f] text-xs font-bold uppercase tracking-[0.20em]">
-                  For Service Providers
+                  {t("service_cta.eyebrow")}
                 </span>
               </div>
 
@@ -44,18 +91,16 @@ export default function ProvideServiceCTA() {
                 className="font-display font-extrabold text-[#1a0e02] leading-tight mb-4 tracking-tight"
                 style={{ fontSize: "clamp(1.75rem, 3vw, 2.5rem)" }}
               >
-                Offer Your Skills to Bedouin Hosts
+                {t("service_cta.heading")}
               </h2>
 
               <p className="text-[#64707d] text-base leading-relaxed mb-7 max-w-md">
-                Are you a cleaning professional, local guide, photographer, or hospitality
-                expert? Join the Bedouin co-host network and connect with hosts who need
-                your services across Saudi Arabia.
+                {t("service_cta.body")}
               </p>
 
               <div className="flex flex-col gap-3.5 mb-8">
-                {points.map((point) => (
-                  <div key={point} className="flex items-center gap-3">
+                {POINT_KEYS.map((key) => (
+                  <div key={key} className="flex items-center gap-3">
                     <div
                       className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
                       style={{
@@ -67,7 +112,7 @@ export default function ProvideServiceCTA() {
                         <path d="M20 6L9 17l-5-5" stroke="#8b5e38" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </div>
-                    <span className="text-sm text-[#1a0e02] font-medium">{point}</span>
+                    <span className="text-sm text-[#1a0e02] font-medium">{t(key)}</span>
                   </div>
                 ))}
               </div>
@@ -82,7 +127,7 @@ export default function ProvideServiceCTA() {
                     boxShadow: "0 4px 16px rgba(26,14,2,0.25)",
                   }}
                 >
-                  Provide a Service
+                  {t("service_cta.primary")}
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                     className="transition-transform duration-200 group-hover:translate-x-0.5"
                   >
@@ -97,7 +142,7 @@ export default function ProvideServiceCTA() {
                     color: "#1a0e02",
                   }}
                 >
-                  Browse co-hosts
+                  {t("service_cta.secondary")}
                 </Link>
               </div>
             </div>
@@ -106,18 +151,32 @@ export default function ProvideServiceCTA() {
           {/* Right: service grid */}
           <FadeInSection direction="right" delay={80}>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {SERVICES.map(({ icon, label }, i) => (
+              {SERVICES.map(({ icon, labelKey }, i) => (
                 <div
-                  key={label}
-                  className="rounded-2xl p-5 flex flex-col items-center gap-3 text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_8px_24px_rgba(70,30,0,0.10)] cursor-default"
+                  key={labelKey}
+                  className="rounded-[18px] p-5 flex flex-col items-center gap-3 text-center cursor-default"
                   style={{
-                    background: "linear-gradient(145deg, #f9f4ee, #f4efe6)",
-                    border: "1px solid #e8dfd4",
+                    background: "linear-gradient(148deg, #faf5ee 0%, #f4efe6 100%)",
+                    border: "1px solid rgba(232,223,212,0.90)",
+                    boxShadow: "0 2px 8px rgba(70,30,0,0.04)",
                     animationDelay: `${i * 60}ms`,
+                    transition: "transform 0.28s cubic-bezier(0.16,1,0.3,1), box-shadow 0.28s cubic-bezier(0.16,1,0.3,1), border-color 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    const el = e.currentTarget as HTMLDivElement;
+                    el.style.transform = "translateY(-4px)";
+                    el.style.boxShadow = "0 10px 28px rgba(70,30,0,0.10)";
+                    el.style.borderColor = "rgba(196,154,79,0.36)";
+                  }}
+                  onMouseLeave={(e) => {
+                    const el = e.currentTarget as HTMLDivElement;
+                    el.style.transform = "";
+                    el.style.boxShadow = "0 2px 8px rgba(70,30,0,0.04)";
+                    el.style.borderColor = "rgba(232,223,212,0.90)";
                   }}
                 >
-                  <span className="text-3xl">{icon}</span>
-                  <span className="text-xs font-semibold text-[#1a0e02] leading-tight">{label}</span>
+                  <div className="text-[#8b5e38]">{icon}</div>
+                  <span className="text-[11.5px] font-semibold text-[#2b1a0e] leading-tight">{t(labelKey)}</span>
                 </div>
               ))}
             </div>

@@ -4,11 +4,14 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import FadeInSection from "@/components/ui/FadeInSection";
+import { useLanguage } from "@/context/LanguageProvider";
+import { localizeText } from "@/lib/types/discovery";
+import type { DiscoveryCollection, CollectionCategory } from "@/lib/types/discovery";
 
 const FALLBACK_IMG = "https://picsum.photos/seed/bedouin-activity/400/300";
 
 function ActivityImage({ src, alt }: { src: string; alt: string }) {
-  const [imgSrc, setImgSrc] = useState(src);
+  const [imgSrc, setImgSrc] = useState(src || FALLBACK_IMG);
   return (
     <Image
       src={imgSrc}
@@ -21,41 +24,20 @@ function ActivityImage({ src, alt }: { src: string; alt: string }) {
   );
 }
 
-const categories = [
-  { key: "explore",   label: "Explore"    },
-  { key: "shows",     label: "Shows"      },
-  { key: "nightlife", label: "Night Life" },
-];
+interface TopThingsToDoProps {
+  /** Pre-fetched activity collections from getHomepageCollections(). */
+  collections: DiscoveryCollection[];
+}
 
-const activities: Record<string, { name: string; image: string }[]> = {
-  explore: [
-    { name: "Mountain View",   image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop" },
-    { name: "Nature Escape",   image: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=300&fit=crop" },
-    { name: "Farm Visit",      image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=400&h=300&fit=crop" },
-    { name: "Heritage Site",   image: "https://images.unsplash.com/photo-1548092372-0d1bd40894a3?w=400&h=300&fit=crop"   },
-    { name: "Desert Hike",     image: "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=400&h=300&fit=crop" },
-    { name: "Scenic Lookout",  image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&h=300&fit=crop" },
-  ],
-  shows: [
-    { name: "Folk Festival",   image: "https://images.unsplash.com/photo-1444930694458-01babf71870c?w=400&h=300&fit=crop" },
-    { name: "Heritage Show",   image: "https://images.unsplash.com/photo-1548092372-0d1bd40894a3?w=400&h=300&fit=crop"   },
-    { name: "Desert Theatre",  image: "https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=400&h=300&fit=crop" },
-    { name: "Cultural Night",  image: "https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=400&h=300&fit=crop" },
-    { name: "Craft Market",    image: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=300&fit=crop" },
-    { name: "Story Night",     image: "https://images.unsplash.com/photo-1537225228614-56cc3556d7ed?w=400&h=300&fit=crop" },
-  ],
-  nightlife: [
-    { name: "Stargazing",      image: "https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=400&h=300&fit=crop" },
-    { name: "Campfire",        image: "https://images.unsplash.com/photo-1537225228614-56cc3556d7ed?w=400&h=300&fit=crop" },
-    { name: "Night Hike",      image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&h=300&fit=crop" },
-    { name: "Desert Dinner",   image: "https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=400&h=300&fit=crop" },
-    { name: "Bonfire Night",   image: "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=400&h=300&fit=crop" },
-    { name: "Moon Watching",   image: "https://images.unsplash.com/photo-1534796636912-3b952d0d5a35?w=400&h=300&fit=crop" },
-  ],
-};
+export default function TopThingsToDo({ collections }: TopThingsToDoProps) {
+  const firstCategory = (collections[0]?.category ?? "explore") as CollectionCategory;
+  const [active, setActive] = useState<CollectionCategory>(firstCategory);
+  const { t, lang } = useLanguage();
 
-export default function TopThingsToDo() {
-  const [active, setActive] = useState("explore");
+  const currentCollection = collections.find((c) => c.category === active);
+  const activities = currentCollection?.activities ?? [];
+
+  if (collections.length === 0) return null;
 
   return (
     <section className="py-16 relative overflow-hidden"
@@ -72,10 +54,15 @@ export default function TopThingsToDo() {
 
         {/* Header */}
         <FadeInSection direction="up" delay={0}>
-          <div className="flex flex-col gap-1.5">
-            <p className="text-[#c49a4f] text-xs font-bold uppercase tracking-[0.20em]">Things to do</p>
-            <h2 className="font-display font-extrabold text-[#1a0e02] text-4xl leading-tight tracking-tight">
-              Top Things to Do in Abha
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="h-px w-8" style={{ background: "linear-gradient(90deg, transparent, #c49a4f)" }} />
+              <p className="text-[#c49a4f] text-[0.6875rem] font-bold uppercase tracking-[0.22em]">
+                {t("things.eyebrow")}
+              </p>
+            </div>
+            <h2 className="font-display font-extrabold text-[#1a0e02] leading-tight tracking-tight" style={{ fontSize: "clamp(1.9rem, 3.2vw, 2.6rem)" }}>
+              {t("things.heading")}
             </h2>
           </div>
         </FadeInSection>
@@ -83,24 +70,29 @@ export default function TopThingsToDo() {
         {/* Category chips */}
         <FadeInSection direction="up" delay={60}>
           <div className="flex flex-wrap gap-2.5">
-            {categories.map(({ key, label }) => {
-              const isActive = active === key;
+            {collections.map(({ category, labelKey }) => {
+              const isActive = active === category;
               return (
                 <button
-                  key={key}
-                  onClick={() => setActive(key)}
-                  className="px-5 py-2.5 rounded-3xl text-sm font-semibold transition-all duration-200"
+                  key={category}
+                  onClick={() => setActive(category)}
+                  className="px-5 py-2.5 rounded-2xl text-sm font-semibold transition-all duration-250"
                   style={{
                     background: isActive
-                      ? "linear-gradient(135deg, #1a0e02 0%, #2d1a08 100%)"
-                      : "#f4efe6",
-                    color: isActive ? "white" : "#2b3037",
-                    border: isActive ? "1.5px solid transparent" : "1.5px solid #e8dfd4",
-                    boxShadow: isActive ? "0 4px 14px rgba(26,14,2,0.25)" : "none",
+                      ? "linear-gradient(148deg, #5a2a00 0%, #3a1800 100%)"
+                      : "rgba(255,255,255,0.90)",
+                    color: isActive ? "rgba(255,248,235,0.96)" : "#3a2510",
+                    border: isActive
+                      ? "1.5px solid rgba(196,154,79,0.22)"
+                      : "1.5px solid rgba(232,223,212,0.90)",
+                    boxShadow: isActive
+                      ? "0 4px 18px rgba(70,30,0,0.28), inset 0 1px 0 rgba(255,255,255,0.08)"
+                      : "0 1px 4px rgba(70,30,0,0.06)",
                     transform: isActive ? "translateY(-1px)" : "none",
+                    letterSpacing: "0.01em",
                   }}
                 >
-                  {label}
+                  {t(labelKey)}
                 </button>
               );
             })}
@@ -109,39 +101,44 @@ export default function TopThingsToDo() {
 
         {/* Activity grid */}
         <FadeInSection direction="up" delay={100}>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            {activities[active].map(({ name, image }, i) => (
-              <Link
-                key={name}
-                href="/explore"
-                className="flex flex-col gap-2.5 group"
-                style={{
-                  animation: `fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) ${i * 55}ms both`,
-                }}
-              >
-                <div
-                  className="relative h-[156px] rounded-2xl overflow-hidden"
+          {activities.length === 0 ? (
+            <p className="text-[#8b94a4] text-sm py-8 text-center">
+              {t("things.empty") || "Experiences coming soon."}
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+              {activities.map(({ id, name, image, href }, i) => (
+                <Link
+                  key={id}
+                  href={href}
+                  className="flex flex-col gap-2.5 group"
                   style={{
-                    boxShadow: "0 4px 16px rgba(70,30,0,0.10)",
-                    transition: "box-shadow 0.3s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLDivElement).style.boxShadow = "0 10px 32px rgba(70,30,0,0.22)";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 16px rgba(70,30,0,0.10)";
+                    animation: `fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) ${i * 55}ms both`,
                   }}
                 >
-                  <ActivityImage src={image} alt={name} />
-                  {/* Dark overlay on hover */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                </div>
-                <p className="text-[#1a0e02] text-sm font-semibold truncate group-hover:text-[#8b5e38] transition-colors duration-200">
-                  {name}
-                </p>
-              </Link>
-            ))}
-          </div>
+                  <div
+                    className="relative h-[156px] rounded-2xl overflow-hidden"
+                    style={{
+                      boxShadow: "0 4px 16px rgba(70,30,0,0.10)",
+                      transition: "box-shadow 0.3s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLDivElement).style.boxShadow = "0 10px 32px rgba(70,30,0,0.22)";
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 16px rgba(70,30,0,0.10)";
+                    }}
+                  >
+                    <ActivityImage src={image} alt={localizeText(name, lang)} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  </div>
+                  <p className="text-[#1a0e02] text-sm font-semibold truncate group-hover:text-[#8b5e38] transition-colors duration-200">
+                    {localizeText(name, lang)}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          )}
         </FadeInSection>
       </div>
     </section>

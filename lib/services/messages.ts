@@ -7,9 +7,10 @@ export interface Conversation {
   lastAt:          string;
   unreadCount:     number;          // messages sent TO myId that are unread in this thread
   // Context fields — null when not linked to a listing or booking
-  listingId:       string | null;
-  listingTitle:    string | null;
-  bookingId:       string | null;
+  listingId:        string | null;
+  listingTitle:     string | null;
+  listingTitle_ar?: string | null;
+  bookingId:        string | null;
   bookingCheckIn:  string | null;   // "YYYY-MM-DD"
   bookingCheckOut: string | null;   // "YYYY-MM-DD"
   /**
@@ -112,11 +113,11 @@ export async function fetchConversations(myId: string): Promise<Conversation[]> 
     const listingIds = [...new Set(
       Array.from(map.values()).map((v) => v.listingId).filter((id): id is string => !!id),
     )];
-    const listingMap: Record<string, { title: string; host_id: string | null }> = {};
+    const listingMap: Record<string, { title: string; title_ar?: string | null; host_id: string | null }> = {};
     if (listingIds.length > 0) {
       const { data: listings } = await supabase
         .from("listings")
-        .select("id, title, host_id")
+        .select("id, title, title_ar, host_id")
         .in("id", listingIds);
       (listings ?? []).forEach((l) => { listingMap[l.id] = l; });
     }
@@ -164,10 +165,12 @@ export async function fetchConversations(myId: string): Promise<Conversation[]> 
 
       // Listing title — prefer booking snapshot (denormalized), fall back to listing row
       let listingTitle: string | null = null;
+      let listingTitle_ar: string | null = null;
       if (bookingId && bookingMap[bookingId]) {
         listingTitle = bookingMap[bookingId].listing_title || null;
       } else if (listingId && listingMap[listingId]) {
-        listingTitle = listingMap[listingId].title || null;
+        listingTitle    = listingMap[listingId].title    || null;
+        listingTitle_ar = listingMap[listingId].title_ar || null;
       }
 
       // Booking dates
@@ -204,6 +207,7 @@ export async function fetchConversations(myId: string): Promise<Conversation[]> 
         unreadCount,
         listingId:            listingId  ?? null,
         listingTitle,
+        listingTitle_ar,
         bookingId:            bookingId  ?? null,
         bookingCheckIn,
         bookingCheckOut,

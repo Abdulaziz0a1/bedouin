@@ -6,16 +6,27 @@ import Image from "next/image";
 import type { SavedListing } from "@/lib/types/user";
 import RatingBadge from "@/components/ui/RatingBadge";
 import UserEmptyState from "../shared/UserEmptyState";
+import { useLanguage } from "@/context/LanguageProvider";
+import { getListingText } from "@/lib/utils/listing-locale";
 
 type SortOrder = "recent" | "price_asc" | "price_desc" | "rating";
 
+const SORT_OPTIONS: { id: SortOrder; labelKey: string }[] = [
+  { id: "recent",     labelKey: "saved.sort.recent" },
+  { id: "price_asc",  labelKey: "saved.sort.price_asc" },
+  { id: "price_desc", labelKey: "saved.sort.price_desc" },
+  { id: "rating",     labelKey: "saved.sort.rating" },
+];
+
 function SavedCard({ listing, onRemove }: { listing: SavedListing; onRemove: (id: string) => void }) {
+  const { t, lang } = useLanguage();
   const discountPct =
     listing.originalPrice && listing.originalPrice > listing.price
       ? Math.round(((listing.originalPrice - listing.price) / listing.originalPrice) * 100)
       : 0;
 
-  const savedDate = new Date(listing.savedAt).toLocaleDateString("en-GB", {
+  const locale = lang === "ar" ? "ar-SA" : "en-GB";
+  const savedDate = new Date(listing.savedAt).toLocaleDateString(locale, {
     day: "numeric", month: "short", year: "numeric",
   });
 
@@ -61,7 +72,7 @@ function SavedCard({ listing, onRemove }: { listing: SavedListing; onRemove: (id
 
         <Link href={`/listing/${listing.listingId}`}>
           <h3 className="font-display font-semibold text-[#1a0e02] text-[1rem] leading-snug mt-0.5 line-clamp-2 hover:text-[#8b5e38] transition-colors">
-            {listing.title}
+            {getListingText(listing.title, listing.title_ar, lang)}
           </h3>
         </Link>
 
@@ -69,7 +80,7 @@ function SavedCard({ listing, onRemove }: { listing: SavedListing; onRemove: (id
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
           </svg>
-          <span className="truncate">{listing.location}</span>
+          <span className="truncate">{getListingText(listing.location, listing.location_ar, lang)}</span>
         </div>
 
         {listing.tags && listing.tags.length > 0 && (
@@ -97,13 +108,14 @@ function SavedCard({ listing, onRemove }: { listing: SavedListing; onRemove: (id
         </div>
 
         {/* Saved date */}
-        <p className="text-[10px] text-[#a09080]">Saved {savedDate}</p>
+        <p className="text-[10px] text-[#a09080]">{`${t("saved.date")} ${savedDate}`}</p>
       </div>
     </div>
   );
 }
 
 export default function UserSavedSection({ initialItems = [] }: { initialItems?: SavedListing[] }) {
+  const { t } = useLanguage();
   const [items, setItems]       = useState<SavedListing[]>(initialItems);
   const [sort, setSort]         = useState<SortOrder>("recent");
 
@@ -125,7 +137,7 @@ export default function UserSavedSection({ initialItems = [] }: { initialItems?:
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="font-display font-semibold text-[#1a0e02] text-lg">Saved Places</h2>
+          <h2 className="font-display font-semibold text-[#1a0e02] text-lg">{t("saved.heading")}</h2>
           <p className="text-xs text-[#64707d] mt-0.5">
             {items.length} listing{items.length !== 1 ? "s" : ""} in your wishlist
           </p>
@@ -138,22 +150,15 @@ export default function UserSavedSection({ initialItems = [] }: { initialItems?:
             <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="1.8" />
             <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           </svg>
-          Explore more
+          {t("saved.explore_more")}
         </Link>
       </div>
 
       {/* Sort */}
       {items.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-[#64707d] font-medium shrink-0">Sort by:</span>
-          {(
-            [
-              { id: "recent",     label: "Recently saved" },
-              { id: "price_asc",  label: "Price: Low–High" },
-              { id: "price_desc", label: "Price: High–Low" },
-              { id: "rating",     label: "Highest rated"  },
-            ] as { id: SortOrder; label: string }[]
-          ).map((s) => (
+          <span className="text-xs text-[#64707d] font-medium shrink-0">{t("saved.sort_by")}</span>
+          {SORT_OPTIONS.map((s) => (
             <button
               key={s.id}
               onClick={() => setSort(s.id)}
@@ -164,7 +169,7 @@ export default function UserSavedSection({ initialItems = [] }: { initialItems?:
                   : "bg-white border border-[#e8dfd4] text-[#64707d] hover:border-[#8b5e38]",
               ].join(" ")}
             >
-              {s.label}
+              {t(s.labelKey)}
             </button>
           ))}
         </div>
@@ -178,9 +183,9 @@ export default function UserSavedSection({ initialItems = [] }: { initialItems?:
               <path d="M12 21S3 14 3 8.5C3 5.42 5.42 3 8.5 3 10.24 3 11.91 3.81 13 5.09 14.09 3.81 15.76 3 17.5 3 20.58 3 23 5.42 23 8.5 23 14 12 21 12 21z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           }
-          title="Your wishlist is empty"
-          description="Tap the heart on any listing to save it here for later."
-          action={{ label: "Explore experiences", href: "/explore" }}
+          title={t("saved.empty.title")}
+          description={t("saved.empty.desc")}
+          action={{ label: t("bookings.explore"), href: "/explore" }}
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">

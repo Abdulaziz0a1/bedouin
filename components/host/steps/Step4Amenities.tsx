@@ -3,9 +3,10 @@
 import {
   ALL_AMENITIES,
   AMENITY_CATEGORIES,
-  AMENITY_CATEGORY_LABELS,
+  AMENITY_CATEGORY_TKEYS,
   AmenityCategory,
 } from "@/lib/data/amenities";
+import { useLanguage } from "@/context/LanguageProvider";
 
 interface Step4AmenitiesProps {
   selected:    string[];
@@ -18,6 +19,7 @@ interface Step4AmenitiesProps {
 export default function Step4Amenities({
   selected, onChange, onNext, onBack, isRejected,
 }: Step4AmenitiesProps) {
+  const { t } = useLanguage();
   const toggle = (id: string) => {
     onChange(
       selected.includes(id)
@@ -33,12 +35,12 @@ export default function Step4Amenities({
     <div className="flex flex-col gap-7">
       {/* Heading */}
       <div>
-        <p className="text-[#c49a4f] text-xs font-bold uppercase tracking-[0.16em] mb-2">Step 4 of 6</p>
+        <p className="text-[#c49a4f] text-xs font-bold uppercase tracking-[0.16em] mb-2">{t("host.step4.eyebrow")}</p>
         <h1 className="font-display font-extrabold text-[#1a0e02] text-3xl mb-1">
-          What does your place offer?
+          {t("host.step4.heading")}
         </h1>
         <p className="text-[#64707d] text-sm">
-          Select all amenities and features available to guests. You can always add more later.
+          {t("host.step4.subtitle")}
         </p>
       </div>
 
@@ -52,7 +54,7 @@ export default function Step4Amenities({
             </svg>
           </div>
           <span className="text-sm font-semibold text-[#8b5e38]">
-            {selected.length} amenit{selected.length === 1 ? "y" : "ies"} selected
+            {selected.length} {selected.length === 1 ? t("host.step4.selected_singular") : t("host.step4.selected_plural")}
           </span>
         </div>
       )}
@@ -63,7 +65,7 @@ export default function Step4Amenities({
             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
             <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
-          Please update this section based on admin feedback.
+          {t("host.admin_feedback")}
         </div>
       )}
 
@@ -74,7 +76,7 @@ export default function Step4Amenities({
           return (
             <div key={cat} className="bg-white border border-[#e8dfd4] rounded-2xl p-5">
               <h2 className="font-display font-semibold text-[#1a0e02] text-sm mb-4">
-                {AMENITY_CATEGORY_LABELS[cat]}
+                {t(AMENITY_CATEGORY_TKEYS[cat])}
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {items.map((amenity) => {
@@ -92,7 +94,7 @@ export default function Step4Amenities({
                       ].join(" ")}
                     >
                       <span className="text-base leading-none">{amenity.icon}</span>
-                      <span className="text-xs leading-tight">{amenity.label}</span>
+                      <span className="text-xs leading-tight">{t(amenity.labelKey)}</span>
                     </button>
                   );
                 })}
@@ -108,7 +110,7 @@ export default function Step4Amenities({
             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
             <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           </svg>
-          Listings with 3+ amenities get 40% more views. Select at least 3.
+          {t("host.step4.tip")}
         </p>
       )}
 
@@ -116,12 +118,12 @@ export default function Step4Amenities({
       <div className="flex flex-col sm:flex-row gap-3">
         <button type="button" onClick={onBack}
           className="flex-1 py-3.5 border border-[#1a0e02] text-[#1a0e02] font-semibold text-sm rounded-2xl hover:bg-[#1a0e02] hover:text-white transition-colors">
-          ← Back
+          {t("host.back")}
         </button>
         <button type="button" onClick={onNext}
           className="flex-[2] py-4 bg-[#8b5e38] font-bold text-base rounded-2xl hover:bg-[#7a5030] transition-colors shadow-sm"
           style={{ color: "#fff" }}>
-          Continue →
+          {t("host.continue")}
         </button>
       </div>
     </div>

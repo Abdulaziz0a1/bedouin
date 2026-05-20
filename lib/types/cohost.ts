@@ -106,6 +106,7 @@ export interface CoHostAssignment {
 export interface InviteModalListing {
   id: string;
   title: string;
+  title_ar?: string;
   region: string;
   image: string;
   status: "approved" | "pending_review" | "draft";

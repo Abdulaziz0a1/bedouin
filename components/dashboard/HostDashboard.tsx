@@ -15,15 +15,18 @@ import BookingsSection       from "./sections/BookingsSection";
 import EarningsSection       from "./sections/EarningsSection";
 import CoHostSection         from "./sections/CoHostSection";
 import NotificationsSection  from "@/components/notifications/NotificationsSection";
+import { useLanguage }       from "@/context/LanguageProvider";
 
 type Tab = "overview" | "listings" | "bookings" | "earnings" | "cohosts" | "notifications";
 
 const VALID_TABS = new Set<Tab>(["overview", "listings", "bookings", "earnings", "cohosts", "notifications"]);
 
-const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+type TabDef = { id: Tab; tKey: string; icon: React.ReactNode };
+
+const TAB_DEFS: TabDef[] = [
   {
     id: "overview",
-    label: "Overview",
+    tKey: "dash.tab.overview",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
         <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.7" />
@@ -35,7 +38,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   },
   {
     id: "listings",
-    label: "My Listings",
+    tKey: "dash.tab.listings",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
         <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
@@ -45,7 +48,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   },
   {
     id: "bookings",
-    label: "Bookings",
+    tKey: "dash.tab.bookings",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
         <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.7" />
@@ -55,7 +58,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   },
   {
     id: "earnings",
-    label: "Earnings",
+    tKey: "dash.tab.earnings",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
         <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
@@ -64,7 +67,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   },
   {
     id: "cohosts",
-    label: "Co-hosts",
+    tKey: "dash.tab.cohosts",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
         <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.7" />
@@ -76,7 +79,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   },
   {
     id: "notifications",
-    label: "Notifications",
+    tKey: "dash.tab.notifications",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
         <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
@@ -103,6 +106,7 @@ export default function HostDashboard({
   hostName:           string;
   hostAvatar:         string;
 }) {
+  const { t, lang }   = useLanguage();
   const searchParams  = useSearchParams();
   const tabParam      = searchParams.get("tab") as Tab | null;
   const resolvedTab   = tabParam && VALID_TABS.has(tabParam) ? tabParam : "overview";
@@ -115,7 +119,8 @@ export default function HostDashboard({
     if (tabParam && VALID_TABS.has(tabParam)) setActiveTab(tabParam);
   }, [tabParam]);
 
-  const fmtDate = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+  const dateLocale = lang === "ar" ? "ar-SA" : "en-GB";
+  const fmtDate = new Date().toLocaleDateString(dateLocale, { weekday: "long", day: "numeric", month: "long" });
 
   // Compute KPIs from real data.
   const kpis = useMemo(() => {
@@ -195,7 +200,7 @@ export default function HostDashboard({
 
           {/* Desktop tabs */}
           <nav className="hidden md:flex items-center gap-0.5 flex-1 justify-center">
-            {TABS.map((tab) => {
+            {TAB_DEFS.map((tab) => {
               const notifBadge = tab.id === "notifications" && notifications.filter((n) => n.isNew).length;
               const isActive = activeTab === tab.id;
               return (
@@ -224,7 +229,7 @@ export default function HostDashboard({
                     />
                   )}
                   <span style={{ opacity: isActive ? 1 : 0.7 }}>{tab.icon}</span>
-                  {tab.label}
+                  {t(tab.tKey)}
                   {!!notifBadge && (
                     <span
                       className="text-[9px] font-bold min-w-[16px] h-[16px] px-0.5 flex items-center justify-center rounded-full"
@@ -260,7 +265,7 @@ export default function HostDashboard({
             className="md:hidden px-4 py-3 flex flex-col gap-0.5"
             style={{ borderTop: "1px solid var(--border-light)" }}
           >
-            {TABS.map((tab) => {
+            {TAB_DEFS.map((tab) => {
               const notifBadge = tab.id === "notifications" && notifications.filter((n) => n.isNew).length;
               const isActive = activeTab === tab.id;
               return (
@@ -274,7 +279,7 @@ export default function HostDashboard({
                   }}
                 >
                   {tab.icon}
-                  {tab.label}
+                  {t(tab.tKey)}
                   {!!notifBadge && (
                     <span className="ml-auto text-[9px] font-bold min-w-[16px] h-[16px] px-0.5 flex items-center justify-center rounded-full bg-[#8b5e38] text-white">
                       {notifBadge > 99 ? "99+" : notifBadge}
@@ -294,12 +299,14 @@ export default function HostDashboard({
           <div>
             <p className="text-eyebrow mb-1.5">{fmtDate}</p>
             <h1 className="font-display font-extrabold text-[#1a0e02]" style={{ fontSize: "clamp(1.6rem, 3vw, 2rem)" }}>
-              Welcome back, {hostName.split(" ")[0]}
+              {t("dash.welcome_back")} {hostName.split(" ")[0]}
             </h1>
             <p className="text-[#64707d] text-sm mt-1.5 leading-snug">
-              {kpis.upcomingCount > 0
-                ? `You have ${kpis.upcomingCount} upcoming check-in${kpis.upcomingCount > 1 ? "s" : ""}.`
-                : "No upcoming check-ins. Your listings are ready for new guests."}
+              {kpis.upcomingCount === 0
+                ? t("dash.no_checkins")
+                : kpis.upcomingCount === 1
+                  ? t("dash.upcoming_one")
+                  : t("dash.upcoming_many").replace("{count}", String(kpis.upcomingCount))}
             </p>
           </div>
 
@@ -315,7 +322,7 @@ export default function HostDashboard({
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                 <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
               </svg>
-              Add new listing
+              {t("dash.add_listing")}
             </a>
           )}
         </div>

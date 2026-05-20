@@ -30,8 +30,10 @@ export interface ChatMessage {
 export interface ConversationContext {
   listingId: string;
   listingTitle: string;
+  listingTitle_ar?: string;
   listingImage: string;
   location: string;
+  location_ar?: string;
   region: string;
   checkIn?: string;         // ISO date — present when tied to a booking
   checkOut?: string;

@@ -7,16 +7,18 @@ import StatusBadge from "../shared/StatusBadge";
 import DashboardEmptyState from "../shared/DashboardEmptyState";
 import RequestListingCancellationModal from "@/components/host/shared/RequestListingCancellationModal";
 import { duplicateListing, removeSubmission } from "@/lib/actions/listing";
+import { useLanguage } from "@/context/LanguageProvider";
+import { getListingText } from "@/lib/utils/listing-locale";
 
 type Filter = "all" | "approved" | "pending_review" | "rejected" | "draft" | "cancelled";
 
-const FILTERS: { id: Filter; label: string }[] = [
-  { id: "all",            label: "All"       },
-  { id: "approved",       label: "Live"      },
-  { id: "pending_review", label: "In Review" },
-  { id: "rejected",       label: "Rejected"  },
-  { id: "cancelled",      label: "Cancelled" },
-  { id: "draft",          label: "Drafts"    },
+const FILTERS: { id: Filter; tKey: string }[] = [
+  { id: "all",            tKey: "dash.filter.all"       },
+  { id: "approved",       tKey: "dash.filter.live"      },
+  { id: "pending_review", tKey: "dash.filter.in_review" },
+  { id: "rejected",       tKey: "dash.filter.rejected"  },
+  { id: "cancelled",      tKey: "dash.filter.cancelled" },
+  { id: "draft",          tKey: "dash.filter.drafts"    },
 ];
 
 const STEP_NUMBER: Record<string, number> = {
@@ -29,43 +31,44 @@ const STEP_NUMBER: Record<string, number> = {
   media:          6,
 };
 
-const STEP_LABEL: Record<string, string> = {
-  category:       "Property Type",
-  description:    "Title & Description",
-  location:       "Location & Details",
-  capacity_rules: "Capacity & Rules",
-  amenities:      "Amenities",
-  pricing:        "Pricing",
-  media:          "Photos & Rules",
+// Maps step key → translation key for the step label
+const STEP_LABEL_KEY: Record<string, string> = {
+  category:       "dash.step.property_type",
+  description:    "dash.step.title_desc",
+  location:       "dash.step.location",
+  capacity_rules: "dash.step.capacity",
+  amenities:      "dash.step.amenities",
+  pricing:        "dash.step.pricing",
+  media:          "dash.step.photos",
 };
 
-/* ─── Confirm-removal modal ─────────────────────────────────────────────────── */
+/* ─── Remove modal copy keys ────────────────────────────────────────────────── */
 
 type RemoveVariant = "rejected" | "pending" | "draft";
 
-const REMOVE_COPY: Record<RemoveVariant, {
-  title: string;
-  body: string;
-  confirm: string;
-  cancel: string;
+const REMOVE_KEYS: Record<RemoveVariant, {
+  titleKey:   string;
+  bodyKey:    string;
+  confirmKey: string;
+  cancelKey:  string;
 }> = {
   rejected: {
-    title:   "Remove rejected submission?",
-    body:    "This submission was not approved. Removing it will delete it from your listings. This action cannot be undone.",
-    confirm: "Remove submission",
-    cancel:  "Keep it",
+    titleKey:   "dash.modal.rejected.title",
+    bodyKey:    "dash.modal.rejected.body",
+    confirmKey: "dash.modal.rejected.confirm",
+    cancelKey:  "dash.modal.rejected.cancel",
   },
   pending: {
-    title:   "Withdraw submission?",
-    body:    "This listing has not been approved yet. Withdrawing it will remove it from the admin review queue.",
-    confirm: "Withdraw",
-    cancel:  "Keep submission",
+    titleKey:   "dash.modal.pending.title",
+    bodyKey:    "dash.modal.pending.body",
+    confirmKey: "dash.modal.pending.confirm",
+    cancelKey:  "dash.modal.pending.cancel",
   },
   draft: {
-    title:   "Delete draft?",
-    body:    "This draft has not been submitted yet. Deleting it will remove it permanently.",
-    confirm: "Delete draft",
-    cancel:  "Keep draft",
+    titleKey:   "dash.modal.draft.title",
+    bodyKey:    "dash.modal.draft.body",
+    confirmKey: "dash.modal.draft.confirm",
+    cancelKey:  "dash.modal.draft.cancel",
   },
 };
 
@@ -82,13 +85,14 @@ function RemoveModal({
   onConfirm: () => void;
   onCancel:  () => void;
 }) {
-  const copy = REMOVE_COPY[variant];
+  const { t } = useLanguage();
+  const keys = REMOVE_KEYS[variant];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-        <h3 className="font-display font-bold text-[#1a0e02] text-lg mb-2">{copy.title}</h3>
-        <p className="text-sm text-[#64707d] leading-relaxed mb-5">{copy.body}</p>
+        <h3 className="font-display font-bold text-[#1a0e02] text-lg mb-2">{t(keys.titleKey)}</h3>
+        <p className="text-sm text-[#64707d] leading-relaxed mb-5">{t(keys.bodyKey)}</p>
 
         {error && (
           <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2 mb-4">
@@ -102,7 +106,7 @@ function RemoveModal({
             disabled={removing}
             className="flex-1 py-2.5 border border-[#e8dfd4] rounded-xl text-sm font-semibold text-[#64707d] hover:border-[#8b5e38] hover:text-[#1a0e02] transition-colors disabled:opacity-50"
           >
-            {copy.cancel}
+            {t(keys.cancelKey)}
           </button>
           <button
             onClick={onConfirm}
@@ -114,9 +118,9 @@ function RemoveModal({
                 <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
                   <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4" strokeDashoffset="15" />
                 </svg>
-                Removing…
+                {t("dash.removing")}
               </>
-            ) : copy.confirm}
+            ) : t(keys.confirmKey)}
           </button>
         </div>
       </div>
@@ -132,37 +136,34 @@ function RejectionNotice({
   rejectedSteps = [],
   rejectedStep,
 }: {
-  reason:        string;
-  submissionId:  string;
+  reason:         string;
+  submissionId:   string;
   rejectedSteps?: string[];
-  /** Legacy single step — used when rejectedSteps is empty (old DB rows). */
   rejectedStep?:  string;
 }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
 
-  // Normalise: prefer multi-step array, fall back to legacy single step
   const effectiveSteps = rejectedSteps.length > 0
     ? rejectedSteps
     : rejectedStep ? [rejectedStep] : [];
 
-  // Collect unique step numbers (in ascending order) for routing + display
   const stepEntries = [...new Map(
     effectiveSteps
-      .map((k) => ({ key: k, num: STEP_NUMBER[k], label: STEP_LABEL[k] }))
-      .filter((e) => e.num !== undefined)
+      .map((k) => ({ key: k, num: STEP_NUMBER[k], labelKey: STEP_LABEL_KEY[k] }))
+      .filter((e) => e.num !== undefined && e.labelKey !== undefined)
       .map((e) => [e.num, e] as [number, typeof e])
   ).values()].sort((a, b) => a.num - b.num);
 
-  // Route the CTA to the lowest-numbered rejected step
   const firstStepNum = stepEntries[0]?.num;
   const editHref     = firstStepNum
     ? `/host/listings/${submissionId}/edit?step=${firstStepNum}`
     : `/host/listings/${submissionId}/edit`;
 
-  const stepLabels = stepEntries.map((e) => e.label);
+  const stepLabels = stepEntries.map((e) => t(e.labelKey));
   const ctaLabel   = stepLabels.length === 1
-    ? `Fix ${stepLabels[0]} & resubmit`
-    : "Fix highlighted steps & resubmit";
+    ? t("dash.reject.fix_step").replace("{step}", stepLabels[0])
+    : t("dash.reject.fix_all");
 
   return (
     <div className="mt-3 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
@@ -175,7 +176,7 @@ function RejectionNotice({
             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
             <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
-          Why was this rejected?
+          {t("dash.reject.why")}
         </span>
         <svg
           width="14" height="14" viewBox="0 0 24 24" fill="none"
@@ -195,7 +196,7 @@ function RejectionNotice({
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
                     <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
-                  Fix needed: Step {e.num} — {e.label}
+                  {t("dash.reject.fix_needed").replace("{num}", String(e.num)).replace("{label}", t(e.labelKey))}
                 </div>
               ))}
             </div>
@@ -203,7 +204,6 @@ function RejectionNotice({
         </div>
       )}
 
-      {/* Steps chip list */}
       {stepLabels.length > 1 && (
         <div className="mt-2 flex flex-wrap gap-1">
           {stepLabels.map((label) => (
@@ -237,6 +237,8 @@ function CancellationRequestBanner({
   status: "pending" | "approved" | "rejected";
   adminNote?: string;
 }) {
+  const { t } = useLanguage();
+
   if (status === "pending") {
     return (
       <div className="mt-3 bg-[#fdf8ee] border border-[#ead9a6] rounded-xl px-4 py-3 flex items-start gap-2">
@@ -245,8 +247,7 @@ function CancellationRequestBanner({
           <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
         <p className="text-xs text-[#8b6a1f] leading-relaxed">
-          <span className="font-semibold">Cancellation requested</span> — our team is reviewing your request.
-          The listing remains active until a decision is made.
+          {t("dash.cancel_req.pending")}
         </p>
       </div>
     );
@@ -254,14 +255,14 @@ function CancellationRequestBanner({
   if (status === "rejected") {
     return (
       <div className="mt-3 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
-        <p className="text-xs font-semibold text-red-700 mb-1">Cancellation request rejected</p>
+        <p className="text-xs font-semibold text-red-700 mb-1">{t("dash.cancel_req.rejected_title")}</p>
         {adminNote ? (
           <p className="text-xs text-red-600 leading-relaxed">{adminNote}</p>
         ) : (
-          <p className="text-xs text-red-500 italic">No reason provided by admin.</p>
+          <p className="text-xs text-red-500 italic">{t("dash.cancel_req.no_reason")}</p>
         )}
         <p className="text-[10px] text-red-400 mt-1.5">
-          Your listing is still active. Contact support if you have questions.
+          {t("dash.cancel_req.still_active")}
         </p>
       </div>
     );
@@ -280,7 +281,10 @@ function ListingCard({
   onCancellationRequested: (id: string) => void;
   onRemoved:               (id: string) => void;
 }) {
+  const { t, lang } = useLanguage();
   const router = useRouter();
+  const displayTitle    = getListingText(listing.title,    listing.title_ar,    lang);
+  const displayLocation = getListingText(listing.location, listing.location_ar, lang);
 
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [removeModal,     setRemoveModal]     = useState(false);
@@ -336,7 +340,7 @@ function ListingCard({
         <div className="bg-white border-2 border-dashed border-[#dddfe3] rounded-2xl overflow-hidden">
           <div className="relative bg-[#f4f6f8] h-44 flex items-center justify-center">
             {listing.imageUrl ? (
-              <img src={listing.imageUrl} alt={listing.title} className="w-full h-full object-cover" />
+              <img src={listing.imageUrl} alt={displayTitle} className="w-full h-full object-cover" />
             ) : (
               <svg width="36" height="36" viewBox="0 0 24 24" fill="none" className="text-[#c4ccd8]">
                 <rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="1.4" />
@@ -347,23 +351,23 @@ function ListingCard({
             <div className="absolute top-3 left-3">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-semibold bg-[#f4f6f8] text-[#64707d] border-[#dddfe3]">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#a0aab8]" />
-                Draft from template
+                {t("dash.listing.draft_badge")}
               </span>
             </div>
           </div>
 
           <div className="p-5">
             <h3 className="font-display font-semibold text-[#1a0e02] text-sm leading-snug mb-1">
-              {listing.title || "Untitled listing"}
+              {displayTitle || t("dash.listing.untitled")}
             </h3>
             <p className="text-xs text-[#64707d] mb-4">
               {listing.category} · {listing.region}
-              {listing.location ? ` · ${listing.location}` : " · Location not set"}
+              {displayLocation ? ` · ${displayLocation}` : ` · ${t("dash.listing.location_not_set")}`}
             </p>
 
             <div className="bg-[#fdf8ee] border border-[#ead9a6] rounded-xl px-4 py-3 mb-4">
               <p className="text-xs text-[#8b6a1f] leading-relaxed">
-                Pre-filled from your original listing. Review and update the title, location, photos, and other key details before submitting.
+                {t("dash.listing.pre_filled")}
               </p>
             </div>
 
@@ -376,14 +380,14 @@ function ListingCard({
                   <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                Continue editing
+                {t("dash.listing.continue")}
               </a>
               <button
                 onClick={() => { setRemoveError(null); setRemoveModal(true); }}
                 className="px-3 py-2.5 border border-red-200 rounded-xl text-xs font-semibold text-red-500 hover:bg-red-50 transition-colors"
-                title="Delete this draft"
+                title={t("dash.listing.delete")}
               >
-                Delete
+                {t("dash.listing.delete")}
               </button>
             </div>
           </div>
@@ -411,7 +415,7 @@ function ListingCard({
           {listing.imageUrl ? (
             <img
               src={listing.imageUrl}
-              alt={listing.title}
+              alt={displayTitle}
               className="w-full h-44 object-cover"
             />
           ) : (
@@ -427,7 +431,7 @@ function ListingCard({
             <StatusBadge status={listing.status} />
             {hasPendingCancelReq && (
               <span className="text-[10px] font-bold bg-[#fdf8ee] text-[#8b6a1f] border border-[#ead9a6] px-2 py-0.5 rounded-full">
-                Cancellation pending
+                {t("dash.listing.cancellation_pending")}
               </span>
             )}
           </div>
@@ -440,9 +444,9 @@ function ListingCard({
 
         {/* Body */}
         <div className="p-5">
-          <h3 className="font-display font-semibold text-[#1a0e02] text-sm leading-snug mb-1">{listing.title}</h3>
+          <h3 className="font-display font-semibold text-[#1a0e02] text-sm leading-snug mb-1">{displayTitle}</h3>
           <p className="text-xs text-[#64707d] mb-3">
-            {listing.category} · {listing.region} · {listing.location}
+            {listing.category} · {listing.region} · {displayLocation}
           </p>
 
           {/* Price */}
@@ -459,11 +463,11 @@ function ListingCard({
             <div className="grid grid-cols-3 gap-2 mb-4">
               <div className="bg-[#faf7f4] rounded-xl px-3 py-2 text-center">
                 <p className="font-bold text-[#1a0e02] text-sm">{listing.totalBookings}</p>
-                <p className="text-[9px] text-[#64707d] uppercase tracking-wide font-bold mt-0.5">Bookings</p>
+                <p className="text-[9px] text-[#64707d] uppercase tracking-wide font-bold mt-0.5">{t("dash.listing.bookings_label")}</p>
               </div>
               <div className="bg-[#faf7f4] rounded-xl px-3 py-2 text-center">
                 <p className="font-bold text-[#1a0e02] text-sm">SAR {(listing.totalEarned / 1000).toFixed(1)}k</p>
-                <p className="text-[9px] text-[#64707d] uppercase tracking-wide font-bold mt-0.5">Earned</p>
+                <p className="text-[9px] text-[#64707d] uppercase tracking-wide font-bold mt-0.5">{t("dash.listing.earned_label")}</p>
               </div>
               <div className="bg-[#faf7f4] rounded-xl px-3 py-2 text-center">
                 <div className="flex items-center justify-center gap-0.5">
@@ -472,7 +476,7 @@ function ListingCard({
                   </svg>
                   <p className="font-bold text-[#1a0e02] text-sm">{listing.avgRating.toFixed(1)}</p>
                 </div>
-                <p className="text-[9px] text-[#64707d] uppercase tracking-wide font-bold mt-0.5">{listing.reviewCount} reviews</p>
+                <p className="text-[9px] text-[#64707d] uppercase tracking-wide font-bold mt-0.5">{listing.reviewCount} {t("card.reviews")}</p>
               </div>
             </div>
           )}
@@ -481,7 +485,7 @@ function ListingCard({
           {isPending && (
             <div className="bg-[#fdf8ee] border border-[#ead9a6] rounded-xl px-4 py-3 mb-4">
               <p className="text-xs text-[#8b6a1f] font-medium">
-                Submitted {fmtDate(listing.submittedAt)} · Usually approved within 48h
+                {t("dash.listing.submitted_at").replace("{date}", fmtDate(listing.submittedAt))}
               </p>
             </div>
           )}
@@ -490,7 +494,7 @@ function ListingCard({
           {isCancelled && (
             <div className="bg-[#f4f6f8] border border-[#dddfe3] rounded-xl px-4 py-3 mb-4">
               <p className="text-xs text-[#64707d] font-medium">
-                This listing has been deactivated following your cancellation request.
+                {t("dash.listing.deactivated")}
               </p>
             </div>
           )}
@@ -529,49 +533,44 @@ function ListingCard({
 
           {/* Action buttons */}
           <div className={`flex gap-2 flex-wrap ${isRejected || isPending || isLive || isCancelled ? "mt-4" : "mt-0"}`}>
-            {/* Live: view listing */}
             {isLive && listing.listingSlug && (
               <a
                 href={`/listing/${listing.listingSlug}`}
                 className="flex-1 py-2 border border-[#e8dfd4] rounded-xl text-xs font-semibold text-[#1a0e02] text-center hover:border-[#8b5e38] hover:text-[#8b5e38] transition-colors"
               >
-                View listing
+                {t("dash.listing.view")}
               </a>
             )}
 
-            {/* Pending: awaiting state + withdraw */}
             {isPending && (
               <span className="flex-1 py-2 border border-[#e8dfd4] rounded-xl text-xs font-semibold text-[#a09080] text-center cursor-default">
-                Awaiting review…
+                {t("dash.listing.awaiting_review")}
               </span>
             )}
 
-            {/* Rejected: edit button (alongside fix-notice above) */}
             {isRejected && (
               <a
                 href={`/host/listings/${listing.id}/edit`}
                 className="flex-1 py-2 border border-[#e8dfd4] rounded-xl text-xs font-semibold text-[#64707d] text-center hover:border-[#8b5e38] hover:text-[#8b5e38] transition-colors"
               >
-                Edit
+                {t("dash.listing.edit")}
               </a>
             )}
 
-            {/* Live: request cancellation */}
             {isLive && !hasPendingCancelReq && listing.cancellationRequestStatus !== "pending" && (
               <button
                 onClick={() => setShowCancelModal(true)}
                 className="px-3 py-2 border border-red-200 rounded-xl text-xs font-semibold text-red-500 hover:bg-red-50 transition-colors"
               >
-                Request cancellation
+                {t("dash.listing.request_cancel")}
               </button>
             )}
 
-            {/* Live / Pending: use as template */}
             {(isLive || isPending) && (
               <button
                 onClick={handleUseAsTemplate}
                 disabled={templating}
-                title="Start a new listing using this one as a template"
+                title={t("dash.listing.use_template")}
                 className="px-3 py-2 border border-[#e8dfd4] rounded-xl text-xs font-semibold text-[#64707d] hover:border-[#8b5e38] hover:text-[#8b5e38] transition-colors disabled:opacity-40 flex items-center gap-1"
               >
                 {templating ? (
@@ -579,7 +578,7 @@ function ListingCard({
                     <svg className="animate-spin w-3 h-3" viewBox="0 0 24 24" fill="none">
                       <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4" strokeDashoffset="15" />
                     </svg>
-                    Preparing…
+                    {t("dash.listing.preparing")}
                   </>
                 ) : (
                   <>
@@ -587,42 +586,39 @@ function ListingCard({
                       <path d="M8 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       <path d="M14 2v6h6M12 11v6M9 14h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
-                    Use as template
+                    {t("dash.listing.use_template")}
                   </>
                 )}
               </button>
             )}
 
-            {/* Rejected: remove submission */}
             {isRejected && (
               <button
                 onClick={() => { setRemoveError(null); setRemoveModal(true); }}
                 className="px-3 py-2 border border-red-200 rounded-xl text-xs font-semibold text-red-500 hover:bg-red-50 transition-colors"
-                title="Remove this rejected submission from your listings"
+                title={t("dash.listing.remove")}
               >
-                Remove
+                {t("dash.listing.remove")}
               </button>
             )}
 
-            {/* Pending: withdraw submission */}
             {isPending && (
               <button
                 onClick={() => { setRemoveError(null); setRemoveModal(true); }}
                 className="px-3 py-2 border border-red-200 rounded-xl text-xs font-semibold text-red-500 hover:bg-red-50 transition-colors"
-                title="Withdraw this submission from the review queue"
+                title={t("dash.listing.withdraw")}
               >
-                Withdraw
+                {t("dash.listing.withdraw")}
               </button>
             )}
           </div>
         </div>
       </div>
 
-      {/* Modals */}
       {showCancelModal && (
         <RequestListingCancellationModal
           submissionId={listing.id}
-          listingTitle={listing.title}
+          listingTitle={displayTitle}
           onClose={() => setShowCancelModal(false)}
           onSuccess={() => onCancellationRequested(listing.id)}
         />
@@ -644,6 +640,7 @@ function ListingCard({
 /* ─── Section ───────────────────────────────────────────────────────────────── */
 
 export default function ListingsSection({ listings: initialListings }: { listings: DashboardListing[] }) {
+  const { t } = useLanguage();
   const [filter,   setFilter]   = useState<Filter>("all");
   const [listings, setListings] = useState<DashboardListing[]>(initialListings);
 
@@ -659,7 +656,6 @@ export default function ListingsSection({ listings: initialListings }: { listing
     setListings((prev) => prev.filter((l) => l.id !== submissionId));
   };
 
-  // "All" excludes draft listings — they live only in the "Drafts" tab
   const filtered =
     filter === "all"
       ? listings.filter((l) => l.status !== "draft")
@@ -679,8 +675,8 @@ export default function ListingsSection({ listings: initialListings }: { listing
 
       {/* Header */}
       <div>
-        <h2 className="font-display font-semibold text-[#1a0e02] text-lg">My Listings</h2>
-        <p className="text-xs text-[#64707d] mt-0.5">{counts.all} properties managed</p>
+        <h2 className="font-display font-semibold text-[#1a0e02] text-lg">{t("dash.listings.title")}</h2>
+        <p className="text-xs text-[#64707d] mt-0.5">{t("dash.listings.managed").replace("{count}", String(counts.all))}</p>
       </div>
 
       {/* Filter tabs */}
@@ -696,7 +692,7 @@ export default function ListingsSection({ listings: initialListings }: { listing
                 : "bg-white border border-[#e8dfd4] text-[#64707d] hover:border-[#8b5e38]",
             ].join(" ")}
           >
-            {f.label}
+            {t(f.tKey)}
             {counts[f.id] > 0 && (
               <span className={`ml-1.5 ${filter === f.id ? "opacity-70" : "text-[#a09080]"}`}>
                 {counts[f.id]}
@@ -715,9 +711,9 @@ export default function ListingsSection({ listings: initialListings }: { listing
               <path d="M9 22V12h6v10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           }
-          title="No listings here"
-          description="You don't have any listings in this category yet."
-          action={{ label: "Add your first listing", href: "/host/new" }}
+          title={t("dash.empty.no_listings")}
+          description={t("dash.empty.no_listings_desc")}
+          action={{ label: t("dash.empty.add_first"), href: "/host/new" }}
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">

@@ -1,14 +1,18 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import { SubmittedListing } from "@/lib/types/host";
+import { useLanguage } from "@/context/LanguageProvider";
+import { getListingText } from "@/lib/utils/listing-locale";
 
-const CATEGORY_LABELS: Record<string, string> = {
-  farms:      "Farm Stay",
-  house:      "Heritage House",
-  guesthouse: "Guest House",
-  cabins:     "Highland Cabin",
-  glamping:   "Desert Glamping",
-  doms:       "Dome Suite",
+const CATEGORY_KEYS: Record<string, string> = {
+  farms:      "host.type.farms",
+  house:      "host.type.house",
+  guesthouse: "host.type.guesthouse",
+  cabins:     "host.type.cabins",
+  glamping:   "host.type.glamping",
+  doms:       "host.type.doms",
 };
 
 interface HostConfirmationProps {
@@ -16,6 +20,7 @@ interface HostConfirmationProps {
 }
 
 export default function HostConfirmation({ listing }: HostConfirmationProps) {
+  const { t, lang } = useLanguage();
   return (
     <div className="bg-[#f4efe6] min-h-[calc(100vh-72px)] py-12">
       <div className="max-w-[560px] mx-auto px-6 flex flex-col gap-8 items-center text-center">
@@ -35,11 +40,10 @@ export default function HostConfirmation({ listing }: HostConfirmationProps) {
 
           <div>
             <h1 className="font-display font-extrabold text-[#1a0e02] text-3xl mb-2">
-              Listing Submitted!
+              {t("host.confirm.submitted")}
             </h1>
             <p className="text-[#64707d] text-base leading-relaxed max-w-sm">
-              Your listing is now under review by the Bedouin team.
-              We'll get back to you within 1–2 business days.
+              {t("host.confirm.review_body")}
             </p>
           </div>
         </div>
@@ -47,7 +51,7 @@ export default function HostConfirmation({ listing }: HostConfirmationProps) {
         {/* ── Listing reference ─────────────────────────────────────────── */}
         <div className="bg-[#1a0e02] px-7 py-4 rounded-2xl flex flex-col items-center gap-1 w-full max-w-xs">
           <p className="text-[10px] font-bold text-white/50 uppercase tracking-[0.16em]">
-            Listing Reference
+            {t("host.confirm.reference")}
           </p>
           <p className="font-display font-extrabold text-[#c49a4f] text-xl tracking-[0.06em]">
             {listing.listingRef}
@@ -74,12 +78,12 @@ export default function HostConfirmation({ listing }: HostConfirmationProps) {
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
             <div className="absolute bottom-4 left-5">
               <p className="font-display font-bold text-white text-lg leading-tight">
-                {listing.title}
+                {getListingText(listing.title, listing.title_ar, lang)}
               </p>
               <div className="flex items-center gap-1.5 mt-0.5">
                 {listing.category && (
                   <span className="text-white/70 text-xs">
-                    {CATEGORY_LABELS[listing.category] ?? listing.category}
+                    {t(CATEGORY_KEYS[listing.category] ?? listing.category)}
                   </span>
                 )}
                 {listing.region && (
@@ -93,17 +97,17 @@ export default function HostConfirmation({ listing }: HostConfirmationProps) {
 
             {/* Pending badge */}
             <span className="absolute top-3 right-3 bg-[#f5c842] text-[#1a0e02] text-[10px] font-bold px-2.5 py-1 rounded-xl">
-              Pending Review
+              {t("host.confirm.pending")}
             </span>
           </div>
 
           {/* Details */}
           <div className="p-5 grid grid-cols-2 gap-4">
             {[
-              { label: "Category",   value: CATEGORY_LABELS[listing.category] ?? "—" },
-              { label: "Region",     value: listing.region || "—" },
-              { label: "Price",      value: listing.price > 0 ? `SAR ${listing.price} / person` : "—" },
-              { label: "Status",     value: "Pending Review" },
+              { label: t("host.confirm.category"), value: t(CATEGORY_KEYS[listing.category] ?? listing.category) || "—" },
+              { label: t("host.confirm.region"),   value: listing.region || "—" },
+              { label: t("host.confirm.price"),    value: listing.price > 0 ? `SAR ${listing.price} ${t("host.confirm.per_person")}` : "—" },
+              { label: t("host.confirm.status"),   value: t("host.confirm.pending") },
             ].map(({ label, value }) => (
               <div key={label}>
                 <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest mb-0.5">
@@ -126,13 +130,13 @@ export default function HostConfirmation({ listing }: HostConfirmationProps) {
               </svg>
             </div>
             <div>
-              <p className="font-semibold text-[#1a0e02] text-sm mb-2">What happens next?</p>
+              <p className="font-semibold text-[#1a0e02] text-sm mb-2">{t("host.confirm.next_title")}</p>
               <ul className="flex flex-col gap-2">
                 {[
-                  "Our team reviews your listing for quality and policy compliance (1–2 business days).",
-                  "You'll receive an email notification once your listing is approved or if changes are needed.",
-                  "Once approved, your listing goes live and guests can start booking.",
-                  "You can manage bookings, update pricing, and track earnings from your Host Dashboard.",
+                  t("host.confirm.next1"),
+                  t("host.confirm.next2"),
+                  t("host.confirm.next3"),
+                  t("host.confirm.next4"),
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-2 text-xs text-[#64707d] leading-relaxed">
                     <span className="w-4 h-4 rounded-full bg-[#f4efe6] border border-[#e8dfd4] text-[#8b5e38] text-[9px] font-bold flex items-center justify-center shrink-0 mt-0.5">
@@ -152,14 +156,14 @@ export default function HostConfirmation({ listing }: HostConfirmationProps) {
             href="/explore"
             className="flex-1 py-3.5 border border-[#1a0e02] text-[#1a0e02] font-semibold text-sm rounded-2xl text-center hover:bg-[#1a0e02] hover:text-white transition-colors"
           >
-            Explore the Platform
+            {t("host.confirm.explore")}
           </Link>
           <Link
             href="/host/new"
             className="flex-1 py-3.5 bg-[#8b5e38] font-bold text-sm rounded-2xl text-center hover:bg-[#7a5030] transition-colors"
             style={{ color: "#fff" }}
           >
-            Add Another Listing
+            {t("host.confirm.add_another")}
           </Link>
         </div>
       </div>

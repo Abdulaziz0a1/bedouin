@@ -1,27 +1,33 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import type { Conversation, ChatMessage } from "@/lib/types/messages";
 import { getOtherParticipant } from "@/lib/data/messages";
 import BookingContextBanner from "./BookingContextBanner";
+import { useLanguage } from "@/context/LanguageProvider";
+import { ensureFreshSession } from "@/lib/client/ensureFreshSession";
+import { getListingText } from "@/lib/utils/listing-locale";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ──────────────────────────────────────────────────────────────────────────────
 
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+function formatTime(iso: string, lang: string): string {
+  const locale = lang === "ar" ? "ar-SA" : "en-GB";
+  return new Date(iso).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
 }
 
-function formatDateSeparator(iso: string): string {
+function formatDateSeparator(iso: string, t: (k: string) => string, lang: string): string {
+  const locale = lang === "ar" ? "ar-SA" : "en-GB";
   const date = new Date(iso);
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
 
-  if (date.toDateString() === today.toDateString())     return "Today";
-  if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
-  return date.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+  if (date.toDateString() === today.toDateString())     return t("messages.today");
+  if (date.toDateString() === yesterday.toDateString()) return t("messages.yesterday");
+  return date.toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" });
 }
 
 function isSameDay(a: string, b: string): boolean {
@@ -45,6 +51,7 @@ function ChatBubble({
   avatar: string;
   isLast: boolean;
 }) {
+  const { lang } = useLanguage();
   return (
     <div className={`flex items-end gap-2.5 ${isMine ? "flex-row-reverse" : "flex-row"}`}>
       {/* Avatar — only for received messages at the start of a group */}
@@ -67,7 +74,7 @@ function ChatBubble({
           {message.text}
         </div>
         {isLast && (
-          <p className="text-[10px] text-[#a09080] px-1">{formatTime(message.sentAt)}</p>
+          <p className="text-[10px] text-[#a09080] px-1">{formatTime(message.sentAt, lang)}</p>
         )}
       </div>
     </div>
@@ -79,11 +86,12 @@ function ChatBubble({
 // ──────────────────────────────────────────────────────────────────────────────
 
 function DateSeparator({ iso }: { iso: string }) {
+  const { t, lang } = useLanguage();
   return (
     <div className="flex items-center gap-3 py-2">
       <div className="flex-1 h-px bg-[#f0e8de]" />
       <span className="text-[10px] font-bold text-[#a09080] bg-[#f0e8de] px-3 py-1 rounded-full shrink-0">
-        {formatDateSeparator(iso)}
+        {formatDateSeparator(iso, t, lang)}
       </span>
       <div className="flex-1 h-px bg-[#f0e8de]" />
     </div>
@@ -101,10 +109,13 @@ interface ChatWindowProps {
 }
 
 export default function ChatWindow({ conversation, myId, onBack }: ChatWindowProps) {
+  const { t, lang } = useLanguage();
+  const pathname    = usePathname();
   const other       = getOtherParticipant(conversation, myId);
   const [messages,  setMessages]  = useState<ChatMessage[]>(conversation.messages);
   const [input,     setInput]     = useState("");
   const [sending,   setSending]   = useState(false);
+  const [msgError,  setMsgError]  = useState<"session_expired" | null>(null);
   const bottomRef   = useRef<HTMLDivElement>(null);
   const inputRef    = useRef<HTMLTextAreaElement>(null);
 
@@ -124,6 +135,15 @@ export default function ChatWindow({ conversation, myId, onBack }: ChatWindowPro
     if (!text || sending) return;
 
     setSending(true);
+    setMsgError(null);
+
+    const sessionCheck = await ensureFreshSession();
+    if (!sessionCheck.ok) {
+      setSending(false);
+      setMsgError("session_expired");
+      return;
+    }
+
     setInput("");
 
     // Optimistic update — Firestore: addDoc(collection(db,"conversations",id,"messages"), msg)
@@ -202,7 +222,7 @@ export default function ChatWindow({ conversation, myId, onBack }: ChatWindowPro
           </div>
           {conversation.context && (
             <p className="text-[11px] text-[#64707d] truncate">
-              {conversation.context.listingTitle}
+              {getListingText(conversation.context.listingTitle, conversation.context.listingTitle_ar, lang)}
             </p>
           )}
         </div>
@@ -242,9 +262,9 @@ export default function ChatWindow({ conversation, myId, onBack }: ChatWindowPro
                 <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
               </svg>
             </div>
-            <p className="font-display font-semibold text-[#1a0e02] text-sm">Start the conversation</p>
+            <p className="font-display font-semibold text-[#1a0e02] text-sm">{t("messages.start_conv")}</p>
             <p className="text-xs text-[#64707d] max-w-xs">
-              Say hello to {other.firstName} and ask about your upcoming experience.
+              {t("messages.start_hello")}
             </p>
           </div>
         ) : (
@@ -280,7 +300,7 @@ export default function ChatWindow({ conversation, myId, onBack }: ChatWindowPro
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={`Message ${other.firstName}…`}
+              placeholder={t("messages.type_msg")}
               rows={1}
               className="w-full px-4 py-3 border border-[#e8dfd4] rounded-2xl text-sm text-[#1a0e02] placeholder:text-[#a09080] focus:outline-none focus:border-[#8b5e38] transition-colors resize-none bg-[#faf7f4] max-h-32 leading-relaxed"
               style={{ scrollbarWidth: "none" }}
@@ -303,9 +323,21 @@ export default function ChatWindow({ conversation, myId, onBack }: ChatWindowPro
             )}
           </button>
         </div>
-        <p className="text-[10px] text-[#a09080] mt-1.5 px-1">
-          Press Enter to send · Shift+Enter for new line
-        </p>
+        {msgError === "session_expired" ? (
+          <p className="text-[11px] text-[#7a4f22] mt-1.5 px-1">
+            {t("session.expired")}{" "}
+            <a
+              href={`/login?returnTo=${encodeURIComponent(pathname)}`}
+              className="font-semibold underline underline-offset-2"
+            >
+              {t("session.login_again")}
+            </a>
+          </p>
+        ) : (
+          <p className="text-[10px] text-[#a09080] mt-1.5 px-1">
+            {t("messages.enter_send")}
+          </p>
+        )}
       </div>
     </div>
   );

@@ -10,14 +10,9 @@ import UserEmptyState from "../shared/UserEmptyState";
 import LeaveReviewModal from "@/components/reviews/LeaveReviewModal";
 import UserAvatar from "@/components/ui/UserAvatar";
 import CancelBookingModal from "../shared/CancelBookingModal";
+import { useLanguage } from "@/context/LanguageProvider";
 
 type Tab = "upcoming" | "past";
-
-const PAYMENT_LABELS: Record<string, string> = {
-  card:      "Credit / Debit Card",
-  mada:      "Mada",
-  apple_pay: "Apple Pay",
-};
 
 function BookingCard({
   booking,
@@ -30,6 +25,7 @@ function BookingCard({
   isReviewed:    boolean;
   onReviewClick: () => void;
 }) {
+  const { t } = useLanguage();
   const [expanded, setExpanded]           = useState(false);
   const [showCancelModal, setShowCancel]  = useState(false);
 
@@ -44,6 +40,12 @@ function BookingCard({
   const daysUntil  = isUpcoming
     ? Math.ceil((checkIn.getTime() - Date.now()) / 86400000)
     : null;
+
+  const paymentLabel: Record<string, string> = {
+    card:      t("payment.card"),
+    mada:      t("payment.mada"),
+    apple_pay: t("payment.apple_pay"),
+  };
 
   return (
     <div className="bg-white border border-[#e8dfd4] rounded-2xl overflow-hidden">
@@ -82,7 +84,7 @@ function BookingCard({
               <span className={`text-xs font-semibold px-2 py-0.5 rounded-lg ${
                 daysUntil <= 3 ? "bg-[#fdf8ee] text-[#8b6a1f]" : "bg-[#f4f6f8] text-[#64707d]"
               }`}>
-                {daysUntil === 0 ? "Check-in today!" : daysUntil === 1 ? "Tomorrow" : `${daysUntil} days away`}
+                {daysUntil === 0 ? t("booking.today") : daysUntil === 1 ? t("booking.tomorrow") : `${daysUntil} ${t("booking.days_away")}`}
               </span>
             )}
           </div>
@@ -106,22 +108,22 @@ function BookingCard({
           {/* Date / guest strip */}
           <div className="flex flex-wrap gap-x-5 gap-y-1.5">
             <div>
-              <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">Check-in</p>
+              <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">{t("booking.check_in")}</p>
               <p className="text-xs font-semibold text-[#1a0e02]">{fmtShort(checkIn)}</p>
             </div>
             <div>
-              <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">Check-out</p>
+              <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">{t("booking.check_out")}</p>
               <p className="text-xs font-semibold text-[#1a0e02]">{fmtShort(checkOut)}</p>
             </div>
             <div>
-              <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">Nights</p>
+              <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">{t("booking.nights")}</p>
               <p className="text-xs font-semibold text-[#1a0e02]">{booking.nights}</p>
             </div>
             <div>
-              <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">Guests</p>
+              <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">{t("bookings.guests")}</p>
               <p className="text-xs font-semibold text-[#1a0e02]">
-                {booking.adults} adult{booking.adults > 1 ? "s" : ""}
-                {booking.children > 0 ? `, ${booking.children} child${booking.children > 1 ? "ren" : ""}` : ""}
+                {`${booking.adults} ${booking.adults > 1 ? t("bookings.adults_plural") : t("bookings.adults_singular")}`}
+                {booking.children > 0 ? `, ${booking.children} ${booking.children > 1 ? t("bookings.children") : t("bookings.child")}` : ""}
               </p>
             </div>
           </div>
@@ -143,7 +145,7 @@ function BookingCard({
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
                     <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
-                  Message
+                  {t("bookings.message")}
                 </Link>
               )}
               {booking.status === "completed" && (
@@ -152,14 +154,14 @@ function BookingCard({
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
                       <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
-                    Reviewed
+                    {t("bookings.reviewed")}
                   </span>
                 ) : (
                   <button
                     onClick={onReviewClick}
                     className="px-3 py-1.5 border border-[#c49a4f] rounded-xl text-xs font-semibold text-[#8b5e38] hover:bg-[#fdf5ee] transition-colors"
                   >
-                    Leave a review
+                    {t("bookings.leave_review")}
                   </button>
                 )
               )}
@@ -168,14 +170,14 @@ function BookingCard({
                   onClick={() => setShowCancel(true)}
                   className="px-3 py-1.5 border border-red-200 rounded-xl text-xs font-semibold text-red-500 hover:bg-red-50 transition-colors"
                 >
-                  Cancel
+                  {t("bookings.cancel")}
                 </button>
               )}
               <button
                 onClick={() => setExpanded(!expanded)}
                 className="px-3 py-1.5 border border-[#e8dfd4] rounded-xl text-xs font-semibold text-[#64707d] hover:border-[#8b5e38] hover:text-[#8b5e38] transition-colors flex items-center gap-1"
               >
-                Details
+                {t("bookings.details")}
                 <svg
                   width="12" height="12" viewBox="0 0 24 24" fill="none"
                   className={`transition-transform ${expanded ? "rotate-180" : ""}`}
@@ -196,7 +198,7 @@ function BookingCard({
             <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
           <div>
-            <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest mb-0.5">Your cancellation reason</p>
+            <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest mb-0.5">{t("bookings.cancel_reason")}</p>
             <p className="text-xs text-red-700 leading-relaxed">{booking.cancellationReason}</p>
           </div>
         </div>
@@ -221,18 +223,18 @@ function BookingCard({
 
             {/* Price breakdown */}
             <div>
-              <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest mb-3">Price breakdown</p>
+              <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest mb-3">{t("bookings.price_breakdown")}</p>
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-[#64707d]">SAR {booking.subtotal / booking.nights} × {booking.nights} nights</span>
                   <span className="font-medium text-[#1a0e02]">SAR {booking.subtotal.toLocaleString("en-US")}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-[#64707d]">Service fee (12%)</span>
+                  <span className="text-[#64707d]">{t("bookings.service_fee")}</span>
                   <span className="font-medium text-[#1a0e02]">SAR {booking.serviceFee.toLocaleString("en-US")}</span>
                 </div>
                 <div className="flex justify-between text-sm font-bold border-t border-[#e8dfd4] pt-2 mt-1">
-                  <span className="text-[#1a0e02]">Total</span>
+                  <span className="text-[#1a0e02]">{t("bookings.total")}</span>
                   <span className="text-[#1a0e02]">SAR {booking.totalPrice.toLocaleString("en-US")}</span>
                 </div>
               </div>
@@ -240,19 +242,19 @@ function BookingCard({
 
             {/* Booking info */}
             <div>
-              <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest mb-3">Booking info</p>
+              <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest mb-3">{t("bookings.booking_info")}</p>
               <div className="flex flex-col gap-2">
                 <div>
-                  <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">Check-in</p>
+                  <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">{t("booking.check_in")}</p>
                   <p className="text-sm font-semibold text-[#1a0e02]">{fmtDate(checkIn)}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">Check-out</p>
+                  <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">{t("booking.check_out")}</p>
                   <p className="text-sm font-semibold text-[#1a0e02]">{fmtDate(checkOut)}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">Payment</p>
-                  <p className="text-sm font-semibold text-[#1a0e02]">{PAYMENT_LABELS[booking.paymentMethod]}</p>
+                  <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">{t("bookings.payment")}</p>
+                  <p className="text-sm font-semibold text-[#1a0e02]">{paymentLabel[booking.paymentMethod]}</p>
                 </div>
               </div>
             </div>
@@ -267,7 +269,7 @@ function BookingCard({
               className="border border-[#e8dfd4] shrink-0"
             />
             <div>
-              <p className="text-xs text-[#a09080]">Your host</p>
+              <p className="text-xs text-[#a09080]">{t("bookings.your_host")}</p>
               <p className="text-sm font-semibold text-[#1a0e02]">{booking.hostName}</p>
             </div>
             {booking.hostId && (
@@ -275,7 +277,7 @@ function BookingCard({
                 href={`/messages?with=${booking.hostId}&booking=${booking.id}`}
                 className="ml-auto px-3 py-1.5 border border-[#e8dfd4] rounded-xl text-xs font-semibold text-[#64707d] hover:border-[#8b5e38] hover:text-[#8b5e38] transition-colors"
               >
-                Message host
+                {t("bookings.message_host")}
               </Link>
             )}
           </div>
@@ -290,6 +292,7 @@ function BookingCard({
 // ──────────────────────────────────────────────────────────────────────────────
 
 function CohostAssignmentCard({ assignment }: { assignment: CohostAssignmentItem }) {
+  const { t } = useLanguage();
   const fmtDate = (iso: string) =>
     new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
@@ -299,7 +302,7 @@ function CohostAssignmentCard({ assignment }: { assignment: CohostAssignmentItem
       <div className="bg-[#f0faf5] border-b border-[#9edcbb] px-5 py-2 flex items-center gap-2">
         <span className="w-2 h-2 rounded-full bg-[#049153] animate-pulse shrink-0" />
         <span className="text-[10px] font-bold text-[#049153] uppercase tracking-widest">
-          Active Co-host Assignment
+          {t("bookings.cohost_status")}
         </span>
       </div>
 
@@ -338,12 +341,12 @@ function CohostAssignmentCard({ assignment }: { assignment: CohostAssignmentItem
           {/* Date strip */}
           <div className="flex flex-wrap gap-x-5 gap-y-1.5">
             <div>
-              <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">Assigned since</p>
+              <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">{t("bookings.assigned_since")}</p>
               <p className="text-xs font-semibold text-[#1a0e02]">{fmtDate(assignment.assignedAt)}</p>
             </div>
             <div>
-              <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">Role</p>
-              <p className="text-xs font-semibold text-[#1a0e02]">Co-host</p>
+              <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">{t("bookings.role")}</p>
+              <p className="text-xs font-semibold text-[#1a0e02]">{t("bookings.cohost_role")}</p>
             </div>
           </div>
 
@@ -369,13 +372,13 @@ function CohostAssignmentCard({ assignment }: { assignment: CohostAssignmentItem
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
                 <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              Message host
+              {t("bookings.message_host")}
             </Link>
             <Link
               href={`/listing/${assignment.listingId}`}
               className="px-3 py-1.5 border border-[#e8dfd4] rounded-xl text-xs font-semibold text-[#64707d] hover:border-[#8b5e38] hover:text-[#8b5e38] hover:bg-[#fdf5ee] transition-colors"
             >
-              View listing
+              {t("bookings.view_listing")}
             </Link>
           </div>
         </div>
@@ -397,6 +400,7 @@ export default function UserBookingsSection({
   cohostAssignments?:  CohostAssignmentItem[];
   reviewedBookingIds?: string[];
 }) {
+  const { t } = useLanguage();
   const [tab, setTab]       = useState<Tab>("upcoming");
   // Local state so cancellation reflects immediately without a page reload.
   const [bookings, setBookings] = useState<UserBooking[]>(initialBookings);
@@ -435,13 +439,13 @@ export default function UserBookingsSection({
       <div className="flex items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-0.5">
-            <h2 className="font-display font-semibold text-[#1a0e02] text-lg">Guest Bookings</h2>
+            <h2 className="font-display font-semibold text-[#1a0e02] text-lg">{t("bookings.guest_bookings")}</h2>
             <span className="text-[10px] font-bold text-[#8b5e38] bg-[#fdf5ee] border border-[#e8c89a] px-2 py-0.5 rounded-full uppercase tracking-wide">
-              As a guest
+              {t("bookings.as_guest")}
             </span>
           </div>
           <p className="text-xs text-[#64707d]">
-            {upcoming.length} upcoming · {past.filter((b) => b.status === "completed").length} completed
+            {upcoming.length} {t("bookings.tab_upcoming").toLowerCase()} · {past.filter((b) => b.status === "completed").length} {t("activity.completed").toLowerCase()}
           </p>
         </div>
         <Link
@@ -451,26 +455,26 @@ export default function UserBookingsSection({
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
             <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
           </svg>
-          Book new
+          {t("bookings.book_new")}
         </Link>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-1 bg-[#f0e8de] rounded-xl p-1 w-fit">
-        {(["upcoming", "past"] as Tab[]).map((t) => (
+        {(["upcoming", "past"] as Tab[]).map((tabKey) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
+            key={tabKey}
+            onClick={() => setTab(tabKey)}
             className={[
               "px-5 py-2 rounded-lg text-sm font-semibold transition-all",
-              tab === t
+              tab === tabKey
                 ? "bg-white text-[#1a0e02] shadow-sm"
                 : "text-[#64707d] hover:text-[#1a0e02]",
             ].join(" ")}
           >
-            {t === "upcoming" ? "Upcoming" : "Past"}
-            <span className={`ml-1.5 text-xs ${tab === t ? "text-[#8b5e38]" : "text-[#a09080]"}`}>
-              {t === "upcoming" ? upcoming.length : past.length}
+            {tabKey === "upcoming" ? t("bookings.tab_upcoming") : t("bookings.tab_past")}
+            <span className={`ml-1.5 text-xs ${tab === tabKey ? "text-[#8b5e38]" : "text-[#a09080]"}`}>
+              {tabKey === "upcoming" ? upcoming.length : past.length}
             </span>
           </button>
         ))}
@@ -495,13 +499,13 @@ export default function UserBookingsSection({
               <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
             </svg>
           }
-          title={tab === "upcoming" ? "No upcoming trips" : "No past bookings"}
+          title={tab === "upcoming" ? t("bookings.no_upcoming.title") : t("bookings.no_past.title")}
           description={
             tab === "upcoming"
-              ? "Start exploring Saudi Arabia and book your first experience."
-              : "Your completed and cancelled bookings will appear here."
+              ? t("bookings.no_upcoming.desc")
+              : t("bookings.no_past.desc")
           }
-          action={tab === "upcoming" ? { label: "Explore experiences", href: "/explore" } : undefined}
+          action={tab === "upcoming" ? { label: t("bookings.explore"), href: "/explore" } : undefined}
         />
       ) : (
         <div className="flex flex-col gap-4">
@@ -539,14 +543,14 @@ export default function UserBookingsSection({
           <div className="flex-1 h-px bg-[#e8dfd4]" />
         </div>
         <div className="flex items-center gap-3">
-          <h2 className="font-display font-semibold text-[#1a0e02] text-lg">My Co-host Assignments</h2>
+          <h2 className="font-display font-semibold text-[#1a0e02] text-lg">{t("bookings.cohost_section")}</h2>
           <span className="text-[10px] font-bold text-[#049153] bg-[#f0faf5] border border-[#9edcbb] px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-[#049153]" />
-            {cohostAssignments.length} active
+            {cohostAssignments.length} {t("bookings.cohost_active")}
           </span>
         </div>
         <p className="text-xs text-[#64707d] -mt-4">
-          Listings you are actively co-hosting — this is not a guest booking.
+          {t("bookings.cohost_desc")}
         </p>
 
         <div className="flex flex-col gap-4">

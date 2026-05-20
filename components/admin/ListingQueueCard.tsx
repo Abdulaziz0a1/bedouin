@@ -3,6 +3,8 @@
 import type { AdminListing } from "@/lib/types/admin";
 import AdminStatusBadge from "./shared/AdminStatusBadge";
 import UserAvatar from "@/components/ui/UserAvatar";
+import { useLanguage } from "@/context/LanguageProvider";
+import { getListingText } from "@/lib/utils/listing-locale";
 
 interface ListingQueueCardProps {
   listing: AdminListing;
@@ -21,6 +23,8 @@ function timeAgo(iso: string): string {
 export default function ListingQueueCard({
   listing, isSelected, onClick,
 }: ListingQueueCardProps) {
+  const { lang } = useLanguage();
+  const displayTitle = getListingText(listing.title, listing.title_ar, lang);
   return (
     <button
       onClick={onClick}
@@ -35,7 +39,7 @@ export default function ListingQueueCard({
       <div className="relative shrink-0 w-14 h-12 rounded-xl overflow-hidden">
         <img
           src={listing.imageUrls[0]}
-          alt={listing.title}
+          alt={displayTitle}
           className="w-full h-full object-cover"
           onError={(e) => { e.currentTarget.style.display = "none"; }}
         />
@@ -48,7 +52,7 @@ export default function ListingQueueCard({
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-1.5 mb-1">
           <p className="text-sm font-semibold text-[#1a0e02] leading-snug line-clamp-1 flex-1">
-            {listing.title}
+            {displayTitle}
           </p>
           <AdminStatusBadge status={listing.status} size="sm" />
         </div>

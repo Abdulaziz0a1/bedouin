@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useLanguage } from "@/context/LanguageProvider";
 
 const FALLBACK_IMG = "https://picsum.photos/seed/bedouin-destination/600/900";
 
@@ -18,32 +19,41 @@ export default function DestinationCard({
   city, fromPrice, description, image, href = "/explore",
 }: DestinationCardProps) {
   const [imgSrc, setImgSrc] = useState(image || FALLBACK_IMG);
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const { t } = useLanguage();
+
   return (
     <Link
       href={href}
-      className="relative w-[280px] h-[480px] rounded-3xl overflow-hidden shrink-0 block group"
+      className="relative w-[272px] h-[460px] rounded-[22px] overflow-hidden shrink-0 block group"
       style={{
-        boxShadow: "0 8px 32px rgba(26,14,2,0.18), 0 2px 8px rgba(26,14,2,0.10)",
-        transition: "box-shadow 0.35s cubic-bezier(0.16,1,0.3,1), transform 0.35s cubic-bezier(0.16,1,0.3,1)",
+        boxShadow: "0 8px 36px rgba(26,14,2,0.16), 0 2px 8px rgba(26,14,2,0.09)",
+        transition: "box-shadow 0.36s cubic-bezier(0.16,1,0.3,1), transform 0.36s cubic-bezier(0.16,1,0.3,1)",
         willChange: "transform, box-shadow",
+        background: "#1a0e02",
       }}
       onMouseEnter={(e) => {
         const el = e.currentTarget as HTMLAnchorElement;
-        el.style.boxShadow = "0 24px 64px rgba(26,14,2,0.38), 0 8px 20px rgba(26,14,2,0.18)";
-        el.style.transform = "translateY(-8px) scale(1.012)";
+        el.style.boxShadow = "0 28px 70px rgba(26,14,2,0.36), 0 8px 24px rgba(26,14,2,0.16)";
+        el.style.transform = "translateY(-8px) scale(1.010)";
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget as HTMLAnchorElement;
-        el.style.boxShadow = "0 8px 32px rgba(26,14,2,0.18), 0 2px 8px rgba(26,14,2,0.10)";
+        el.style.boxShadow = "0 8px 36px rgba(26,14,2,0.16), 0 2px 8px rgba(26,14,2,0.09)";
         el.style.transform = "translateY(0) scale(1)";
       }}
     >
+      {/* Skeleton shimmer while image loads */}
+      {!imgLoaded && (
+        <div className="absolute inset-0 skeleton-img" aria-hidden="true" />
+      )}
       <Image
         src={imgSrc}
         alt={city}
         fill
-        onError={() => setImgSrc(FALLBACK_IMG)}
-        className="object-cover group-hover:scale-[1.08] transition-transform duration-700"
+        onLoad={() => setImgLoaded(true)}
+        onError={() => { setImgSrc(FALLBACK_IMG); setImgLoaded(true); }}
+        className={`object-cover group-hover:scale-[1.08] transition-all duration-700 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
         style={{ transitionTimingFunction: "cubic-bezier(0.16,1,0.3,1)" }}
         sizes="280px"
       />
@@ -53,8 +63,8 @@ export default function DestinationCard({
         className="absolute inset-0"
         style={{
           background: [
-            "linear-gradient(to bottom, rgba(26,14,2,0.08) 35%, rgba(26,14,2,0.78) 80%, rgba(26,14,2,0.95) 100%)",
-            "linear-gradient(to top right, rgba(70,30,0,0.25) 0%, transparent 60%)",
+            "linear-gradient(to bottom, rgba(16,8,0,0.04) 25%, rgba(16,8,0,0.60) 72%, rgba(8,4,0,0.96) 100%)",
+            "linear-gradient(to top right, rgba(70,30,0,0.22) 0%, transparent 55%)",
           ].join(", "),
         }}
       />
@@ -78,17 +88,24 @@ export default function DestinationCard({
       {/* Content */}
       <div className="absolute bottom-0 left-0 right-0 px-5 py-6 flex flex-col gap-1.5">
         {/* City name */}
-        <h3 className="text-white font-display font-extrabold text-2xl leading-tight tracking-tight">
+        <h3
+          className="text-white font-display font-extrabold leading-tight"
+          style={{
+            fontSize: "clamp(1.25rem, 2.2vw, 1.5rem)",
+            letterSpacing: "-0.025em",
+            textShadow: "0 2px 16px rgba(0,0,0,0.40)",
+          }}
+        >
           {city}
         </h3>
 
         {/* Price */}
-        <div className="flex items-baseline gap-1">
-          <span className="text-white/65 text-sm">From</span>
+        <div className="flex items-baseline gap-1 mt-0.5">
+          <span className="text-white/60 text-xs font-medium">{t("dest.from")}</span>
           <span
-            className="text-base font-bold"
+            className="text-[0.9375rem] font-bold"
             style={{
-              background: "linear-gradient(90deg, #c49a4f, #f0c84a)",
+              background: "linear-gradient(90deg, #d4aa5f, #f0c84a)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               backgroundClip: "text",
@@ -96,15 +113,15 @@ export default function DestinationCard({
           >
             SAR {fromPrice}
           </span>
-          <span className="text-white/55 text-sm">/night</span>
+          <span className="text-white/50 text-xs font-medium">{t("dest.per_night")}</span>
         </div>
 
-        <p className="text-white/70 text-sm leading-snug mt-0.5">{description}</p>
+        <p className="text-white/68 text-[0.8rem] leading-snug mt-1">{description}</p>
 
         {/* Explore arrow — appears on hover */}
-        <div className="flex items-center gap-1.5 mt-3 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-1 group-hover:translate-y-0">
-          <span className="text-[#c49a4f] text-xs font-bold uppercase tracking-[0.14em]">Explore</span>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+        <div className="flex items-center gap-1.5 mt-3.5 opacity-0 group-hover:opacity-100 transition-all duration-280 translate-y-1.5 group-hover:translate-y-0">
+          <span className="text-[#c49a4f] text-[0.7rem] font-bold uppercase tracking-[0.16em]">{t("nav.explore")}</span>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
             <path d="M9 18l6-6-6-6" stroke="#c49a4f" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>

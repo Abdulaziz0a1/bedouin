@@ -9,10 +9,13 @@ import type { SubmittedListing } from "@/lib/types/host";
 export interface ListingPayload {
   category:         string;
   title:            string;
+  title_ar?:        string;
   description:      string;
+  description_ar?:  string;
   highlights:       string[];
   region:           string;
   location:         string;
+  location_ar?:     string;
   mapsUrl:          string;
   maxGuests:        number;
   bedrooms:         number;

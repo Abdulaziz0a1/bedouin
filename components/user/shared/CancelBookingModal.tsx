@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { cancelBooking } from "@/lib/actions/booking";
+import { useLanguage } from "@/context/LanguageProvider";
 
 interface CancelBookingModalProps {
   bookingId:    string;
@@ -23,6 +24,7 @@ export default function CancelBookingModal({
   const [reason, setReason]   = useState("");
   const [error, setError]     = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const { t } = useLanguage();
 
   const fmtDate = (iso: string) =>
     new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -57,7 +59,7 @@ export default function CancelBookingModal({
           </div>
           <div>
             <h2 className="font-display font-bold text-[#1a0e02] text-base leading-snug">
-              Cancel your booking?
+              {t("cancel.title")}
             </h2>
             <p className="text-xs text-[#64707d] mt-0.5">
               {listingTitle} · {fmtDate(checkIn)} – {fmtDate(checkOut)}
@@ -68,24 +70,24 @@ export default function CancelBookingModal({
         {/* Body */}
         <div className="px-6 py-5 flex flex-col gap-4">
           <p className="text-sm text-[#64707d] leading-relaxed">
-            This action cannot be undone. Your booking will be permanently cancelled.
+            {t("cancel.body")}
           </p>
 
           {/* Optional reason */}
           <div>
             <label className="block text-[10px] font-bold text-[#64707d] uppercase tracking-widest mb-1.5">
-              Would you like to tell us why you are cancelling?
-              <span className="ml-1 text-[#a09080] font-normal normal-case tracking-normal">(optional)</span>
+              {t("cancel.reason_label")}
+              <span className="ml-1 text-[#a09080] font-normal normal-case tracking-normal">{t("cancel.optional")}</span>
             </label>
             <textarea
               rows={3}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="e.g. Change of plans, found another option…"
+              placeholder={t("cancel.placeholder")}
               className="w-full border border-[#e8dfd4] rounded-xl px-3 py-2.5 text-sm text-[#1a0e02] placeholder:text-[#a09080] focus:outline-none focus:border-[#8b5e38] resize-none transition-colors"
             />
             <p className="text-[10px] text-[#a09080] mt-1">
-              Your feedback helps us improve. This is optional.
+              {t("cancel.feedback")}
             </p>
           </div>
 
@@ -104,7 +106,7 @@ export default function CancelBookingModal({
             disabled={isPending}
             className="flex-1 py-3 border border-[#e8dfd4] rounded-2xl text-sm font-semibold text-[#64707d] hover:bg-[#f0e8de] transition-colors disabled:opacity-50"
           >
-            Keep booking
+            {t("cancel.keep")}
           </button>
           <button
             type="button"
@@ -117,10 +119,10 @@ export default function CancelBookingModal({
                 <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
                   <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="30 70" />
                 </svg>
-                Cancelling…
+                {t("cancel.confirming")}
               </>
             ) : (
-              "Yes, cancel booking"
+              t("cancel.confirm")
             )}
           </button>
         </div>

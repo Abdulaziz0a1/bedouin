@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { requestWithdrawal, respondToInvitation } from "@/lib/actions/cohost";
 import { SERVICE_LABELS } from "@/lib/data/cohost";
 import type { CohostAssignmentItem, CohostInboxItem } from "@/lib/services/cohost";
+import { useLanguage } from "@/context/LanguageProvider";
 
 type CohostStatus = "pending" | "approved" | "rejected" | null;
 
@@ -11,8 +12,9 @@ type CohostStatus = "pending" | "approved" | "rejected" | null;
 // Shared helpers
 // ──────────────────────────────────────────────────────────────────────────────
 
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-GB", {
+function fmtDate(iso: string, lang: string) {
+  const locale = lang === "ar" ? "ar-SA" : "en-GB";
+  return new Date(iso).toLocaleDateString(locale, {
     day: "numeric", month: "short", year: "numeric",
   });
 }
@@ -59,6 +61,7 @@ function InlineInvitationCard({
   item:      CohostInboxItem;
   onRespond: (id: string, decision: "accepted" | "declined") => Promise<void>;
 }) {
+  const { lang } = useLanguage();
   const [localStatus,  setLocalStatus]  = useState(item.status);
   const [pending, startTransition] = useTransition();
 
@@ -85,7 +88,7 @@ function InlineInvitationCard({
             <p className="font-display font-semibold text-[#1a0e02] text-sm truncate">{item.listingTitle}</p>
             <p className="text-xs text-[#64707d]">
               From <span className="font-semibold text-[#8b5e38]">{item.hostName}</span>
-              {" · "}{fmtDate(item.sentAt)}
+              {" · "}{fmtDate(item.sentAt, lang)}
             </p>
           </div>
           {localStatus !== "pending" && (
@@ -187,6 +190,7 @@ function AssignmentCard({
   assignment:            CohostAssignmentItem;
   onWithdrawalRequested: (id: string) => void;
 }) {
+  const { lang } = useLanguage();
   const [localStatus, setLocalStatus] = useState(assignment.status ?? "active");
   const [confirming,  setConfirming]  = useState(false);
   const [pending,     startTransition] = useTransition();
@@ -238,7 +242,7 @@ function AssignmentCard({
           </p>
           <p className="text-[11px] text-[#64707d] mb-3">
             Host: <span className="font-semibold text-[#8b5e38]">{assignment.hostName}</span>
-            {" · "}Since {fmtDate(assignment.assignedAt)}
+            {" · "}Since {fmtDate(assignment.assignedAt, lang)}
           </p>
 
           {isWithdrawalPending ? (

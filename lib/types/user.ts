@@ -58,7 +58,9 @@ export interface SavedListing {
   id: string;             // Firestore document id
   listingId: string;
   title: string;
+  title_ar?: string;
   location: string;
+  location_ar?: string;
   region: string;
   category: string;
   price: number;

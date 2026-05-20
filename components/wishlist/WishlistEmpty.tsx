@@ -3,12 +3,15 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { RecommendedListing } from "@/lib/data/wishlist";
+import { useLanguage } from "@/context/LanguageProvider";
+import { getListingText } from "@/lib/utils/listing-locale";
 
 interface WishlistEmptyProps {
   recommended: RecommendedListing[];
 }
 
 function RecommendedCard({ listing }: { listing: RecommendedListing }) {
+  const { lang } = useLanguage();
   const discountPct =
     listing.originalPrice && listing.originalPrice > listing.price
       ? Math.round(((listing.originalPrice - listing.price) / listing.originalPrice) * 100)
@@ -52,13 +55,13 @@ function RecommendedCard({ listing }: { listing: RecommendedListing }) {
       {/* Body */}
       <div className="px-4 pt-3 pb-4 flex flex-col gap-1.5 flex-1">
         <h3 className="font-display font-semibold text-[#1a0e02] text-sm leading-snug line-clamp-2 group-hover:text-[#8b5e38] transition-colors">
-          {listing.title}
+          {getListingText(listing.title, listing.title_ar, lang)}
         </h3>
         <p className="text-xs text-[#64707d] flex items-center gap-1 truncate">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
           </svg>
-          {listing.location}
+          {getListingText(listing.location, listing.location_ar, lang)}
         </p>
         <div className="mt-auto pt-2.5 border-t border-[#f0e8de] flex items-center justify-between">
           <div className="flex items-baseline gap-1">

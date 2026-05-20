@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 interface GalleryGridProps {
   images: string[];
@@ -10,10 +11,29 @@ interface GalleryGridProps {
 
 export default function GalleryGrid({ images, title }: GalleryGridProps) {
   const [lightbox, setLightbox] = useState<number | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   // Ensure we have at least 5 images (pad if needed)
   const imgs = [...images];
   while (imgs.length < 5) imgs.push(imgs[0]);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    if (lightbox === null) return;
+    const len = imgs.length;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLightbox(null);
+      else if (e.key === "ArrowLeft") setLightbox((p) => ((p ?? 0) - 1 + len) % len);
+      else if (e.key === "ArrowRight") setLightbox((p) => ((p ?? 0) + 1) % len);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [lightbox, imgs.length]);
 
   return (
     <>
@@ -88,13 +108,13 @@ export default function GalleryGrid({ images, title }: GalleryGridProps) {
         </div>
       </div>
 
-      {/* ── Lightbox ──────────────────────────────────────────────────────── */}
-      {lightbox !== null && (
+      {/* ── Lightbox (portal — escapes any transformed ancestor) ─────────── */}
+      {mounted && lightbox !== null && createPortal(
         <div
           className="fixed inset-0 z-[200] bg-black/90 flex items-center justify-center"
           onClick={() => setLightbox(null)}
         >
-          {/* Close button */}
+          {/* Close */}
           <button
             className="absolute top-5 right-5 text-white/80 hover:text-white w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
             onClick={() => setLightbox(null)}
@@ -107,7 +127,7 @@ export default function GalleryGrid({ images, title }: GalleryGridProps) {
           {/* Prev */}
           <button
             className="absolute left-4 top-1/2 -translate-y-1/2 text-white w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
-            onClick={(e) => { e.stopPropagation(); setLightbox((prev) => (prev! - 1 + imgs.length) % imgs.length); }}
+            onClick={(e) => { e.stopPropagation(); setLightbox((p) => ((p ?? 0) - 1 + imgs.length) % imgs.length); }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
               <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -131,7 +151,7 @@ export default function GalleryGrid({ images, title }: GalleryGridProps) {
           {/* Next */}
           <button
             className="absolute right-4 top-1/2 -translate-y-1/2 text-white w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
-            onClick={(e) => { e.stopPropagation(); setLightbox((prev) => (prev! + 1) % imgs.length); }}
+            onClick={(e) => { e.stopPropagation(); setLightbox((p) => ((p ?? 0) + 1) % imgs.length); }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
               <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -142,7 +162,8 @@ export default function GalleryGrid({ images, title }: GalleryGridProps) {
           <p className="absolute bottom-5 left-1/2 -translate-x-1/2 text-white/70 text-sm">
             {lightbox + 1} / {imgs.length}
           </p>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

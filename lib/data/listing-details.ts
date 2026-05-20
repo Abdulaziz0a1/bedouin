@@ -43,7 +43,9 @@ export interface RatingBreakdown {
 export interface ListingDetail extends Listing {
   images: string[];      // all gallery images (6+)
   description: string;
+  description_ar?: string;
   highlights: string[];
+  highlights_ar?: string[];
   host: Host;
   amenities: Amenity[];
   reviews: Review[];
@@ -74,11 +76,19 @@ const DETAIL_MAP: Record<string, Omit<ListingDetail, keyof Listing>> = {
     ],
     description:
       "Wake up to the stars above and ancient sandstone formations around you. Nestled in a private valley minutes from Madain Saleh, this geodesic dome offers an unrivalled combination of astronomy and heritage. The interior is fitted with floor-to-ceiling panoramic glass, a king-size bed, private plunge pool, and a dedicated telescope deck. Our resident astronomer hosts a nightly stargazing session (included). During the day, explore the 2,000-year-old Nabataean tombs or take a guided jeep safari.",
+    description_ar:
+      "استيقظ على النجوم في السماء والتكوينات الحجرية القديمة من حولك. تقع هذه القبة الجيوديسية في وادٍ خاص على بُعد دقائق من مدائن صالح، وتقدم مزيجًا لا مثيل له من علم الفلك والتراث. يضم المبنى من الداخل زجاجًا بانوراميًا من الأرضية إلى السقف، وسريرًا بحجم كينغ، وحمام سباحة خاص، وسطحًا مخصصًا للتلسكوب. يستضيف الفلكي المقيم لدينا جلسة مراقبة نجوم ليلية (مدرجة). وخلال النهار، استكشف المقابر النبطية التي يبلغ عمرها 2000 عام أو انطلق في سفاري جيب مع مرشد.",
     highlights: [
       "Private plunge pool with rock views",
       "Nightly astronomer-led stargazing",
       "30 min walk to Hegra World Heritage Site",
       "Chef-prepared breakfast delivered to your dome",
+    ],
+    highlights_ar: [
+      "حمام سباحة خاص مطل على الصخور",
+      "جلسة مراقبة نجوم ليلية مع فلكي متخصص",
+      "30 دقيقة سيرًا إلى موقع الحِجر التراثي العالمي",
+      "وجبة إفطار جاهزة من الشيف يتم توصيلها إلى قبتك",
     ],
     host: {
       name: "Fahad Al-Rashidi",
@@ -181,11 +191,19 @@ const DETAIL_MAP: Record<string, Omit<ListingDetail, keyof Listing>> = {
     ],
     description:
       "Perched at 2,700 metres in the Al Soudah mountains, this hand-crafted timber cabin offers misty valley views, crisp highland air, and some of Saudi's most dramatic hiking trails at your doorstep. The cabin sleeps four across two bedrooms and features a wrap-around deck, wood-burning fireplace, and a hot outdoor shower. Abha city is 25 minutes away for restaurants and souq visits.",
+    description_ar:
+      "تقع هذه الكابينة الخشبية المصنوعة يدويًا على ارتفاع 2700 متر في جبال السودة، وتوفر إطلالات رائعة على الوادي الضبابي وهواءً جبليًا منعشًا مع أروع مسارات المشي لمسافات طويلة في المملكة على بُعد خطوات من بابك. تتسع الكابينة لأربعة أشخاص في غرفتي نوم، وتتميز بسطح محيط وموقد حطب وحمام خارجي ساخن. مدينة أبها على بُعد 25 دقيقة للمطاعم وزيارة السوق.",
     highlights: [
       "2,700 m elevation — cool weather year-round",
       "Wrap-around deck with Al Soudah valley views",
       "Wood-burning fireplace",
       "Access to Al Soudah cable car (5 min drive)",
+    ],
+    highlights_ar: [
+      "ارتفاع 2700 متر — طقس بارد طوال العام",
+      "سطح محيط مطل على وادي السودة",
+      "موقد حطب أصيل",
+      "الوصول إلى تلفريك السودة (5 دقائق بالسيارة)",
     ],
     host: {
       name: "Maha Al-Ghamdi",

@@ -4,14 +4,15 @@ import { useState } from "react";
 import { ListingDraft } from "@/lib/types/host";
 import { ALL_AMENITIES } from "@/lib/data/amenities";
 import ImageUploadZone from "@/components/host/ImageUploadZone";
+import { useLanguage } from "@/context/LanguageProvider";
 
-const CATEGORY_LABELS: Record<string, string> = {
-  farms:      "Farm Stay",
-  house:      "Heritage House",
-  guesthouse: "Guest House",
-  cabins:     "Highland Cabin",
-  glamping:   "Desert Glamping",
-  doms:       "Dome Suite",
+const CATEGORY_LABEL_KEYS: Record<string, string> = {
+  farms:      "host.type.farms",
+  house:      "host.type.house",
+  guesthouse: "host.type.guesthouse",
+  cabins:     "host.type.cabins",
+  glamping:   "host.type.glamping",
+  doms:       "host.type.doms",
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -58,6 +59,7 @@ function ReviewSection({
 export default function Step6Review({
   draft, onChangeImages, onChangeRules, onSubmit, onBack, isSubmitting, submitLabel, isRejected,
 }: Step6ReviewProps) {
+  const { t } = useLanguage();
   const [newRule, setNewRule]   = useState("");
   const [photoError, setPhotoError] = useState("");
 
@@ -74,7 +76,7 @@ export default function Step6Review({
 
   const handleSubmit = () => {
     if (draft.imagePreviewUrls.length < 3) {
-      setPhotoError("Please add at least 3 photos before submitting.");
+      setPhotoError(t("host.step6.photo_err"));
       return;
     }
     setPhotoError("");
@@ -90,18 +92,18 @@ export default function Step6Review({
   const suggestions:    string[] = [];
 
   if (draft.imagePreviewUrls.length < 3) {
-    requiredIssues.push("Add at least 3 photos. This is required before submitting.");
+    requiredIssues.push(t("host.step6.tip.photos"));
   } else if (draft.imagePreviewUrls.length < 4) {
-    suggestions.push("Add more photos to help guests understand the place better.");
+    suggestions.push(t("host.step6.tip.photos_more"));
   }
   if (draft.description.length < 150) {
-    suggestions.push("Add more details about what guests will experience.");
+    suggestions.push(t("host.step6.tip.desc"));
   }
   if (draft.amenities.length < 3) {
-    suggestions.push("Add more amenities so guests know what is included.");
+    suggestions.push(t("host.step6.tip.amenities"));
   }
   if (!draft.mapsUrl?.trim()) {
-    suggestions.push("Add a Google Maps link so guests can find the location after booking.");
+    suggestions.push(t("host.step6.tip.maps"));
   }
 
   const allGood = requiredIssues.length === 0 && suggestions.length === 0;
@@ -110,12 +112,12 @@ export default function Step6Review({
     <div className="flex flex-col gap-7">
       {/* Heading */}
       <div>
-        <p className="text-[#c49a4f] text-xs font-bold uppercase tracking-[0.16em] mb-2">Step 6 of 6</p>
+        <p className="text-[#c49a4f] text-xs font-bold uppercase tracking-[0.16em] mb-2">{t("host.step6.eyebrow")}</p>
         <h1 className="font-display font-extrabold text-[#1a0e02] text-3xl mb-1">
-          Photos, rules & final review
+          {t("host.step6.heading")}
         </h1>
         <p className="text-[#64707d] text-sm">
-          Add photos, set your house rules, then review everything before submitting for approval.
+          {t("host.step6.subtitle")}
         </p>
       </div>
 
@@ -127,12 +129,12 @@ export default function Step6Review({
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
               <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            Please update this section based on admin feedback.
+            {t("host.admin_feedback")}
           </div>
         )}
-        <h2 className="font-display font-semibold text-[#1a0e02] mb-1">Photos</h2>
+        <h2 className="font-display font-semibold text-[#1a0e02] mb-1">{t("host.step6.photos")}</h2>
         <p className="text-xs text-[#64707d] mb-4">
-          Great photos are the #1 factor in guest decisions. Aim for bright, well-composed shots.
+          {t("host.step6.photos_hint")}
         </p>
         <ImageUploadZone
           previewUrls={draft.imagePreviewUrls}
@@ -153,9 +155,9 @@ export default function Step6Review({
       {/* ── House rules ───────────────────────────────────────────────── */}
       <div className="bg-white border border-[#e8dfd4] rounded-2xl p-6 flex flex-col gap-4">
         <div>
-          <h2 className="font-display font-semibold text-[#1a0e02] mb-0.5">House rules</h2>
+          <h2 className="font-display font-semibold text-[#1a0e02] mb-0.5">{t("host.step6.rules")}</h2>
           <p className="text-xs text-[#64707d]">
-            Let guests know what's expected. Rules are shown on your listing and guests agree before booking.
+            {t("host.step6.rules_hint")}
           </p>
         </div>
 
@@ -185,12 +187,12 @@ export default function Step6Review({
             value={newRule}
             onChange={(e) => setNewRule(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRule(); } }}
-            placeholder="e.g. No smoking inside the property"
+            placeholder={t("host.step6.rule_ph")}
             className="flex-1 px-4 py-3 border border-[#e8dfd4] rounded-xl text-sm text-[#1a0e02] placeholder:text-[#a09080] focus:outline-none focus:border-[#8b5e38] bg-white transition-colors"
           />
           <button type="button" onClick={addRule} disabled={!newRule.trim()}
             className="px-4 py-3 border border-[#e8dfd4] rounded-xl text-sm font-semibold text-[#8b5e38] hover:border-[#8b5e38] hover:bg-[#fdf5ee] disabled:opacity-40 transition-colors">
-            Add
+            {t("host.step6.add")}
           </button>
         </div>
       </div>
@@ -200,32 +202,32 @@ export default function Step6Review({
         <div className="flex items-center gap-2">
           <div className="h-px w-6 bg-[#c49a4f]" />
           <p className="text-[#c49a4f] text-xs font-bold uppercase tracking-[0.16em]">
-            Review before submitting
+            {t("host.step6.review")}
           </p>
         </div>
 
         {/* Category */}
         <ReviewSection
           icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /><polyline points="9 22 9 12 15 12 15 22" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-          title="Property type"
+          title={t("host.step6.prop_type")}
         >
           {draft.category ? (
             <span className="inline-flex items-center gap-2 text-sm font-semibold text-white px-3 py-1.5 rounded-xl"
               style={{ backgroundColor: CATEGORY_COLORS[draft.category] ?? "#8b5e38" }}>
-              {CATEGORY_LABELS[draft.category] ?? draft.category}
+              {CATEGORY_LABEL_KEYS[draft.category] ? t(CATEGORY_LABEL_KEYS[draft.category]) : draft.category}
             </span>
           ) : (
-            <p className="text-sm text-[#a09080] italic">Not set</p>
+            <p className="text-sm text-[#a09080] italic">{t("host.step6.not_set")}</p>
           )}
         </ReviewSection>
 
         {/* About */}
         <ReviewSection
           icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-          title="About your listing"
+          title={t("host.step6.about")}
         >
           <div className="flex flex-col gap-2">
-            <p className="font-semibold text-[#1a0e02]">{draft.title || <span className="text-[#a09080] font-normal italic">No title</span>}</p>
+            <p className="font-semibold text-[#1a0e02]">{draft.title || <span className="text-[#a09080] font-normal italic">{t("host.step6.no_title")}</span>}</p>
             {draft.description && (
               <p className="text-sm text-[#64707d] leading-relaxed line-clamp-3">{draft.description}</p>
             )}
@@ -244,22 +246,22 @@ export default function Step6Review({
         {/* Location & details */}
         <ReviewSection
           icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="1.5" /></svg>}
-          title="Location & details"
+          title={t("host.step6.location")}
         >
           <div className="grid grid-cols-2 gap-3 text-sm">
             {[
-              { label: "Region",      value: draft.region    || "—" },
-              { label: "Location",    value: draft.location  || "—" },
-              { label: "Guests",      value: draft.maxGuests         },
-              { label: "Bedrooms",    value: draft.bedrooms          },
-              { label: "Beds",        value: draft.beds              },
-              { label: "Baths",       value: draft.baths             },
-              { label: "Min. nights", value: draft.minNights         },
-              { label: "Check-in",    value: draft.checkInTime       },
-              { label: "Check-out",   value: draft.checkOutTime      },
-            ].map(({ label, value }) => (
-              <div key={label}>
-                <p className="text-[10px] text-[#64707d] font-bold uppercase tracking-widest mb-0.5">{label}</p>
+              { labelKey: "host.detail.region",     value: draft.region    || "—" },
+              { labelKey: "host.detail.location",   value: draft.location  || "—" },
+              { labelKey: "host.detail.guests",     value: draft.maxGuests         },
+              { labelKey: "host.detail.bedrooms",   value: draft.bedrooms          },
+              { labelKey: "host.detail.beds",       value: draft.beds              },
+              { labelKey: "host.detail.baths",      value: draft.baths             },
+              { labelKey: "host.detail.min_nights", value: draft.minNights         },
+              { labelKey: "host.detail.check_in",   value: draft.checkInTime       },
+              { labelKey: "host.detail.check_out",  value: draft.checkOutTime      },
+            ].map(({ labelKey, value }) => (
+              <div key={labelKey}>
+                <p className="text-[10px] text-[#64707d] font-bold uppercase tracking-widest mb-0.5">{t(labelKey)}</p>
                 <p className="font-medium text-[#1a0e02]">{value}</p>
               </div>
             ))}
@@ -269,26 +271,26 @@ export default function Step6Review({
         {/* Amenities */}
         <ReviewSection
           icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5 9-9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" /></svg>}
-          title={`Amenities (${selectedAmenities.length})`}
+          title={`${t("host.step6.amenities_section")} (${selectedAmenities.length})`}
         >
           {selectedAmenities.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
               {selectedAmenities.map((a) => (
                 <span key={a.id}
                   className="flex items-center gap-1.5 text-xs font-medium text-[#8b5e38] bg-[#fdf5ee] border border-[#f0dcc8] px-2.5 py-1 rounded-full">
-                  <span>{a.icon}</span>{a.label}
+                  <span>{a.icon}</span>{t(a.labelKey)}
                 </span>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-[#a09080] italic">No amenities selected</p>
+            <p className="text-sm text-[#a09080] italic">{t("host.step6.no_amenities")}</p>
           )}
         </ReviewSection>
 
         {/* Pricing */}
         <ReviewSection
           icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><line x1="12" y1="1" x2="12" y2="23" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-          title="Pricing"
+          title={t("host.step6.pricing")}
         >
           <div className="flex items-baseline gap-3">
             {draft.originalPrice > draft.price && draft.originalPrice > 0 && (
@@ -312,20 +314,20 @@ export default function Step6Review({
             </svg>
           </div>
           <p className="text-sm font-semibold text-[#049153]">
-            Your listing looks complete and ready for review.
+            {t("host.step6.ready")}
           </p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <div className="h-px w-6 bg-[#c49a4f]" />
-            <p className="text-[#c49a4f] text-xs font-bold uppercase tracking-[0.16em]">Listing tips</p>
+            <p className="text-[#c49a4f] text-xs font-bold uppercase tracking-[0.16em]">{t("host.step6.tips")}</p>
           </div>
 
           {requiredIssues.length > 0 && (
             <div className="bg-[#fdf8ee] border border-[#ead9a6] rounded-2xl px-5 py-4 flex flex-col gap-2.5">
               <p className="text-[10px] font-bold text-[#8b6a1f] uppercase tracking-widest">
-                Fix before submitting
+                {t("host.step6.fix_before")}
               </p>
               {requiredIssues.map((tip, i) => (
                 <div key={i} className="flex items-start gap-2.5">
@@ -342,7 +344,7 @@ export default function Step6Review({
           {suggestions.length > 0 && (
             <div className="bg-[#faf7f4] border border-[#e8dfd4] rounded-2xl px-5 py-4 flex flex-col gap-2.5">
               <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest">
-                Suggestions
+                {t("host.step6.suggestions")}
               </p>
               {suggestions.map((tip, i) => (
                 <div key={i} className="flex items-start gap-2.5">
@@ -370,12 +372,10 @@ export default function Step6Review({
         </div>
         <div>
           <p className="font-semibold text-[#1a0e02] text-sm mb-1">
-            Your listing will be reviewed before going live
+            {t("host.step6.approval")}
           </p>
           <p className="text-xs text-[#64707d] leading-relaxed">
-            After submission, the Bedouin team will review your listing within
-            1–2 business days. You'll receive an email confirmation once approved.
-            Your listing will not be visible to guests until it passes review.
+            {t("host.step6.approval_body")}
           </p>
         </div>
       </div>
@@ -384,7 +384,7 @@ export default function Step6Review({
       <div className="flex flex-col sm:flex-row gap-3">
         <button type="button" onClick={onBack} disabled={isSubmitting}
           className="flex-1 py-3.5 border border-[#1a0e02] text-[#1a0e02] font-semibold text-sm rounded-2xl hover:bg-[#1a0e02] hover:text-white disabled:opacity-50 transition-colors">
-          ← Back
+          {t("host.back")}
         </button>
         <button type="button" onClick={handleSubmit} disabled={isSubmitting}
           className="flex-[2] py-4 bg-[#8b5e38] font-bold text-base rounded-2xl hover:bg-[#7a5030] disabled:opacity-70 transition-colors shadow-sm flex items-center justify-center gap-2"
@@ -395,10 +395,10 @@ export default function Step6Review({
                 <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.3)" strokeWidth="2.5" />
                 <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
               </svg>
-              Saving…
+              {t("host.step6.saving")}
             </>
           ) : (
-            submitLabel ?? "Submit for Approval →"
+            submitLabel ?? t("host.step6.submit")
           )}
         </button>
       </div>

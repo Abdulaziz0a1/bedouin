@@ -4,13 +4,12 @@ import { useRef } from "react";
 import Image from "next/image";
 import ProductCard from "@/components/ui/ProductCard";
 import FadeInSection from "@/components/ui/FadeInSection";
+import { useLanguage } from "@/context/LanguageProvider";
+import type { HomepageListing } from "@/lib/server/homepage/getMarketplaceListings";
 
-const farms = [
-  { id: "strawberry-farm",  image: "https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=600&h=500&fit=crop",  title: "Strawberry Farm",       location: "Al Taif – Al Hada",    price: 70,  score: 5.0, reviewCount: 350 },
-  { id: "al-barr-farms",    image: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&h=500&fit=crop",  title: "Al Barr Farms",         location: "Northern Al Namas",    price: 120, score: 5.0, reviewCount: 200 },
-  { id: "al-baha-fruit",    image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&h=500&fit=crop",  title: "Al Baha Fruit Farms",   location: "Al Baha",              price: 99,  score: 4.8, reviewCount: 160 },
-  { id: "date-palm-farm",   image: "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=600&h=500&fit=crop", title: "Date Palm Estate",      location: "Al Ahsa",              price: 85,  score: 4.6, reviewCount: 94  },
-];
+interface FarmsSectionProps {
+  farms: HomepageListing[];
+}
 
 const ArrowBtn = ({
   dir, onClick,
@@ -47,8 +46,11 @@ const ArrowBtn = ({
   </button>
 );
 
-export default function FarmsSection() {
+export default function FarmsSection({ farms }: FarmsSectionProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const { t } = useLanguage();
+
+  if (farms.length === 0) return null;
   const scroll = (dir: "left" | "right") =>
     ref.current?.scrollBy({ left: dir === "right" ? 316 : -316, behavior: "smooth" });
 
@@ -97,24 +99,30 @@ export default function FarmsSection() {
                 <div className="flex items-center gap-3 mb-0.5">
                   <div className="h-px w-8" style={{ background: "rgba(196,154,79,0.60)" }} />
                   <p className="text-[#c49a4f] text-[0.65rem] font-bold uppercase tracking-[0.28em]">
-                    Farm stays
+                    {t("farms.eyebrow")}
                   </p>
                   <div className="h-px w-8" style={{ background: "rgba(196,154,79,0.60)" }} />
                 </div>
                 <h2
-                  className="font-display font-extrabold text-white text-4xl leading-tight tracking-tight"
-                  style={{ textShadow: "0 2px 20px rgba(0,0,0,0.40)" }}
+                  className="font-display font-extrabold text-white leading-tight"
+                  style={{
+                    fontSize: "clamp(1.75rem, 3.2vw, 2.4rem)",
+                    textShadow: "0 2px 24px rgba(0,0,0,0.45)",
+                    letterSpacing: "-0.022em",
+                  }}
                 >
-                  Farms Guests Love
+                  {t("farms.heading")}
                 </h2>
-                <p className="text-white/58 text-sm mt-0.5">
-                  Handpicked farm experiences across the Kingdom.
+                <p className="text-white/70 text-sm mt-1 leading-relaxed">
+                  {t("farms.subtitle")}
                 </p>
               </div>
-              <div className="flex gap-2 shrink-0 pb-1">
-                <ArrowBtn dir="left"  onClick={() => scroll("left")}  />
-                <ArrowBtn dir="right" onClick={() => scroll("right")} />
-              </div>
+              {farms.length > 0 && (
+                <div className="flex gap-2 shrink-0 pb-1">
+                  <ArrowBtn dir="left"  onClick={() => scroll("left")}  />
+                  <ArrowBtn dir="right" onClick={() => scroll("right")} />
+                </div>
+              )}
             </div>
           </FadeInSection>
         </div>
@@ -125,7 +133,9 @@ export default function FarmsSection() {
         <div className="max-w-[1232px] mx-auto px-6 lg:px-0">
           <FadeInSection direction="up" delay={80}>
             <div ref={ref} className="scroll-row -mx-6 px-6 lg:mx-0 lg:px-0">
-              {farms.map((f) => <ProductCard key={f.id} {...f} />)}
+              {farms.map((f) => (
+                <ProductCard key={f.id} {...f} />
+              ))}
             </div>
           </FadeInSection>
         </div>

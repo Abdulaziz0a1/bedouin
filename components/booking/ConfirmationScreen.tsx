@@ -1,25 +1,50 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import { BookingConfirmation } from "@/lib/types/booking";
+import { useLanguage } from "@/context/LanguageProvider";
 
 interface ConfirmationScreenProps {
   booking: BookingConfirmation;
 }
 
-const METHOD_LABELS: Record<string, string> = {
-  card:      "Credit / Debit Card",
-  mada:      "Mada",
-  apple_pay: "Apple Pay",
-};
-
 export default function ConfirmationScreen({ booking }: ConfirmationScreenProps) {
+  const { t } = useLanguage();
+
   const guestCount = booking.adults + booking.children;
+
+  const methodLabel: Record<string, string> = {
+    card:      t("confirm.payment_card"),
+    mada:      t("confirm.payment_mada"),
+    apple_pay: t("confirm.payment_apple"),
+  };
+
+  const nightLabel = booking.nights === 1 ? t("confirm.night") : t("confirm.nights");
+  const guestLabel = guestCount === 1
+    ? t("confirm.guest_one").replace("{n}", String(guestCount))
+    : t("confirm.guest_many").replace("{n}", String(guestCount));
+
+  const details = [
+    { label: t("confirm.label_checkin"),    value: booking.checkIn  },
+    { label: t("confirm.label_checkout"),   value: booking.checkOut },
+    { label: t("confirm.label_duration"),   value: `${booking.nights} ${nightLabel}` },
+    { label: t("confirm.label_guests"),     value: guestLabel },
+    { label: t("confirm.label_guest_name"), value: booking.guestName || "—" },
+    { label: t("confirm.label_payment"),    value: methodLabel[booking.paymentMethod] ?? booking.paymentMethod },
+  ];
+
+  const nextSteps = [
+    t("confirm.next1"),
+    t("confirm.next2"),
+    t("confirm.next3"),
+  ];
 
   return (
     <div className="bg-[#f4efe6] min-h-[calc(100vh-72px)] py-12">
       <div className="max-w-[600px] mx-auto px-6 flex flex-col gap-8 items-center text-center">
 
-        {/* ── Success animation ────────────────────────────────────────── */}
+        {/* Success animation */}
         <div className="flex flex-col items-center gap-4">
           <div className="w-20 h-20 rounded-full bg-[#f0faf5] border-2 border-[#049153] flex items-center justify-center shadow-[0_0_0_8px_rgba(4,145,83,0.08)]">
             <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
@@ -35,26 +60,26 @@ export default function ConfirmationScreen({ booking }: ConfirmationScreenProps)
 
           <div>
             <h1 className="font-display font-extrabold text-[#1a0e02] text-3xl mb-2">
-              Booking Confirmed!
+              {t("confirm.title")}
             </h1>
             <p className="text-[#64707d] text-base leading-relaxed max-w-sm">
-              Your experience has been reserved. A confirmation has been sent to{" "}
+              {t("confirm.subtitle")}{" "}
               <span className="font-semibold text-[#1a0e02]">{booking.guestEmail}</span>.
             </p>
           </div>
         </div>
 
-        {/* ── Booking reference pill ───────────────────────────────────── */}
+        {/* Booking reference */}
         <div className="bg-[#1a0e02] px-7 py-4 rounded-2xl flex flex-col items-center gap-1 w-full max-w-xs">
           <p className="text-[10px] font-bold text-white/50 uppercase tracking-[0.16em]">
-            Booking Reference
+            {t("confirm.reference")}
           </p>
           <p className="font-display font-extrabold text-white text-2xl tracking-[0.08em]">
             {booking.reference}
           </p>
         </div>
 
-        {/* ── Booking details card ─────────────────────────────────────── */}
+        {/* Booking details card */}
         <div className="w-full bg-white border border-[#e8dfd4] rounded-3xl overflow-hidden text-left shadow-sm">
 
           {/* Listing hero image */}
@@ -85,14 +110,7 @@ export default function ConfirmationScreen({ booking }: ConfirmationScreenProps)
 
           {/* Details grid */}
           <div className="p-5 grid grid-cols-2 gap-4">
-            {[
-              { label: "Check-in",    value: booking.checkIn  },
-              { label: "Check-out",   value: booking.checkOut },
-              { label: "Duration",    value: `${booking.nights} night${booking.nights !== 1 ? "s" : ""}` },
-              { label: "Guests",      value: `${guestCount} guest${guestCount !== 1 ? "s" : ""}` },
-              { label: "Guest name",  value: booking.guestName || "—" },
-              { label: "Payment",     value: METHOD_LABELS[booking.paymentMethod] ?? booking.paymentMethod },
-            ].map(({ label, value }) => (
+            {details.map(({ label, value }) => (
               <div key={label}>
                 <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest mb-0.5">
                   {label}
@@ -106,7 +124,7 @@ export default function ConfirmationScreen({ booking }: ConfirmationScreenProps)
           <div className="px-5 py-4 border-t border-[#f0e8de] flex justify-between items-center bg-[#faf7f4]">
             <div>
               <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest mb-0.5">
-                Total paid
+                {t("confirm.total_paid")}
               </p>
               <p className="font-display font-extrabold text-[#1a0e02] text-xl">
                 SAR {booking.totalPrice.toLocaleString("en-US")}
@@ -117,12 +135,12 @@ export default function ConfirmationScreen({ booking }: ConfirmationScreenProps)
                 <path d="M5 12l5 5 9-9"
                   stroke="#049153" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              Paid
+              {t("confirm.paid")}
             </div>
           </div>
         </div>
 
-        {/* ── What's next card ──────────────────────────────────────────── */}
+        {/* What's next */}
         <div className="w-full bg-[#fff4e5] border border-[#f0dcc8] rounded-2xl p-5 text-left">
           <div className="flex gap-3">
             <div className="w-9 h-9 rounded-xl bg-[#8b5e38]/10 flex items-center justify-center shrink-0">
@@ -134,13 +152,9 @@ export default function ConfirmationScreen({ booking }: ConfirmationScreenProps)
               </svg>
             </div>
             <div>
-              <p className="font-semibold text-[#1a0e02] text-sm mb-1">What happens next?</p>
+              <p className="font-semibold text-[#1a0e02] text-sm mb-1">{t("confirm.next_title")}</p>
               <ul className="flex flex-col gap-1.5">
-                {[
-                  "Your host will contact you within 24 hours with arrival details.",
-                  "A confirmation email has been sent to your inbox.",
-                  "You can message your host directly from your bookings page.",
-                ].map((item) => (
+                {nextSteps.map((item) => (
                   <li key={item} className="flex items-start gap-2 text-xs text-[#64707d] leading-relaxed">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
                       className="shrink-0 mt-0.5">
@@ -156,20 +170,20 @@ export default function ConfirmationScreen({ booking }: ConfirmationScreenProps)
           </div>
         </div>
 
-        {/* ── CTAs ─────────────────────────────────────────────────────── */}
+        {/* CTAs */}
         <div className="flex flex-col sm:flex-row gap-3 w-full">
           <Link
             href="/explore"
             className="flex-1 py-3.5 border border-[#1a0e02] text-[#1a0e02] font-semibold text-sm rounded-2xl text-center hover:bg-[#1a0e02] hover:text-white transition-colors"
           >
-            Explore More Experiences
+            {t("confirm.explore")}
           </Link>
           <Link
             href="/"
             className="flex-1 py-3.5 bg-[#8b5e38] font-bold text-sm rounded-2xl text-center hover:bg-[#7a5030] transition-colors"
             style={{ color: "#fff" }}
           >
-            Back to Home
+            {t("confirm.home")}
           </Link>
         </div>
       </div>

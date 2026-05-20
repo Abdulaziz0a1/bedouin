@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { PaymentMethod, CardDetails } from "@/lib/types/booking";
+import { useLanguage } from "@/context/LanguageProvider";
 
 interface PaymentStepProps {
   method:       PaymentMethod;
@@ -28,62 +29,61 @@ function fmtExpiry(v: string): string {
   return n.length >= 3 ? `${n.slice(0, 2)}/${n.slice(2)}` : n;
 }
 
-/* ─── Payment methods ────────────────────────────────────────────────────── */
-
-const METHODS: { id: PaymentMethod; label: string; desc: string; icon: React.ReactNode }[] = [
-  {
-    id: "card",
-    label: "Credit / Debit Card",
-    desc: "Visa, Mastercard, American Express",
-    icon: (
-      <svg width="22" height="16" viewBox="0 0 36 24" fill="none">
-        <rect width="36" height="24" rx="4" fill="#1a0e02" />
-        <rect y="7" width="36" height="5" fill="#c49a4f" />
-        <rect x="4" y="15" width="10" height="2" rx="1" fill="#c49a4f" opacity="0.6" />
-      </svg>
-    ),
-  },
-  {
-    id: "mada",
-    label: "Mada",
-    desc: "Saudi domestic debit network",
-    icon: (
-      <span className="text-lg font-extrabold" style={{ color: "#00a651", letterSpacing: "-0.03em" }}>
-        mada
-      </span>
-    ),
-  },
-  {
-    id: "apple_pay",
-    label: "Apple Pay",
-    desc: "Pay with Face ID or Touch ID",
-    icon: (
-      <svg width="20" height="24" viewBox="0 0 20 24" fill="none">
-        <path
-          d="M14.5 0C13 0 11.2 1 10.2 2.3 9.3 3.4 8.5 5 8.7 6.6c1.6.1 3.3-.9 4.3-2.2C14 3.2 14.7 1.6 14.5 0zM18.7 8.1c-1.7-1-3.3-1-3.8-1-1.2 0-2.2.5-3.1.5-.9 0-2-.5-3.1-.5-2.4 0-4.7 1.4-6 3.6-2.6 4.5-1 11.1 1.8 14.8.9 1.3 2 2.7 3.5 2.7 1.3 0 1.9-.8 3.5-.8s2.1.8 3.5.8c1.5 0 2.5-1.3 3.4-2.6.7-1 1.3-2 1.7-3.1-4.1-1.6-4.8-7.4-.4-9.4z"
-          fill="#1a0e02"
-        />
-      </svg>
-    ),
-  },
-];
-
-/* ─── Component ──────────────────────────────────────────────────────────── */
-
-const READINESS_ITEMS = [
-  "I understand the exact location will be shared after booking.",
-  "I agree to follow the host's house rules.",
-  "I understand this may be an outdoor or rural experience.",
-];
-
 export default function PaymentStep({
   method, cardDetails, total, nights, listingPrice, serviceFee,
   isSubmitting, onMethodChange, onCardChange, onConfirm, onBack,
 }: PaymentStepProps) {
+  const { t } = useLanguage();
   const [errors, setErrors] = useState<Partial<Record<keyof CardDetails, string>>>({});
   const [readinessChecks, setReadinessChecks] = useState([false, false, false]);
 
   const allChecked = readinessChecks.every(Boolean);
+
+  const METHODS: { id: PaymentMethod; label: string; desc: string; icon: React.ReactNode }[] = [
+    {
+      id: "card",
+      label: t("payment.card"),
+      desc: "Visa, Mastercard, American Express",
+      icon: (
+        <svg width="22" height="16" viewBox="0 0 36 24" fill="none">
+          <rect width="36" height="24" rx="4" fill="#1a0e02" />
+          <rect y="7" width="36" height="5" fill="#c49a4f" />
+          <rect x="4" y="15" width="10" height="2" rx="1" fill="#c49a4f" opacity="0.6" />
+        </svg>
+      ),
+    },
+    {
+      id: "mada",
+      label: t("payment.mada"),
+      desc: "Saudi domestic debit network",
+      icon: (
+        <span className="text-lg font-extrabold" style={{ color: "#00a651", letterSpacing: "-0.03em" }}>
+          mada
+        </span>
+      ),
+    },
+    {
+      id: "apple_pay",
+      label: t("payment.apple_pay"),
+      desc: "Pay with Face ID or Touch ID",
+      icon: (
+        <svg width="20" height="24" viewBox="0 0 20 24" fill="none">
+          <path
+            d="M14.5 0C13 0 11.2 1 10.2 2.3 9.3 3.4 8.5 5 8.7 6.6c1.6.1 3.3-.9 4.3-2.2C14 3.2 14.7 1.6 14.5 0zM18.7 8.1c-1.7-1-3.3-1-3.8-1-1.2 0-2.2.5-3.1.5-.9 0-2-.5-3.1-.5-2.4 0-4.7 1.4-6 3.6-2.6 4.5-1 11.1 1.8 14.8.9 1.3 2 2.7 3.5 2.7 1.3 0 1.9-.8 3.5-.8s2.1.8 3.5.8c1.5 0 2.5-1.3 3.4-2.6.7-1 1.3-2 1.7-3.1-4.1-1.6-4.8-7.4-.4-9.4z"
+            fill="#1a0e02"
+          />
+        </svg>
+      ),
+    },
+  ];
+
+  const READINESS_ITEMS = [
+    t("pay.readiness1"),
+    t("pay.readiness2"),
+    t("pay.readiness3"),
+  ];
+
+  const nightLabel = nights === 1 ? t("pay.night") : t("pay.nights");
 
   const toggleCheck = (i: number) =>
     setReadinessChecks((prev) => prev.map((v, idx) => (idx === i ? !v : v)));
@@ -100,14 +100,10 @@ export default function PaymentStep({
   const validateCard = (): boolean => {
     if (method !== "card") return true;
     const e: Partial<Record<keyof CardDetails, string>> = {};
-    if (cardDetails.number.replace(/\s/g, "").length < 16)
-      e.number = "Enter a valid 16-digit card number.";
-    if (!cardDetails.name.trim())
-      e.name = "Cardholder name is required.";
-    if (cardDetails.expiry.length < 5)
-      e.expiry = "Enter expiry as MM/YY.";
-    if (cardDetails.cvv.length < 3)
-      e.cvv = "CVV must be 3 or 4 digits.";
+    if (cardDetails.number.replace(/\s/g, "").length < 16) e.number = t("pay.valid_number");
+    if (!cardDetails.name.trim())                          e.name   = t("pay.valid_name");
+    if (cardDetails.expiry.length < 5)                     e.expiry = t("pay.valid_expiry");
+    if (cardDetails.cvv.length < 3)                        e.cvv    = t("pay.valid_cvv");
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -129,16 +125,14 @@ export default function PaymentStep({
     <div className="flex flex-col gap-7">
       {/* Heading */}
       <div>
-        <h1 className="font-display font-extrabold text-[#1a0e02] text-3xl mb-1">Payment</h1>
-        <p className="text-[#64707d] text-sm">
-          Choose your preferred payment method to confirm your booking.
-        </p>
+        <h1 className="font-display font-extrabold text-[#1a0e02] text-3xl mb-1">{t("pay.heading")}</h1>
+        <p className="text-[#64707d] text-sm">{t("pay.subtitle")}</p>
       </div>
 
-      {/* ── Payment method selection ─────────────────────────────────── */}
+      {/* Payment method selection */}
       <div className="bg-white border border-[#e8dfd4] rounded-2xl p-5 flex flex-col gap-3">
         <h2 className="font-display font-semibold text-[#1a0e02] text-sm mb-1">
-          Payment method
+          {t("pay.method_section")}
         </h2>
 
         {METHODS.map((m) => (
@@ -158,7 +152,6 @@ export default function PaymentStep({
               onChange={() => onMethodChange(m.id)}
               className="sr-only"
             />
-            {/* Radio indicator */}
             <div
               className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
                 method === m.id ? "border-[#8b5e38]" : "border-[#c4b49a]"
@@ -168,9 +161,7 @@ export default function PaymentStep({
                 <div className="w-2.5 h-2.5 rounded-full bg-[#8b5e38]" />
               )}
             </div>
-            {/* Icon */}
             <span className="shrink-0 flex items-center">{m.icon}</span>
-            {/* Label */}
             <div>
               <p className="font-semibold text-[#1a0e02] text-sm">{m.label}</p>
               <p className="text-xs text-[#64707d]">{m.desc}</p>
@@ -179,13 +170,13 @@ export default function PaymentStep({
         ))}
       </div>
 
-      {/* ── Card form ────────────────────────────────────────────────── */}
+      {/* Card form */}
       {method === "card" && (
         <div className="bg-white border border-[#e8dfd4] rounded-2xl p-5 flex flex-col gap-4">
-          <h2 className="font-display font-semibold text-[#1a0e02] text-sm">Card details</h2>
+          <h2 className="font-display font-semibold text-[#1a0e02] text-sm">{t("pay.card_section")}</h2>
 
           <div>
-            <label className={labelCls}>Card Number <span className="text-red-500">*</span></label>
+            <label className={labelCls}>{t("pay.field_number")} <span className="text-red-500">*</span></label>
             <input
               type="text"
               inputMode="numeric"
@@ -200,13 +191,13 @@ export default function PaymentStep({
 
           <div>
             <label className={labelCls}>
-              Cardholder Name <span className="text-red-500">*</span>
+              {t("pay.field_name")} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={cardDetails.name}
               onChange={(e) => updateCard("name", e.target.value)}
-              placeholder="Name as it appears on card"
+              placeholder={t("pay.name_placeholder")}
               autoComplete="cc-name"
               className={inputCls("name")}
             />
@@ -216,7 +207,7 @@ export default function PaymentStep({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>
-                Expiry Date <span className="text-red-500">*</span>
+                {t("pay.field_expiry")} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -230,7 +221,7 @@ export default function PaymentStep({
               {errors.expiry && <p className="text-xs text-red-600 mt-1">{errors.expiry}</p>}
             </div>
             <div>
-              <label className={labelCls}>CVV <span className="text-red-500">*</span></label>
+              <label className={labelCls}>{t("pay.field_cvv")} <span className="text-red-500">*</span></label>
               <input
                 type="text"
                 inputMode="numeric"
@@ -254,10 +245,7 @@ export default function PaymentStep({
             <path d="M12 8v4M12 16h.01"
               stroke="#0046cc" strokeWidth="1.8" strokeLinecap="round" />
           </svg>
-          <p className="text-sm text-[#2b3037] leading-relaxed">
-            You'll be securely redirected to your bank's payment page to authorise
-            the transaction. No card details are stored on Bedouin.
-          </p>
+          <p className="text-sm text-[#2b3037] leading-relaxed">{t("pay.mada_notice")}</p>
         </div>
       )}
 
@@ -269,33 +257,30 @@ export default function PaymentStep({
             <path d="M12 8v4M12 16h.01"
               stroke="#1a0e02" strokeWidth="1.8" strokeLinecap="round" />
           </svg>
-          <p className="text-sm text-[#2b3037] leading-relaxed">
-            Confirm with Face ID or Touch ID when prompted. Payment completes
-            instantly via Apple Pay — no card details required.
-          </p>
+          <p className="text-sm text-[#2b3037] leading-relaxed">{t("pay.apple_notice")}</p>
         </div>
       )}
 
-      {/* ── Final price summary ───────────────────────────────────────── */}
+      {/* Final price summary */}
       <div className="bg-white border border-[#e8dfd4] rounded-2xl px-5 py-4 flex flex-col gap-2.5">
         <h2 className="font-display font-semibold text-[#1a0e02] text-sm mb-1">
-          Payment summary
+          {t("pay.summary_section")}
         </h2>
         <div className="flex justify-between text-sm">
           <span className="text-[#64707d]">
-            SAR {listingPrice.toLocaleString("en-US")} × {nights} night{nights !== 1 ? "s" : ""}
+            SAR {listingPrice.toLocaleString("en-US")} × {nights} {nightLabel}
           </span>
           <span className="text-[#1a0e02] font-medium">
             SAR {(listingPrice * nights).toLocaleString("en-US")}
           </span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-[#64707d]">Service fee (12%)</span>
+          <span className="text-[#64707d]">{t("pay.service_fee")}</span>
           <span className="text-[#1a0e02] font-medium">SAR {serviceFee.toLocaleString("en-US")}</span>
         </div>
         <div className="h-px bg-[#f0e8de] mt-1" />
         <div className="flex justify-between font-bold text-[#1a0e02] text-base">
-          <span>Total due today</span>
+          <span>{t("pay.total_due")}</span>
           <span>SAR {total.toLocaleString("en-US")}</span>
         </div>
       </div>
@@ -308,16 +293,14 @@ export default function PaymentStep({
           <path d="M8 11V7a4 4 0 0 1 8 0v4"
             stroke="#64707d" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
-        Your payment is protected by 256-bit SSL encryption
+        {t("pay.ssl")}
       </div>
 
-      {/* ── Guest Readiness Checklist ─────────────────────────────────── */}
+      {/* Guest Readiness Checklist */}
       <div className="bg-white border border-[#e8dfd4] rounded-2xl p-5 flex flex-col gap-4">
         <div>
-          <h2 className="font-display font-semibold text-[#1a0e02] text-sm">Before you confirm</h2>
-          <p className="text-xs text-[#64707d] mt-0.5">
-            Please review these points to make sure the experience matches your expectations.
-          </p>
+          <h2 className="font-display font-semibold text-[#1a0e02] text-sm">{t("pay.readiness_section")}</h2>
+          <p className="text-xs text-[#64707d] mt-0.5">{t("pay.readiness_desc")}</p>
         </div>
         <div className="flex flex-col gap-3">
           {READINESS_ITEMS.map((item, i) => (
@@ -353,12 +336,12 @@ export default function PaymentStep({
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
               <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            Check all items above to enable the confirm button.
+            {t("pay.check_all")}
           </p>
         )}
       </div>
 
-      {/* ── Navigation ───────────────────────────────────────────────── */}
+      {/* Navigation */}
       <div className="flex flex-col sm:flex-row gap-3">
         <button
           type="button"
@@ -366,7 +349,7 @@ export default function PaymentStep({
           disabled={isSubmitting}
           className="flex-1 py-3.5 border border-[#1a0e02] text-[#1a0e02] font-semibold text-sm rounded-2xl hover:bg-[#1a0e02] hover:text-white disabled:opacity-50 transition-colors"
         >
-          ← Back
+          {t("pay.back")}
         </button>
         <button
           type="button"
@@ -391,10 +374,10 @@ export default function PaymentStep({
                   stroke="white" strokeWidth="2.5" strokeLinecap="round"
                 />
               </svg>
-              Processing payment…
+              {t("pay.processing")}
             </>
           ) : (
-            `Confirm & Pay SAR ${total.toLocaleString("en-US")}`
+            t("pay.confirm_btn").replace("{amount}", total.toLocaleString("en-US"))
           )}
         </button>
       </div>

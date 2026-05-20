@@ -4,8 +4,11 @@ import { useState, useCallback } from "react";
 import Link from "next/link";
 import { ListingDraft, INITIAL_DRAFT, SubmittedListing } from "@/lib/types/host";
 import type { ListingPayload, SubmitListingResult } from "@/lib/types/listing";
-import { uploadImages, deleteUploadedImages } from "@/lib/client/upload-images";
+import { uploadImages, deleteUploadedImages, SessionExpiredError } from "@/lib/client/upload-images";
+import { ensureFreshSession } from "@/lib/client/ensureFreshSession";
+import SessionExpiredBanner from "@/components/auth/SessionExpiredBanner";
 import HostStepProgress from "./HostStepProgress";
+import { useLanguage } from "@/context/LanguageProvider";
 import HostListingPreview from "./HostListingPreview";
 import HostConfirmation from "./HostConfirmation";
 import Step1Type        from "./steps/Step1Type";
@@ -20,13 +23,15 @@ type HostStep = 1 | 2 | 3 | 4 | 5 | 6 | "confirmed";
 /* ─── Component ────────────────────────────────────────────────────────────── */
 
 export default function HostListingFlow({ userId }: { userId: string }) {
-  const [step,         setStep]        = useState<HostStep>(1);
-  const [draft,        setDraft]       = useState<ListingDraft>(INITIAL_DRAFT);
+  const { t } = useLanguage();
+  const [step,          setStep]         = useState<HostStep>(1);
+  const [draft,         setDraft]        = useState<ListingDraft>(INITIAL_DRAFT);
   // Parallel array: File object for each blob URL, null for http URLs (URL fallback)
-  const [imageFiles,   setImageFiles]  = useState<(File | null)[]>([]);
-  const [submitting,   setSubmitting]  = useState(false);
-  const [submitted,    setSubmitted]   = useState<SubmittedListing | null>(null);
-  const [submitError,  setSubmitError] = useState<string | null>(null);
+  const [imageFiles,    setImageFiles]   = useState<(File | null)[]>([]);
+  const [submitting,     setSubmitting]    = useState(false);
+  const [submitted,      setSubmitted]     = useState<SubmittedListing | null>(null);
+  const [submitError,    setSubmitError]   = useState<string | null>(null);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   const update = useCallback(
     <K extends keyof ListingDraft>(key: K, value: ListingDraft[K]) => {
@@ -58,6 +63,16 @@ export default function HostListingFlow({ userId }: { userId: string }) {
   const handleSubmit = useCallback(async () => {
     setSubmitting(true);
     setSubmitError(null);
+    setSessionExpired(false);
+
+    // Verify session freshness before touching Storage — avoids a partial upload
+    // that would fail mid-way with a cryptic auth error.
+    const sessionCheck = await ensureFreshSession();
+    if (!sessionCheck.ok) {
+      setSessionExpired(true);
+      setSubmitting(false);
+      return;
+    }
 
     // Tracks Storage paths uploaded this attempt so we can roll them back if
     // the DB write fails — preventing orphaned files in Supabase Storage.
@@ -80,10 +95,13 @@ export default function HostListingFlow({ userId }: { userId: string }) {
       const payload: ListingPayload = {
         category:         draft.category,
         title:            draft.title,
+        ...(draft.title_ar?.trim()       && { title_ar:       draft.title_ar }),
         description:      draft.description,
+        ...(draft.description_ar?.trim() && { description_ar: draft.description_ar }),
         highlights:       draft.highlights,
         region:           draft.region,
         location:         draft.location,
+        ...(draft.location_ar?.trim()    && { location_ar:    draft.location_ar }),
         mapsUrl:          draft.mapsUrl,
         maxGuests:        draft.maxGuests,
         bedrooms:         draft.bedrooms,
@@ -128,7 +146,14 @@ export default function HostListingFlow({ userId }: { userId: string }) {
       // Roll back any files that were uploaded before the failure
       await deleteUploadedImages(uploadedPaths);
 
-      const raw = err instanceof Error ? err.message : "Submission failed — please try again.";
+      // Session expired mid-upload — show the session banner instead of a
+      // generic upload error so the user knows exactly what went wrong.
+      if (err instanceof SessionExpiredError) {
+        setSessionExpired(true);
+        return;
+      }
+
+      const raw = err instanceof Error ? err.message : "Upload failed. Please try again.";
       // "Invalid Server Actions request" = dev Fast Refresh stale module — page needs a hard reload
       const msg = raw.includes("Invalid Server Actions request")
         ? "The page needs to be refreshed. Please refresh and try again."
@@ -172,7 +197,7 @@ export default function HostListingFlow({ userId }: { userId: string }) {
               stroke="currentColor" strokeWidth="1.8"
               strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          Back to Host Overview
+          {t("host.back_to_overview")}
         </Link>
 
         <div className="flex flex-col lg:flex-row gap-10 lg:gap-14 items-start">
@@ -189,10 +214,14 @@ export default function HostListingFlow({ userId }: { userId: string }) {
             {currentStep === 2 && (
               <Step2About
                 title={draft.title}
+                title_ar={draft.title_ar}
                 description={draft.description}
+                description_ar={draft.description_ar}
                 highlights={draft.highlights}
-                onChangeTitle={(v)       => update("title",       v)}
+                onChangeTitle={(v)       => update("title",        v)}
+                onChangeTitleAr={(v)     => update("title_ar",     v)}
                 onChangeDesc={(v)        => update("description",  v)}
+                onChangeDescAr={(v)      => update("description_ar", v)}
                 onChangeHighlights={(v)  => update("highlights",   v)}
                 onNext={() => setStep(3)}
                 onBack={() => setStep(1)}
@@ -228,7 +257,8 @@ export default function HostListingFlow({ userId }: { userId: string }) {
             )}
             {currentStep === 6 && (
               <>
-                {submitError && (
+                {sessionExpired && <SessionExpiredBanner />}
+                {!sessionExpired && submitError && (
                   <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-red-500 shrink-0 mt-0.5">
                       <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />

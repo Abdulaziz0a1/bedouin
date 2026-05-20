@@ -1,17 +1,45 @@
 "use client";
 
-import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import ProductCard from "@/components/ui/ProductCard";
 import RatingBadge from "@/components/ui/RatingBadge";
+import { useLanguage } from "@/context/LanguageProvider";
 import {
-  CATEGORIES,
-  REGIONS,
-  PRICE_RANGES,
+  EXPLORE_CATEGORIES as CATEGORIES,
+  EXPLORE_REGIONS as REGIONS,
+  EXPLORE_PRICE_RANGES as PRICE_RANGES,
   filterListings,
   type Listing,
-} from "@/lib/data/listings";
+} from "@/lib/utils/explore-filters";
+import { REGION_KEY_MAP } from "@/lib/constants/regions";
+import { getListingText } from "@/lib/utils/listing-locale";
+
+/* ─── Translation key maps ───────────────────────────────────────────────────*/
+
+const PRICE_RANGE_KEYS: Record<string, string> = {
+  "all":     "explore.price.all",
+  "u100":    "explore.price.u100",
+  "100-250": "explore.price.100_250",
+  "250-500": "explore.price.250_500",
+  "500+":    "explore.price.500plus",
+};
+
+const SORT_OPTION_KEYS = [
+  { id: "newest",     key: "sort.newest" },
+  { id: "popular",    key: "sort.popular" },
+  { id: "rating",     key: "sort.rating" },
+  { id: "price-asc",  key: "sort.price_asc" },
+  { id: "price-desc", key: "sort.price_desc" },
+] as const;
+
+const HEADER_STATS = [
+  { value: "18+",  labelKey: "explore.stat.experiences" },
+  { value: "10",   labelKey: "explore.stat.regions" },
+  { value: "6",    labelKey: "explore.stat.categories" },
+  { value: "850+", labelKey: "explore.stat.hosts" },
+] as const;
 
 /* ─── Icon primitives ────────────────────────────────────────────────────── */
 
@@ -49,16 +77,6 @@ const PinIcon = () => (
     <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" fill="currentColor" />
   </svg>
 );
-
-/* ─── Sort options ───────────────────────────────────────────────────────── */
-
-const SORT_OPTIONS = [
-  { id: "newest",     label: "Newest First"   },
-  { id: "popular",    label: "Most Popular"   },
-  { id: "rating",     label: "Top Rated"      },
-  { id: "price-asc",  label: "Price: Low–High" },
-  { id: "price-desc", label: "Price: High–Low" },
-];
 
 /* ─── Styled native select ───────────────────────────────────────────────── */
 
@@ -118,6 +136,7 @@ function ActiveChip({ label, onRemove }: { label: string; onRemove: () => void }
 
 function ListCard({ listing }: { listing: Listing }) {
   const [saved, setSaved] = useState(false);
+  const { t, lang } = useLanguage();
 
   return (
     <Link
@@ -144,7 +163,7 @@ function ListCard({ listing }: { listing: Listing }) {
         )}
         {/* Wishlist */}
         <button
-          aria-label={saved ? "Remove from wishlist" : "Save to wishlist"}
+          aria-label={saved ? t("wishlist.remove") : t("wishlist.save")}
           type="button"
           onClick={(e) => { e.preventDefault(); setSaved((v) => !v); }}
           className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full w-7 h-7 flex items-center justify-center hover:scale-110 transition-transform shadow-sm"
@@ -166,27 +185,27 @@ function ListCard({ listing }: { listing: Listing }) {
           <RatingBadge score={listing.score} reviewCount={listing.reviewCount} />
           <span className="font-display font-bold text-[#1a0e02] text-xl leading-none shrink-0">
             SAR {listing.price}
-            <span className="text-[#64707d] text-xs font-normal ml-1">/ person</span>
+            <span className="text-[#64707d] text-xs font-normal ml-1">{t("explore.per_person")}</span>
           </span>
         </div>
 
         <h3 className="font-display font-bold text-[#1a0e02] text-lg leading-snug mt-1">
-          {listing.title}
+          {getListingText(listing.title, listing.title_ar, lang)}
         </h3>
 
         <div className="flex items-center gap-1 text-[#64707d] text-sm">
           <PinIcon />
-          <span className="truncate">{listing.location}</span>
+          <span className="truncate">{getListingText(listing.location, listing.location_ar, lang)}</span>
         </div>
 
         {listing.tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-1">
-            {listing.tags.slice(0, 4).map((t) => (
+            {listing.tags.slice(0, 4).map((tag) => (
               <span
-                key={t}
+                key={tag}
                 className="text-[11px] font-medium text-[#8b5e38] bg-[#fdf5ee] border border-[#f0dcc8] px-2.5 py-0.5 rounded-full"
               >
-                {t}
+                {tag}
               </span>
             ))}
           </div>
@@ -196,7 +215,7 @@ function ListCard({ listing }: { listing: Listing }) {
           <p className="mt-auto text-sm text-[#a09080]">
             <span className="line-through">SAR {listing.originalPrice}</span>
             <span className="text-[#049153] font-semibold ml-2">
-              Save SAR {listing.originalPrice - listing.price}
+              {t("explore.save")} SAR {listing.originalPrice - listing.price}
             </span>
           </p>
         )}
@@ -205,9 +224,11 @@ function ListCard({ listing }: { listing: Listing }) {
   );
 }
 
-/* ─── Empty state ────────────────────────────────────────────────────────── */
+/* ─── Empty states ───────────────────────────────────────────────────────── */
 
+/** Shown when filters produce zero results but listings do exist. */
 function EmptyState({ onClear }: { onClear: () => void }) {
+  const { t } = useLanguage();
   return (
     <div className="col-span-full flex flex-col items-center justify-center py-28 text-center">
       <div className="w-20 h-20 bg-[#fdf5ee] border border-[#f0dcc8] rounded-3xl flex items-center justify-center mb-6">
@@ -218,10 +239,10 @@ function EmptyState({ onClear }: { onClear: () => void }) {
         </svg>
       </div>
       <h3 className="font-display font-bold text-[#1a0e02] text-2xl mb-2">
-        No experiences found
+        {t("explore.no_results.title")}
       </h3>
       <p className="text-[#64707d] text-base mb-8 max-w-xs leading-relaxed">
-        Try adjusting your filters or searching with different keywords.
+        {t("explore.no_results.body")}
       </p>
       <button
         type="button"
@@ -229,8 +250,42 @@ function EmptyState({ onClear }: { onClear: () => void }) {
         style={{ color: "#fff" }}
         className="px-7 py-3 bg-[#8b5e38] font-semibold rounded-xl hover:bg-[#7a5030] active:bg-[#6a4228] transition-colors"
       >
-        Clear all filters
+        {t("explore.clear_all_filters")}
       </button>
+    </div>
+  );
+}
+
+/** Shown when the platform has zero approved listings (no filters applied). */
+function NoListingsEmptyState() {
+  const { t } = useLanguage();
+  return (
+    <div className="flex flex-col items-center justify-center py-32 text-center">
+      <div
+        className="w-24 h-24 rounded-3xl flex items-center justify-center mb-8"
+        style={{
+          background: "linear-gradient(148deg, #fdf5ee 0%, #faecd8 100%)",
+          border: "1.5px solid #f0dcc8",
+          boxShadow: "0 8px 32px rgba(196,154,79,0.10)",
+        }}
+      >
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+            stroke="#c49a4f" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+          />
+          <polyline points="9 22 9 12 15 12 15 22" stroke="#c49a4f" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
+      <h3
+        className="font-display font-extrabold text-[#1a0e02] mb-3"
+        style={{ fontSize: "clamp(1.5rem, 2.5vw, 2rem)", letterSpacing: "-0.02em" }}
+      >
+        {t("explore.no_listings.title")}
+      </h3>
+      <p className="text-[#64707d] text-base max-w-sm leading-relaxed">
+        {t("explore.no_listings.body")}
+      </p>
     </div>
   );
 }
@@ -240,18 +295,22 @@ function EmptyState({ onClear }: { onClear: () => void }) {
 export default function ExploreClient({
   initialQuery = "",
   initialRegion = "",
+  initialCategory = "all",
   initialListings,
 }: {
   initialQuery?: string;
   initialRegion?: string;
+  initialCategory?: string;
   initialListings: Listing[];
 }) {
   const [query,      setQuery]      = useState(initialQuery);
-  const [category,   setCategory]   = useState("all");
+  const [category,   setCategory]   = useState(initialCategory);
   const [region,     setRegion]     = useState(initialRegion || "All");
   const [priceRange, setPriceRange] = useState("all");
   const [sortBy,     setSortBy]     = useState("newest");
   const [viewMode,   setViewMode]   = useState<"grid" | "list">("grid");
+
+  const { t } = useLanguage();
 
   const results = useMemo(
     () => filterListings(initialListings, { query, category, region, priceRange, sortBy }),
@@ -266,19 +325,114 @@ export default function ExploreClient({
     setSortBy("newest");
   }, []);
 
+  /* Translated option lists */
+  const categoryOptions = CATEGORIES.map((cat) => ({
+    id:    cat.id,
+    label: cat.id === "all" ? t("cat.all") : t(`search.cat.${cat.id}`),
+  }));
+
+  const regionOptions = REGIONS.map((r) => ({
+    id:    r,
+    label: r === "All" ? t("explore.all_regions") : t(REGION_KEY_MAP[r] ?? r),
+  }));
+
+  const priceOptions = PRICE_RANGES.map((p) => ({
+    id:    p.id,
+    label: t(PRICE_RANGE_KEYS[p.id] ?? p.id),
+  }));
+
+  const sortOptions = SORT_OPTION_KEYS.map((s) => ({
+    id:    s.id,
+    label: t(s.key),
+  }));
+
+  const getCategoryLabel = (catId: string) =>
+    catId === "all" ? t("cat.all") : t(`search.cat.${catId}`);
+
+  const getPriceLabel = (priceId: string) => {
+    const key = PRICE_RANGE_KEYS[priceId];
+    return key ? t(key) : priceId;
+  };
+
   const activeFilters: { label: string; clear: () => void }[] = [];
   if (category !== "all")
-    activeFilters.push({ label: CATEGORIES.find((c) => c.id === category)?.label ?? category, clear: () => setCategory("all") });
+    activeFilters.push({ label: getCategoryLabel(category), clear: () => setCategory("all") });
   if (region !== "All")
     activeFilters.push({ label: region, clear: () => setRegion("All") });
   if (priceRange !== "all")
-    activeFilters.push({ label: PRICE_RANGES.find((p) => p.id === priceRange)?.label ?? priceRange, clear: () => setPriceRange("all") });
+    activeFilters.push({ label: getPriceLabel(priceRange), clear: () => setPriceRange("all") });
 
-  const regionOptions = REGIONS.map((r) => ({ id: r, label: r === "All" ? "All Regions" : r }));
   const hasFilters = activeFilters.length > 0 || query !== "";
 
   return (
     <>
+      {/* ── Page header ──────────────────────────────────────────────────── */}
+      <div
+        className="pt-[72px] relative overflow-hidden"
+        style={{
+          background: "linear-gradient(to bottom, #ffffff 0%, #fdfaf6 70%, #f8f2ea 100%)",
+          borderBottom: "1px solid rgba(232,223,212,0.8)",
+        }}
+      >
+        {/* Subtle background radial */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(ellipse at 80% 50%, rgba(196,154,79,0.04) 0%, transparent 60%)",
+          }}
+          aria-hidden="true"
+        />
+        <div className="relative max-w-[1232px] mx-auto px-6 lg:px-0 pt-10 pb-9">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
+            {/* Title block */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2.5">
+                <div
+                  className="h-px w-8"
+                  style={{ background: "linear-gradient(90deg, transparent, #c49a4f)" }}
+                />
+                <p className="text-[#c49a4f] text-xs font-bold uppercase tracking-[0.20em]">
+                  {t("explore.discover")}
+                </p>
+              </div>
+              <h1
+                className="font-display font-extrabold text-[#1a0e02] leading-tight tracking-tight"
+                style={{ fontSize: "clamp(2rem, 3.5vw, 2.75rem)" }}
+              >
+                {t("explore.heading")}
+              </h1>
+              <p className="text-[#64707d] text-base max-w-lg leading-relaxed mt-0.5">
+                {t("explore.subtitle")}
+              </p>
+            </div>
+
+            {/* Stats strip */}
+            <div className="flex items-center gap-0 shrink-0 pb-1">
+              {HEADER_STATS.map(({ value, labelKey }, i) => (
+                <div key={labelKey} className="flex items-center">
+                  {i > 0 && <div className="w-px h-8 bg-[#e8dfd4] mx-5" />}
+                  <div className="text-right">
+                    <p
+                      className="font-display font-extrabold text-2xl leading-none"
+                      style={{
+                        background: "linear-gradient(135deg, #c49a4f 0%, #d4aa5f 100%)",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                        backgroundClip: "text",
+                      }}
+                    >
+                      {value}
+                    </p>
+                    <p className="text-[#64707d] text-xs mt-0.5">{t(labelKey)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* ── Sticky filter bar ───────────────────────────────────────────── */}
       <div
         className="sticky z-30 bg-white/98 backdrop-blur-sm border-b border-[#e8dfd4]"
@@ -297,7 +451,7 @@ export default function ExploreClient({
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search experiences, locations, tags…"
+                placeholder={t("explore.search_placeholder")}
                 className="w-full h-10 pl-10 pr-10 text-sm border border-[#e8dfd4] rounded-xl bg-[#fdfaf7] outline-none transition-all"
                 style={{ color: "#1a0e02" }}
                 onFocus={(e) => (e.target.style.borderColor = "#c49a4f")}
@@ -308,7 +462,7 @@ export default function ExploreClient({
                   type="button"
                   onClick={() => setQuery("")}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9b8878] hover:text-[#1a0e02] transition-colors"
-                  aria-label="Clear search"
+                  aria-label={t("explore.clear_all")}
                 >
                   <XIcon />
                 </button>
@@ -324,7 +478,7 @@ export default function ExploreClient({
                   <path d="M3 6h18M7 12h10M11 18h2" />
                 </svg>
               </span>
-              <FilterSelect value={sortBy} onChange={setSortBy} options={SORT_OPTIONS} label="Sort by" />
+              <FilterSelect value={sortBy} onChange={setSortBy} options={sortOptions} label={t("sort.newest")} />
             </div>
 
             {/* View toggle */}
@@ -338,7 +492,6 @@ export default function ExploreClient({
                   key={v}
                   type="button"
                   onClick={() => setViewMode(v)}
-                  aria-label={v === "grid" ? "Grid view" : "List view"}
                   aria-pressed={viewMode === v}
                   className="w-9 h-9 flex items-center justify-center transition-colors"
                   style={{
@@ -354,9 +507,9 @@ export default function ExploreClient({
 
           {/* Row 2 — Categories + dropdowns */}
           <div className="flex items-center gap-2.5 pb-3 overflow-x-auto scrollbar-hide">
-            {/* Category chip bar — same pill-container as SearchSection */}
+            {/* Category chip bar */}
             <div className="flex items-center bg-[#f5f1ec] rounded-2xl p-1 gap-0.5 shrink-0">
-              {CATEGORIES.map((cat) => {
+              {categoryOptions.map((cat) => {
                 const active = category === cat.id;
                 return (
                   <button
@@ -380,8 +533,8 @@ export default function ExploreClient({
             <div className="w-px h-7 bg-[#e8dfd4] shrink-0 mx-0.5" />
 
             {/* Dropdown filters */}
-            <FilterSelect value={region}     onChange={setRegion}     options={regionOptions} label="Region"      />
-            <FilterSelect value={priceRange} onChange={setPriceRange} options={PRICE_RANGES}  label="Price range" />
+            <FilterSelect value={region}     onChange={setRegion}     options={regionOptions} label={t("explore.all_regions")} />
+            <FilterSelect value={priceRange} onChange={setPriceRange} options={priceOptions}  label={t("explore.price.all")}   />
           </div>
         </div>
       </div>
@@ -395,7 +548,8 @@ export default function ExploreClient({
             <div className="flex items-center gap-3 flex-wrap">
               <p className="text-sm text-[#64707d]">
                 <span className="font-bold text-[#1a0e02] text-base">{results.length}</span>
-                {"  "}experience{results.length !== 1 ? "s" : ""} found
+                {"  "}
+                {results.length !== 1 ? t("explore.result_plural") : t("explore.result_singular")}
               </p>
 
               {/* Active filter chips */}
@@ -409,14 +563,16 @@ export default function ExploreClient({
                   onClick={clearAll}
                   className="text-xs font-semibold text-[#8b5e38] hover:text-[#6a4228] transition-colors underline underline-offset-2"
                 >
-                  Clear all
+                  {t("explore.clear_all")}
                 </button>
               )}
             </div>
           </div>
 
           {/* Grid / List results */}
-          {results.length === 0 ? (
+          {initialListings.length === 0 ? (
+            <NoListingsEmptyState />
+          ) : results.length === 0 ? (
             <EmptyState onClear={clearAll} />
           ) : viewMode === "grid" ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">

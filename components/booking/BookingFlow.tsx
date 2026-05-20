@@ -9,6 +9,10 @@ import {
 } from "@/lib/types/booking";
 import { createBooking } from "@/lib/actions/booking";
 import { checkAvailability } from "@/lib/actions/availability";
+import { ensureFreshSession } from "@/lib/client/ensureFreshSession";
+import SessionExpiredBanner from "@/components/auth/SessionExpiredBanner";
+import { useLanguage } from "@/context/LanguageProvider";
+import { getListingText } from "@/lib/utils/listing-locale";
 import StepIndicator from "./StepIndicator";
 import BookingSummaryCard from "./BookingSummaryCard";
 import ReviewStep from "./ReviewStep";
@@ -70,6 +74,8 @@ export default function BookingFlow({
   initialChildren,
   prefill,
 }: BookingFlowProps) {
+  const { lang } = useLanguage();
+
   /* ── Step ── */
   const [step, setStep] = useState<BookingStep>(1);
 
@@ -98,8 +104,9 @@ export default function BookingFlow({
     expiry: "",
     cvv: "",
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [bookingError, setBookingError] = useState<string | null>(null);
+  const [isSubmitting,   setIsSubmitting]   = useState(false);
+  const [bookingError,   setBookingError]   = useState<string | null>(null);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   /* ── Confirmation ── */
   const [confirmation, setConfirmation] = useState<BookingConfirmation | null>(null);
@@ -138,6 +145,16 @@ export default function BookingFlow({
   const handleConfirm = async () => {
     setIsSubmitting(true);
     setBookingError(null);
+    setSessionExpired(false);
+
+    // Verify session freshness before the server action — avoids confusing
+    // "not signed in" errors after long idle periods on the booking page.
+    const sessionCheck = await ensureFreshSession();
+    if (!sessionCheck.ok) {
+      setSessionExpired(true);
+      setIsSubmitting(false);
+      return;
+    }
 
     const result = await createBooking({
       listingSlug:      listing.id,
@@ -221,7 +238,7 @@ export default function BookingFlow({
               stroke="currentColor" strokeWidth="1.8"
               strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          Back to {listing.title}
+          Back to {getListingText(listing.title, listing.title_ar, lang)}
         </Link>
 
         <div className="flex flex-col lg:flex-row gap-10 lg:gap-14 items-start">
@@ -258,7 +275,8 @@ export default function BookingFlow({
                 onBack={() => setStep(1)}
               />
             )}
-            {step === 3 && bookingError && (
+            {step === 3 && sessionExpired && <SessionExpiredBanner />}
+            {step === 3 && !sessionExpired && bookingError && (
               <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-5">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-red-500 shrink-0 mt-0.5">
                   <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />

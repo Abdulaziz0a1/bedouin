@@ -4,6 +4,8 @@ import { useState, useTransition, useEffect, useRef, useCallback } from "react";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { sendMessage, fetchThread, deleteMessage, hideConversation, markThreadRead, type ThreadMessage } from "@/lib/actions/messages";
 import type { Conversation } from "@/lib/services/messages";
+import { useLanguage } from "@/context/LanguageProvider";
+import { getListingText } from "@/lib/utils/listing-locale";
 
 interface MessagesPageProps {
   myId:                 string;
@@ -15,13 +17,13 @@ interface MessagesPageProps {
   initialBookingId?:    string;
 }
 
-function fmtTime(iso: string) {
+function fmtTime(iso: string, t: (k: string) => string) {
   const d = new Date(iso);
   const now = new Date();
   const diffDays = Math.floor((now.getTime() - d.getTime()) / 86400000);
   if (diffDays === 0)
     return d.toLocaleTimeString("en-SA", { hour: "2-digit", minute: "2-digit" });
-  if (diffDays === 1) return "Yesterday";
+  if (diffDays === 1) return t("messages.yesterday");
   if (diffDays < 7)
     return d.toLocaleDateString("en-SA", { weekday: "short" });
   return d.toLocaleDateString("en-SA", { day: "numeric", month: "short" });
@@ -83,6 +85,10 @@ function ConvItem({
   isActive: boolean;
   onClick:  () => void;
 }) {
+  const { t, lang } = useLanguage();
+  const convTitle = conv.listingTitle
+    ? getListingText(conv.listingTitle, conv.listingTitle_ar ?? undefined, lang)
+    : null;
   return (
     <button
       onClick={onClick}
@@ -98,21 +104,21 @@ function ConvItem({
         <div className="flex items-center justify-between gap-2 mb-0.5">
           <p className="text-sm font-semibold text-[#1a0e02] truncate">{conv.name}</p>
           {conv.lastAt && (
-            <span className="text-[10px] text-[#a09080] shrink-0">{fmtTime(conv.lastAt)}</span>
+            <span className="text-[10px] text-[#a09080] shrink-0">{fmtTime(conv.lastAt, t)}</span>
           )}
         </div>
-        {(conv.otherParticipantRole || conv.listingTitle) && (
+        {(conv.otherParticipantRole || convTitle) && (
           <div className="flex items-center gap-1.5 mb-0.5">
             {conv.otherParticipantRole && <RoleBadge role={conv.otherParticipantRole} />}
-            {conv.listingTitle && (
-              <span className="text-[11px] text-[#a09080] truncate">{conv.listingTitle}</span>
+            {convTitle && (
+              <span className="text-[11px] text-[#a09080] truncate">{convTitle}</span>
             )}
           </div>
         )}
         {conv.lastMessage ? (
           <p className="text-xs text-[#64707d] truncate">{conv.lastMessage}</p>
         ) : (
-          <p className="text-xs text-[#a09080] italic">No messages yet</p>
+          <p className="text-xs text-[#a09080] italic">{t("messages.no_msgs_conv")}</p>
         )}
       </div>
     </button>
@@ -132,6 +138,7 @@ function MessageBubble({
   senderName: string;
   onDelete?:  (msgId: string) => void;
 }) {
+  const { t } = useLanguage();
   const [confirming, setConfirming] = useState(false);
 
   function handleDelete() {
@@ -188,26 +195,26 @@ function MessageBubble({
                 }
           }
         >
-          {msg.isDeleted ? "This message was deleted." : msg.content}
+          {msg.isDeleted ? t("messages.deleted_msg") : msg.content}
         </div>
-        <span className="text-[10px] text-[#a09080] px-1">{fmtTime(msg.createdAt)}</span>
+        <span className="text-[10px] text-[#a09080] px-1">{fmtTime(msg.createdAt, t)}</span>
 
         {/* Inline delete confirmation */}
         {confirming && (
           <div className="flex items-center gap-2 px-3 py-2 bg-white border border-[#e8dfd4] rounded-xl shadow-sm">
-            <span className="text-xs text-[#64707d]">Delete this message?</span>
+            <span className="text-xs text-[#64707d]">{t("messages.delete_msg")}</span>
             <button
               onClick={handleDelete}
               className="text-xs font-semibold text-red-600 hover:text-red-700 transition-colors"
             >
-              Delete
+              {t("messages.delete")}
             </button>
             <span className="text-[#d0c8be] text-xs">·</span>
             <button
               onClick={() => setConfirming(false)}
               className="text-xs text-[#a09080] hover:text-[#64707d] transition-colors"
             >
-              Cancel
+              {t("messages.cancel")}
             </button>
           </div>
         )}
@@ -231,6 +238,7 @@ function HideConvModal({
   isLoading: boolean;
   error:     string | null;
 }) {
+  const { t } = useLanguage();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-[#1a0e02]/40 backdrop-blur-sm" onClick={onCancel} />
@@ -245,11 +253,11 @@ function HideConvModal({
             </svg>
           </div>
           <div>
-            <h3 className="font-display font-semibold text-[#1a0e02] text-base">Delete conversation?</h3>
+            <h3 className="font-display font-semibold text-[#1a0e02] text-base">{t("messages.delete_conv.title")}</h3>
             <p className="text-xs text-[#64707d] mt-1 leading-relaxed">
-              Your conversation with{" "}
+              {t("messages.delete_conv.pre")}{" "}
               <span className="font-semibold text-[#1a0e02]">{name}</span>{" "}
-              will be removed from your inbox. The other person will still be able to see it.
+              {t("messages.delete_conv.post")}
             </p>
           </div>
         </div>
@@ -264,7 +272,7 @@ function HideConvModal({
             onClick={onCancel}
             className="flex-1 py-2.5 border border-[#e8dfd4] rounded-xl text-sm font-semibold text-[#64707d] hover:border-[#8b5e38] transition-colors"
           >
-            Cancel
+            {t("messages.cancel")}
           </button>
           <button
             type="button"
@@ -278,7 +286,7 @@ function HideConvModal({
                 <path d="M12 2a10 10 0 0110 10" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
               </svg>
             )}
-            Delete conversation
+            {t("messages.delete_conv.btn")}
           </button>
         </div>
       </div>
@@ -297,6 +305,7 @@ export default function MessagesPage({
   initialListingTitle,
   initialBookingId,
 }: MessagesPageProps) {
+  const { t, lang } = useLanguage();
   // Merge the initialWith user into the conversation list if they aren't there yet
   const [convList, setConvList] = useState<Conversation[]>(() => {
     if (
@@ -344,12 +353,15 @@ export default function MessagesPage({
   const activeName  = activeConv?.name ?? "User";
 
   // Context line shown below the name in the thread header
+  const activeListingTitle = activeConv?.listingTitle
+    ? getListingText(activeConv.listingTitle, activeConv.listingTitle_ar ?? undefined, lang)
+    : null;
   let contextLine: string | null = null;
   if (activeConv?.bookingCheckIn && activeConv?.bookingCheckOut) {
     const range = `${fmtShortDate(activeConv.bookingCheckIn)} → ${fmtShortDate(activeConv.bookingCheckOut)}`;
-    contextLine = activeConv.listingTitle ? `${range} · ${activeConv.listingTitle}` : range;
-  } else if (activeConv?.listingTitle) {
-    contextLine = `Inquiry about ${activeConv.listingTitle}`;
+    contextLine = activeListingTitle ? `${range} · ${activeListingTitle}` : range;
+  } else if (activeListingTitle) {
+    contextLine = `${t("messages.inquiry_about")} ${activeListingTitle}`;
   }
 
   const loadThread = useCallback(async (otherId: string) => {
@@ -484,8 +496,8 @@ export default function MessagesPage({
       >
         {/* Header */}
         <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--border-light)" }}>
-          <h1 className="font-display font-bold text-[#1a0e02] text-[1.05rem]">Messages</h1>
-          <p className="text-xs text-[#a09080] mt-0.5">Your conversations</p>
+          <h1 className="font-display font-bold text-[#1a0e02] text-[1.05rem]">{t("messages.heading")}</h1>
+          <p className="text-xs text-[#a09080] mt-0.5">{t("messages.your_convs")}</p>
         </div>
 
         {/* List */}
@@ -498,9 +510,9 @@ export default function MessagesPage({
                     stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
-              <p className="text-sm font-semibold text-[#1a0e02]">No messages yet</p>
+              <p className="text-sm font-semibold text-[#1a0e02]">{t("messages.empty.title")}</p>
               <p className="text-xs text-[#64707d]">
-                Messages appear here after you book a stay or connect with a co-host.
+                {t("messages.empty.desc")}
               </p>
             </div>
           ) : (
@@ -570,18 +582,18 @@ export default function MessagesPage({
             </div>
 
             {/* Conversation context banner */}
-            {(activeConv?.listingTitle || (activeConv?.bookingCheckIn && activeConv?.bookingCheckOut)) && (
+            {(activeListingTitle || (activeConv?.bookingCheckIn && activeConv?.bookingCheckOut)) && (
               <div className="px-5 py-2.5 bg-white border-b border-[#f0e8de] flex flex-col gap-0.5">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-[#a09080]">
-                  You&apos;re talking about
+                  {t("messages.you_talking")}
                 </span>
                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                  {activeConv.listingTitle && (
+                  {activeListingTitle && (
                     <span className="text-xs font-semibold text-[#1a0e02]">
-                      {activeConv.listingTitle}
+                      {activeListingTitle}
                     </span>
                   )}
-                  {activeConv.bookingCheckIn && activeConv.bookingCheckOut && (
+                  {activeConv?.bookingCheckIn && activeConv?.bookingCheckOut && (
                     <span className="text-[11px] text-[#64707d]">
                       {fmtShortDate(activeConv.bookingCheckIn)} – {fmtShortDate(activeConv.bookingCheckOut)}
                     </span>
@@ -616,8 +628,8 @@ export default function MessagesPage({
                 </div>
               ) : thread.length === 0 ? (
                 <div className="flex flex-col items-center justify-center flex-1 gap-2 text-center">
-                  <p className="text-sm text-[#64707d]">No messages yet.</p>
-                  <p className="text-xs text-[#a09080]">Send the first message below.</p>
+                  <p className="text-sm text-[#64707d]">{t("messages.no_msgs")}</p>
+                  <p className="text-xs text-[#a09080]">{t("messages.send_first")}</p>
                 </div>
               ) : (() => {
                 const deletableIds = getDeletableIds(thread, myId);
@@ -645,7 +657,7 @@ export default function MessagesPage({
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
                 }}
-                placeholder="Type a message…"
+                placeholder={t("messages.type_msg")}
                 rows={1}
                 className="flex-1 resize-none px-4 py-2.5 text-sm text-[#1a0e02] placeholder:text-[#a09080] outline-none max-h-32 overflow-y-auto transition-all"
                 style={{
@@ -706,9 +718,9 @@ export default function MessagesPage({
                   stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
-            <p className="font-semibold text-[#1a0e02]">Select a conversation</p>
+            <p className="font-semibold text-[#1a0e02]">{t("messages.select_conv")}</p>
             <p className="text-sm text-[#64707d] max-w-xs">
-              Choose a conversation from the list, or start one from your bookings or co-host assignments.
+              {t("messages.select_desc")}
             </p>
           </div>
         )}

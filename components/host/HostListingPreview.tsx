@@ -1,13 +1,17 @@
+"use client";
+
 import Image from "next/image";
 import { ListingDraft } from "@/lib/types/host";
+import { useLanguage } from "@/context/LanguageProvider";
+import { getListingText } from "@/lib/utils/listing-locale";
 
-const CATEGORY_LABELS: Record<string, string> = {
-  farms:      "Farm Stay",
-  house:      "Heritage House",
-  guesthouse: "Guest House",
-  cabins:     "Highland Cabin",
-  glamping:   "Desert Glamping",
-  doms:       "Dome Suite",
+const CATEGORY_KEYS: Record<string, string> = {
+  farms:      "host.type.farms",
+  house:      "host.type.house",
+  guesthouse: "host.type.guesthouse",
+  cabins:     "host.type.cabins",
+  glamping:   "host.type.glamping",
+  doms:       "host.type.doms",
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -25,6 +29,7 @@ interface HostListingPreviewProps {
 }
 
 export default function HostListingPreview({ draft, currentStep }: HostListingPreviewProps) {
+  const { t, lang } = useLanguage();
   const hasImage  = draft.imagePreviewUrls.length > 0;
   const hasTitle  = draft.title.trim().length > 0;
   const hasPrice  = draft.price > 0;
@@ -47,10 +52,10 @@ export default function HostListingPreview({ draft, currentStep }: HostListingPr
       {/* Label */}
       <div className="flex items-center justify-between">
         <p className="text-xs font-bold text-[#64707d] uppercase tracking-widest">
-          Live preview
+          {t("host.preview.live")}
         </p>
         <span className="text-xs text-[#8b5e38] font-semibold">
-          {completionPct}% complete
+          {completionPct}{t("host.preview.complete")}
         </span>
       </div>
 
@@ -75,7 +80,7 @@ export default function HostListingPreview({ draft, currentStep }: HostListingPr
                 <polyline points="21 15 16 10 5 21" stroke="currentColor" strokeWidth="1.5"
                   strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              <p className="text-xs text-[#c4b49a] font-medium">Photos will appear here</p>
+              <p className="text-xs text-[#c4b49a] font-medium">{t("host.preview.photos")}</p>
             </div>
           )}
 
@@ -85,13 +90,13 @@ export default function HostListingPreview({ draft, currentStep }: HostListingPr
               className="absolute top-3 left-3 text-[11px] font-bold text-white px-2.5 py-1 rounded-xl shadow-sm"
               style={{ backgroundColor: CATEGORY_COLORS[draft.category] ?? "#8b5e38" }}
             >
-              {CATEGORY_LABELS[draft.category] ?? draft.category}
+              {t(CATEGORY_KEYS[draft.category] ?? draft.category)}
             </span>
           )}
 
           {/* New badge */}
           <span className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm text-[#64707d] text-[10px] font-semibold px-2 py-0.5 rounded-lg">
-            Preview
+            {t("host.preview.preview")}
           </span>
         </div>
 
@@ -101,16 +106,18 @@ export default function HostListingPreview({ draft, currentStep }: HostListingPr
           <div className="flex items-center gap-1.5">
             <div className="flex items-center justify-center px-[5px] h-6 w-[34px] bg-[#f1f2f3]"
               style={{ borderRadius: "10px 6px 6px 10px" }}>
-              <span className="text-xs font-bold text-[#0046cc]">New</span>
+              <span className="text-xs font-bold text-[#0046cc]">{t("host.preview.new")}</span>
             </div>
-            <span className="text-xs text-[#64707d]">No reviews yet</span>
+            <span className="text-xs text-[#64707d]">{t("host.preview.no_reviews")}</span>
           </div>
 
           {/* Title */}
           <h3 className={`font-display font-semibold text-[0.95rem] leading-snug line-clamp-2 ${
             hasTitle ? "text-[#1a0e02]" : "text-[#c4b49a]"
           }`}>
-            {hasTitle ? draft.title : "Your listing title will appear here"}
+            {hasTitle
+              ? getListingText(draft.title, draft.title_ar, lang)
+              : t("host.preview.placeholder")}
           </h3>
 
           {/* Location */}
@@ -122,7 +129,7 @@ export default function HostListingPreview({ draft, currentStep }: HostListingPr
               />
             </svg>
             <span className={`truncate text-xs ${hasRegion ? "text-[#64707d]" : "text-[#c4b49a]"}`}>
-              {draft.location || draft.region || "Location not set"}
+              {getListingText(draft.location, draft.location_ar, lang) || draft.region || t("host.preview.location")}
               {draft.region && draft.location ? `, ${draft.region}` : ""}
             </span>
           </div>
@@ -138,7 +145,7 @@ export default function HostListingPreview({ draft, currentStep }: HostListingPr
               ))}
               {draft.amenities.length > 3 && (
                 <span className="text-[10px] font-medium text-[#64707d] px-1">
-                  +{draft.amenities.length - 3} more
+                  +{draft.amenities.length - 3} {t("host.preview.more")}
                 </span>
               )}
             </div>
@@ -168,19 +175,19 @@ export default function HostListingPreview({ draft, currentStep }: HostListingPr
       {/* Progress checklist */}
       <div className="bg-white border border-[#e8dfd4] rounded-2xl p-4">
         <p className="text-xs font-bold text-[#64707d] uppercase tracking-widest mb-3">
-          Listing checklist
+          {t("host.preview.checklist")}
         </p>
         <div className="flex flex-col gap-2">
           {[
-            { label: "Property type",   done: draft.category !== ""                  },
-            { label: "Title",           done: hasTitle                               },
-            { label: "Description",     done: draft.description.trim().length >= 30  },
-            { label: "Location",        done: hasRegion                              },
-            { label: "Amenities",       done: draft.amenities.length >= 3            },
-            { label: "Pricing",         done: hasPrice                               },
-            { label: "Photos (min 3)", done: draft.imagePreviewUrls.length >= 3      },
-          ].map(({ label, done }) => (
-            <div key={label} className="flex items-center gap-2.5">
+            { labelKey: "host.check.type",        done: draft.category !== ""                  },
+            { labelKey: "host.check.title",       done: hasTitle                               },
+            { labelKey: "host.check.description", done: draft.description.trim().length >= 30  },
+            { labelKey: "host.check.location",    done: hasRegion                              },
+            { labelKey: "host.check.amenities",   done: draft.amenities.length >= 3            },
+            { labelKey: "host.check.pricing",     done: hasPrice                               },
+            { labelKey: "host.check.photos",      done: draft.imagePreviewUrls.length >= 3     },
+          ].map(({ labelKey, done }) => (
+            <div key={labelKey} className="flex items-center gap-2.5">
               <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 transition-all ${
                 done ? "bg-[#049153]" : "bg-[#e8dfd4]"
               }`}>
@@ -192,7 +199,7 @@ export default function HostListingPreview({ draft, currentStep }: HostListingPr
                 )}
               </div>
               <span className={`text-xs ${done ? "text-[#1a0e02] font-medium" : "text-[#a09080]"}`}>
-                {label}
+                {t(labelKey)}
               </span>
             </div>
           ))}

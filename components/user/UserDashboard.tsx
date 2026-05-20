@@ -13,13 +13,14 @@ import UserAccountSection    from "./sections/UserAccountSection";
 import UserCohostSection     from "./sections/UserCohostSection";
 import UserSupportSection    from "./sections/UserSupportSection";
 import NotificationsSection  from "@/components/notifications/NotificationsSection";
+import { useLanguage } from "@/context/LanguageProvider";
 
 type Tab = "overview" | "bookings" | "saved" | "activity" | "account" | "cohost" | "support" | "notifications";
 
-const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+const TABS: { id: Tab; labelKey: string; icon: React.ReactNode }[] = [
   {
     id: "overview",
-    label: "Overview",
+    labelKey: "tab.overview",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
         <rect x="3"  y="3"  width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.7" />
@@ -31,7 +32,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   },
   {
     id: "bookings",
-    label: "Bookings",
+    labelKey: "tab.bookings",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
         <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.7" />
@@ -41,7 +42,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   },
   {
     id: "saved",
-    label: "Saved",
+    labelKey: "tab.saved",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
         <path d="M12 21S3 14 3 8.5C3 5.42 5.42 3 8.5 3 10.24 3 11.91 3.81 13 5.09 14.09 3.81 15.76 3 17.5 3 20.58 3 23 5.42 23 8.5 23 14 12 21 12 21z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
@@ -50,7 +51,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   },
   {
     id: "activity",
-    label: "Activity",
+    labelKey: "tab.activity",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
         <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.7" />
@@ -60,7 +61,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   },
   {
     id: "account",
-    label: "Account",
+    labelKey: "tab.account",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
         <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.7" />
@@ -70,7 +71,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   },
   {
     id: "cohost",
-    label: "Co-host",
+    labelKey: "tab.cohost",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
         <circle cx="9" cy="7" r="3.5" stroke="currentColor" strokeWidth="1.7" />
@@ -82,7 +83,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   },
   {
     id: "support",
-    label: "Support",
+    labelKey: "tab.support",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
         <path d="M8 10h8M8 14h5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
@@ -92,7 +93,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   },
   {
     id: "notifications",
-    label: "Notifications",
+    labelKey: "tab.notifications",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
         <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
@@ -147,6 +148,7 @@ export default function UserDashboard({
   reviewedBookingIds?:             string[];
   initialTickets?:                 SupportTicket[];
 }) {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab]     = useState<Tab>("overview");
   const [mobileNavOpen, setMobileNav] = useState(false);
 
@@ -222,7 +224,7 @@ export default function UserDashboard({
                     />
                   )}
                   <span style={{ opacity: isActive ? 1 : 0.7 }}>{tab.icon}</span>
-                  {tab.label}
+                  {t(tab.labelKey)}
                   {badge !== undefined && badge > 0 && (
                     <span
                       className="text-[9px] font-bold min-w-[16px] h-[16px] px-0.5 flex items-center justify-center rounded-full"
@@ -280,7 +282,7 @@ export default function UserDashboard({
                 }}
               >
                 {tab.icon}
-                {tab.label}
+                {t(tab.labelKey)}
               </button>
               );
             })}
@@ -303,9 +305,9 @@ export default function UserDashboard({
                   <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 </svg>
                 <div>
-                  <p className="text-sm font-bold text-[#1a0e02]">Host Application Under Review</p>
+                  <p className="text-sm font-bold text-[#1a0e02]">{t("dashboard.host_pending.title")}</p>
                   <p className="text-xs text-[#64707d] mt-0.5">
-                    Our team is reviewing your host application. You&apos;ll hear back within 1–2 business days.
+                    {t("dashboard.host_pending.body")}
                   </p>
                 </div>
               </div>
@@ -317,9 +319,9 @@ export default function UserDashboard({
                   <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 <div>
-                  <p className="text-sm font-bold text-[#1a0e02]">Host Application Approved</p>
+                  <p className="text-sm font-bold text-[#1a0e02]">{t("dashboard.host_approved.title")}</p>
                   <p className="text-xs text-[#64707d] mt-0.5">
-                    You&apos;re now a verified Bedouin host. Use the &quot;Switch to Hosting&quot; button in the navbar to access your Host Dashboard.
+                    {t("dashboard.host_approved.body")}
                   </p>
                 </div>
               </div>
@@ -332,15 +334,15 @@ export default function UserDashboard({
                   <path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                 </svg>
                 <div className="flex-1">
-                  <p className="text-sm font-bold text-[#1a0e02]">Host Application Not Approved</p>
+                  <p className="text-sm font-bold text-[#1a0e02]">{t("dashboard.host_rejected.title")}</p>
                   {hostRejectionReason && (
-                    <p className="text-xs text-red-700 mt-0.5">Reason: {hostRejectionReason}</p>
+                    <p className="text-xs text-red-700 mt-0.5">{t("dashboard.reason")}: {hostRejectionReason}</p>
                   )}
                   <a
                     href="/host/onboarding"
                     className="inline-block mt-2 text-xs font-bold text-[#461e00] underline hover:no-underline"
                   >
-                    Re-apply as a host →
+                    {t("dashboard.reapply_host")}
                   </a>
                 </div>
               </div>
@@ -364,20 +366,20 @@ export default function UserDashboard({
             ].join(" ")} />
             <p className="text-sm font-semibold text-[#1a0e02] flex-1">
               {pendingCohostInvitationCount > 0
-                ? `${pendingCohostInvitationCount} pending co-host invitation${pendingCohostInvitationCount > 1 ? "s" : ""}`
-                : cohostStatus === "approved" ? "Your co-host profile is live"
-                : cohostStatus === "pending"  ? "Co-host application under review"
-                :                              "Co-host application: action required"}
+                ? `${pendingCohostInvitationCount} ${pendingCohostInvitationCount > 1 ? t("dashboard.cohost_invite_plural") : t("dashboard.cohost_invite_singular")}`
+                : cohostStatus === "approved" ? t("dashboard.cohost_live")
+                : cohostStatus === "pending"  ? t("dashboard.cohost_pending")
+                :                              t("dashboard.cohost_action")}
             </p>
-            <span className="text-xs font-semibold text-[#8b5e38] shrink-0">View →</span>
+            <span className="text-xs font-semibold text-[#8b5e38] shrink-0">{t("dashboard.view")}</span>
           </div>
         )}
 
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-xs text-[#64707d] mb-6">
-          <a href="/" className="hover:text-[#8b5e38] transition-colors">Home</a>
+          <a href="/" className="hover:text-[#8b5e38] transition-colors">{t("nav.home")}</a>
           <span>›</span>
-          <span className="text-[#1a0e02] font-medium capitalize">{activeTab}</span>
+          <span className="text-[#1a0e02] font-medium">{t(`tab.${activeTab}`)}</span>
         </div>
 
         {/* Section content */}
@@ -428,7 +430,7 @@ export default function UserDashboard({
               ].join(" ")}
             >
               {tab.icon}
-              <span className="text-[9px] font-bold uppercase tracking-wide">{tab.label}</span>
+              <span className="text-[9px] font-bold uppercase tracking-wide">{t(tab.labelKey)}</span>
               {isActive && (
                 <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-[#8b5e38] rounded-full" />
               )}

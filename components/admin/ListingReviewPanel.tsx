@@ -5,6 +5,8 @@ import type { AdminListing } from "@/lib/types/admin";
 import AdminStatusBadge from "./shared/AdminStatusBadge";
 import RejectModal, { type RejectPayload } from "./RejectModal";
 import UserAvatar from "@/components/ui/UserAvatar";
+import { useLanguage } from "@/context/LanguageProvider";
+import { getListingText, getListingHighlights } from "@/lib/utils/listing-locale";
 
 interface ListingReviewPanelProps {
   listing: AdminListing;
@@ -162,6 +164,12 @@ function GalleryStrip({ urls }: { urls: string[] }) {
 export default function ListingReviewPanel({
   listing, onApprove, onReject, onClose,
 }: ListingReviewPanelProps) {
+  const { lang } = useLanguage();
+  const displayTitle       = getListingText(listing.title,       listing.title_ar,       lang);
+  const displayLocation    = getListingText(listing.location,    listing.location_ar,    lang);
+  const displayDescription = getListingText(listing.description, listing.description_ar, lang);
+  const displayHighlights  = getListingHighlights(listing.highlights, listing.highlights_ar, lang);
+
   const [isApproving,  setIsApproving]  = useState(false);
   const [showReject,   setShowReject]   = useState(false);
   const [isRejecting,  setIsRejecting]  = useState(false);
@@ -311,13 +319,13 @@ export default function ListingReviewPanel({
               <div className="flex items-start gap-3 mb-2">
                 <div className="flex-1">
                   <h2 className="font-display font-extrabold text-[#1a0e02] text-2xl leading-tight">
-                    {listing.title}
+                    {displayTitle}
                   </h2>
                   <p className="text-[#64707d] text-sm mt-1 flex items-center gap-1">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="shrink-0 text-[#8b5e38]">
                       <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
                     </svg>
-                    {listing.location} · {listing.region}
+                    {displayLocation} · {listing.region}
                   </p>
                 </div>
                 <span className="text-[11px] font-bold text-[#8b5e38] bg-[#fdf5ee] border border-[#e8c89a] px-2.5 py-1 rounded-full shrink-0">
@@ -371,9 +379,9 @@ export default function ListingReviewPanel({
             <div className="bg-white border border-[#e8dfd4] rounded-2xl p-5">
               <SectionHeading>Description</SectionHeading>
               <p className="text-sm text-[#64707d] leading-relaxed whitespace-pre-line">
-                {listing.description}
+                {displayDescription}
               </p>
-              {listing.description.length < 100 && (
+              {displayDescription.length < 100 && (
                 <p className="text-xs text-amber-600 flex items-center gap-1.5 mt-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
                     <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
@@ -384,11 +392,11 @@ export default function ListingReviewPanel({
               )}
 
               {/* Highlights */}
-              {listing.highlights.length > 0 && (
+              {displayHighlights.length > 0 && (
                 <div className="mt-4">
                   <p className="text-[10px] font-bold text-[#64707d] uppercase tracking-widest mb-2">Highlights</p>
                   <ul className="flex flex-col gap-1.5">
-                    {listing.highlights.map((h, i) => (
+                    {displayHighlights.map((h, i) => (
                       <li key={i} className="flex items-start gap-2 text-sm text-[#1a0e02]">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="text-[#c49a4f] mt-1 shrink-0">
                           <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
@@ -534,7 +542,7 @@ export default function ListingReviewPanel({
       {/* Reject modal */}
       {showReject && (
         <RejectModal
-          listingTitle={listing.title}
+          listingTitle={displayTitle}
           onConfirm={handleReject}
           onCancel={() => setShowReject(false)}
           isSubmitting={isRejecting}

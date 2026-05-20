@@ -23,12 +23,16 @@ export interface ListingDraft {
 
   /* Step 2 – About your listing */
   title: string;
+  title_ar?: string;
   description: string;
+  description_ar?: string;
   highlights: string[];     // up to 5 short bullet points
+  highlights_ar?: string[];
 
   /* Step 3 – Location & capacity */
   region: DraftRegion;
   location: string;         // specific area / neighbourhood
+  location_ar?: string;
   mapsUrl: string;          // Google Maps / GPS link (required)
   maxGuests: number;
   bedrooms: number;
@@ -85,6 +89,7 @@ export const INITIAL_DRAFT: ListingDraft = {
 export interface SubmittedListing {
   listingRef: string;       // Firestore doc ID or generated ID
   title: string;
+  title_ar?: string;
   category: DraftCategory;
   region: DraftRegion;
   price: number;

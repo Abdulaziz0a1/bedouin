@@ -90,38 +90,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        // Fetch the profile BEFORE updating any UI-visible state.
-        // This prevents the flash where user != null but hostStatus is still null
-        // (which caused approved hosts to see "Become a Host" on every page load).
-        const { data: profile, error } = await supabase
-          .from("profiles")
-          .select("role, active_mode, host_status, cohost_status")
-          .eq("id", session.user.id)
-          .single();
-
-        if (error) {
-          console.warn("[AuthProvider] session profile fetch failed:", error.message);
-        }
-
-        // React 18 automatic batching: all setState calls after an await boundary
-        // inside the same async callback are batched into a single re-render.
-        // The UI jumps directly from "loading" to the correct final state.
-        setSession(session);
-        setUser(session.user);
-        setActiveMode((profile?.active_mode as ActiveMode) ?? "tourist");
-        setIsAdmin(profile?.role === "admin");
-        setHostStatus((profile?.host_status as HostStatus) ?? null);
-        setCohostStatus((profile?.cohost_status as CohostStatus) ?? null);
-      } else {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // TOKEN_REFRESH_FAILED fires when the SDK cannot renew the access token
+      // (e.g. refresh token revoked, network error after a long idle period).
+      // Treat it the same as SIGNED_OUT so every tab clears its auth state.
+      if ((event as string) === "TOKEN_REFRESH_FAILED" || !session?.user) {
         setSession(null);
         setUser(null);
         setActiveMode("tourist");
         setIsAdmin(false);
         setHostStatus(null);
         setCohostStatus(null);
+        setLoading(false);
+        return;
       }
+
+      // Fetch the profile BEFORE updating any UI-visible state.
+      // This prevents the flash where user != null but hostStatus is still null
+      // (which caused approved hosts to see "Become a Host" on every page load).
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("role, active_mode, host_status, cohost_status")
+        .eq("id", session.user.id)
+        .single();
+
+      if (error) {
+        console.warn("[AuthProvider] session profile fetch failed:", error.message);
+      }
+
+      // React 18 automatic batching: all setState calls after an await boundary
+      // inside the same async callback are batched into a single re-render.
+      // The UI jumps directly from "loading" to the correct final state.
+      setSession(session);
+      setUser(session.user);
+      setActiveMode((profile?.active_mode as ActiveMode) ?? "tourist");
+      setIsAdmin(profile?.role === "admin");
+      setHostStatus((profile?.host_status as HostStatus) ?? null);
+      setCohostStatus((profile?.cohost_status as CohostStatus) ?? null);
       setLoading(false);
     });
 

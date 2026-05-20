@@ -23,12 +23,13 @@ import {
 } from "@/lib/actions/support";
 import ListingQueueCard from "./ListingQueueCard";
 import ListingReviewPanel from "./ListingReviewPanel";
+import DiscoverySection from "./discovery/DiscoverySection";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Types
 // ──────────────────────────────────────────────────────────────────────────────
 
-type Section   = "listings" | "hosts" | "cohosts" | "cancellations" | "support";
+type Section   = "listings" | "hosts" | "cohosts" | "cancellations" | "support" | "discovery";
 type TabFilter = "pending_review" | "approved" | "rejected";
 type AppStatus = "pending" | "approved" | "rejected";
 
@@ -532,6 +533,7 @@ export default function AdminDashboard({
             { id: "cohosts"       as Section, label: "Co-host Applications",  count: pendingCohostCount },
             { id: "cancellations" as Section, label: "Cancellation Requests", count: pendingCancelCount },
             { id: "support"       as Section, label: "Support Tickets",       count: openTicketCount    },
+            { id: "discovery"     as Section, label: "Homepage Discovery",     count: 0                  },
           ] as const).map(({ id, label, count }) => (
             <button
               key={id}
@@ -1063,6 +1065,9 @@ export default function AdminDashboard({
             </>
           );
         })()}
+
+        {/* ── Homepage Discovery section ───────────────────────────────────── */}
+        {section === "discovery" && <DiscoverySection />}
 
       </div>
     </div>

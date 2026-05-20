@@ -1,19 +1,20 @@
 "use client";
 
 import { DraftCategory } from "@/lib/types/host";
+import { useLanguage } from "@/context/LanguageProvider";
 
 const TYPES: {
   id: DraftCategory;
-  label: string;
+  labelKey: string;
   icon: string;
-  desc: string;
+  descKey: string;
 }[] = [
-  { id: "farms",      label: "Farm Stay",       icon: "🌾", desc: "Orchards, date palms, strawberry fields, and agricultural experiences." },
-  { id: "house",      label: "Heritage House",  icon: "🏛️", desc: "Coral houses, riads, mud-brick homes, and historic Saudi architecture." },
-  { id: "guesthouse", label: "Guest House",     icon: "🏡", desc: "Traditional Saudi hospitality in a family-hosted environment." },
-  { id: "cabins",     label: "Highland Cabin",  icon: "🌲", desc: "Mountain retreats in the highlands of Asir, Al Baha, and Taif." },
-  { id: "glamping",   label: "Desert Glamping", icon: "⛺", desc: "Luxury tents, camps, and curated desert experiences." },
-  { id: "doms",       label: "Dome Suite",      icon: "🔭", desc: "Geodesic domes with panoramic sky-view interiors, perfect for stargazing." },
+  { id: "farms",      labelKey: "host.type.farms",      icon: "🌾", descKey: "host.type.farms.desc" },
+  { id: "house",      labelKey: "host.type.house",      icon: "🏛️", descKey: "host.type.house.desc" },
+  { id: "guesthouse", labelKey: "host.type.guesthouse", icon: "🏡", descKey: "host.type.guesthouse.desc" },
+  { id: "cabins",     labelKey: "host.type.cabins",     icon: "🌲", descKey: "host.type.cabins.desc" },
+  { id: "glamping",   labelKey: "host.type.glamping",   icon: "⛺", descKey: "host.type.glamping.desc" },
+  { id: "doms",       labelKey: "host.type.doms",       icon: "🔭", descKey: "host.type.doms.desc" },
 ];
 
 interface Step1TypeProps {
@@ -24,18 +25,19 @@ interface Step1TypeProps {
 }
 
 export default function Step1Type({ category, onChange, onNext, isRejected }: Step1TypeProps) {
+  const { t } = useLanguage();
   return (
     <div className="flex flex-col gap-7">
       {/* Heading */}
       <div>
         <p className="text-[#c49a4f] text-xs font-bold uppercase tracking-[0.16em] mb-2">
-          Step 1 of 6
+          {t("host.step1.eyebrow")}
         </p>
         <h1 className="font-display font-extrabold text-[#1a0e02] text-3xl mb-1">
-          What kind of place are you listing?
+          {t("host.step1.heading")}
         </h1>
         <p className="text-[#64707d] text-sm">
-          Choose the type that best describes your property or experience.
+          {t("host.step1.subtitle")}
         </p>
       </div>
 
@@ -47,7 +49,7 @@ export default function Step1Type({ category, onChange, onNext, isRejected }: St
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
               <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            Please update this section based on admin feedback.
+            {t("host.admin_feedback")}
           </div>
         )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -72,7 +74,7 @@ export default function Step1Type({ category, onChange, onNext, isRejected }: St
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
                   <p className="font-display font-semibold text-[#1a0e02] text-base">
-                    {type.label}
+                    {t(type.labelKey)}
                   </p>
                   {/* Selected indicator */}
                   <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
@@ -87,7 +89,7 @@ export default function Step1Type({ category, onChange, onNext, isRejected }: St
                     )}
                   </div>
                 </div>
-                <p className="text-xs text-[#64707d] mt-1 leading-relaxed">{type.desc}</p>
+                <p className="text-xs text-[#64707d] mt-1 leading-relaxed">{t(type.descKey)}</p>
               </div>
             </button>
           );
@@ -104,8 +106,8 @@ export default function Step1Type({ category, onChange, onNext, isRejected }: St
         style={{ color: "#fff" }}
       >
         {category
-          ? `Continue with ${TYPES.find((t) => t.id === category)?.label ?? "selection"} →`
-          : "Select a property type to continue"}
+          ? `${t("host.continue")}`
+          : t("host.step1.select")}
       </button>
     </div>
   );

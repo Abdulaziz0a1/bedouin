@@ -257,10 +257,13 @@ export default function EditListingFlow({
       const payload: ListingPayload = {
         category:         draft.category,
         title:            draft.title,
+        ...(draft.title_ar?.trim()       && { title_ar:       draft.title_ar }),
         description:      draft.description,
+        ...(draft.description_ar?.trim() && { description_ar: draft.description_ar }),
         highlights:       draft.highlights,
         region:           draft.region,
         location:         draft.location,
+        ...(draft.location_ar?.trim()    && { location_ar:    draft.location_ar }),
         mapsUrl:          draft.mapsUrl,
         maxGuests:        draft.maxGuests,
         bedrooms:         draft.bedrooms,
@@ -392,11 +395,15 @@ export default function EditListingFlow({
             {currentStep === 2 && (
               <Step2About
                 title={draft.title}
+                title_ar={draft.title_ar}
                 description={draft.description}
+                description_ar={draft.description_ar}
                 highlights={draft.highlights}
-                onChangeTitle={(v)      => update("title",       v)}
-                onChangeDesc={(v)       => update("description",  v)}
-                onChangeHighlights={(v) => update("highlights",   v)}
+                onChangeTitle={(v)      => update("title",          v)}
+                onChangeTitleAr={(v)    => update("title_ar",       v)}
+                onChangeDesc={(v)       => update("description",    v)}
+                onChangeDescAr={(v)     => update("description_ar", v)}
+                onChangeHighlights={(v) => update("highlights",     v)}
                 onNext={() => setStep(3)}
                 onBack={() => setStep(1)}
                 isRejected={rejectedSteps.includes("description")}

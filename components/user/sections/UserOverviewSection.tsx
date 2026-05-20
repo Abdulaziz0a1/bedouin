@@ -5,6 +5,7 @@ import type { UserBooking } from "@/lib/types/user";
 import type { CohostAssignmentItem } from "@/lib/services/cohost";
 import BookingStatusBadge from "../shared/BookingStatusBadge";
 import UserAvatar from "@/components/ui/UserAvatar";
+import { useLanguage } from "@/context/LanguageProvider";
 
 function KPITile({
   icon,
@@ -65,6 +66,7 @@ function QuickAction({
 }
 
 function NextTripCard({ trip }: { trip: UserBooking | null }) {
+  const { t, lang } = useLanguage();
 
   if (!trip) {
     return (
@@ -75,14 +77,14 @@ function NextTripCard({ trip }: { trip: UserBooking | null }) {
           </svg>
         </div>
         <div>
-          <p className="font-display font-semibold text-[#1a0e02]">No upcoming trips</p>
-          <p className="text-xs text-[#64707d] mt-0.5">Explore Saudi Arabia and book your next experience</p>
+          <p className="font-display font-semibold text-[#1a0e02]">{t("overview.no_upcoming")}</p>
+          <p className="text-xs text-[#64707d] mt-0.5">{t("overview.no_upcoming_sub")}</p>
         </div>
         <Link
           href="/explore"
           className="mt-1 px-4 py-2 bg-[#8b5e38] text-white text-sm font-semibold rounded-xl hover:bg-[#7a5030] transition-colors"
         >
-          Explore now
+          {t("overview.explore_now")}
         </Link>
       </div>
     );
@@ -91,7 +93,14 @@ function NextTripCard({ trip }: { trip: UserBooking | null }) {
   const checkIn  = new Date(trip.checkIn);
   const checkOut = new Date(trip.checkOut);
   const daysUntil = Math.ceil((checkIn.getTime() - Date.now()) / 86400000);
-  const fmtDate  = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  const locale   = lang === "ar" ? "ar-SA" : "en-GB";
+  const fmtDate  = (d: Date) => d.toLocaleDateString(locale, { day: "numeric", month: "short" });
+
+  const daysLabel = daysUntil === 0
+    ? t("booking.today")
+    : daysUntil === 1
+    ? t("booking.tomorrow")
+    : `${t("booking.in_days_pre")} ${daysUntil} ${t("booking.in_days_suf")}`;
 
   return (
     <div className="bg-white border border-[#e8dfd4] rounded-2xl overflow-hidden">
@@ -104,7 +113,7 @@ function NextTripCard({ trip }: { trip: UserBooking | null }) {
         <div className="flex items-start justify-between gap-2 mb-2">
           <BookingStatusBadge status={trip.status} />
           <span className={`text-xs font-bold px-2 py-1 rounded-lg ${daysUntil <= 7 ? "bg-[#fdf8ee] text-[#8b6a1f]" : "bg-[#f4f6f8] text-[#64707d]"}`}>
-            {daysUntil === 0 ? "Today!" : daysUntil === 1 ? "Tomorrow" : `in ${daysUntil} days`}
+            {daysLabel}
           </span>
         </div>
         <h3 className="font-display font-semibold text-[#1a0e02] mt-2 leading-snug">{trip.listingTitle}</h3>
@@ -116,17 +125,17 @@ function NextTripCard({ trip }: { trip: UserBooking | null }) {
         </p>
         <div className="flex items-center gap-3 mt-3 pt-3 border-t border-[#f0e8de]">
           <div className="flex-1">
-            <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">Check-in</p>
+            <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">{t("booking.check_in")}</p>
             <p className="text-sm font-semibold text-[#1a0e02]">{fmtDate(checkIn)}</p>
           </div>
           <div className="w-px h-8 bg-[#e8dfd4]" />
           <div className="flex-1">
-            <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">Check-out</p>
+            <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">{t("booking.check_out")}</p>
             <p className="text-sm font-semibold text-[#1a0e02]">{fmtDate(checkOut)}</p>
           </div>
           <div className="w-px h-8 bg-[#e8dfd4]" />
           <div className="flex-1">
-            <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">Nights</p>
+            <p className="text-[10px] text-[#a09080] uppercase tracking-wide font-bold">{t("booking.nights")}</p>
             <p className="text-sm font-semibold text-[#1a0e02]">{trip.nights}</p>
           </div>
         </div>
@@ -159,9 +168,17 @@ export default function UserOverviewSection({
   cohostAssignments?:   CohostAssignmentItem[];
   onViewAssignments?:   () => void;
 }) {
-  const fmtDate = new Date().toLocaleDateString("en-GB", {
+  const { t, lang } = useLanguage();
+
+  const fmtDate = new Date().toLocaleDateString(lang === "ar" ? "ar-SA" : "en-GB", {
     weekday: "long", day: "numeric", month: "long",
   });
+
+  const tripMsg = kpis.upcomingCount === 1
+    ? t("overview.one_trip_msg")
+    : kpis.upcomingCount > 1
+    ? `${t("overview.multi_trip_pre")} ${kpis.upcomingCount} ${t("overview.multi_trip_suf")}`
+    : t("overview.no_trips");
 
   const recentBookings = bookings.slice(0, 2);
 
@@ -170,22 +187,15 @@ export default function UserOverviewSection({
 
       {/* Welcome strip */}
       <div className="bg-[#1a0e02] rounded-2xl px-6 py-5 flex items-center justify-between gap-4 overflow-hidden relative">
-        {/* Background pattern */}
         <div className="absolute inset-0 opacity-5 pointer-events-none"
           style={{ backgroundImage: "radial-gradient(circle at 80% 50%, #c49a4f 0%, transparent 60%)" }} />
-
         <div className="relative">
           <p className="text-[#c49a4f] text-xs font-bold uppercase tracking-widest mb-1">{fmtDate}</p>
           <h2 className="font-display font-extrabold text-white text-2xl">
-            Welcome back, {userName}
+            {t("overview.welcome")} {userName}
           </h2>
-          <p className="text-white/60 text-sm mt-1">
-            {kpis.upcomingCount > 0
-              ? `You have ${kpis.upcomingCount} upcoming trip${kpis.upcomingCount > 1 ? "s" : ""} — let's make it unforgettable.`
-              : "Ready to discover your next Saudi adventure?"}
-          </p>
+          <p className="text-white/60 text-sm mt-1">{tripMsg}</p>
         </div>
-
         <UserAvatar
           src={userAvatar}
           name={userName}
@@ -199,7 +209,7 @@ export default function UserOverviewSection({
         <KPITile
           accent
           value={String(kpis.upcomingCount)}
-          label="Upcoming trips"
+          label={t("kpi.upcoming_trips")}
           icon={
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
               <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.8" />
@@ -209,7 +219,7 @@ export default function UserOverviewSection({
         />
         <KPITile
           value={String(kpis.completedCount)}
-          label="Experiences"
+          label={t("kpi.experiences")}
           icon={
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
@@ -218,7 +228,7 @@ export default function UserOverviewSection({
         />
         <KPITile
           value={String(kpis.savedCount)}
-          label="Saved places"
+          label={t("kpi.saved_places")}
           icon={
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
               <path d="M12 21S3 14 3 8.5C3 5.42 5.42 3 8.5 3 10.24 3 11.91 3.81 13 5.09 14.09 3.81 15.76 3 17.5 3 20.58 3 23 5.42 23 8.5 23 14 12 21 12 21z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
@@ -227,7 +237,7 @@ export default function UserOverviewSection({
         />
         <KPITile
           value={`SAR ${(kpis.totalSpent / 1000).toFixed(1)}k`}
-          label="Total spent"
+          label={t("kpi.total_spent")}
           icon={
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
               <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -236,7 +246,7 @@ export default function UserOverviewSection({
         />
       </div>
 
-      {/* Co-host work banner — shown when user has active assignments */}
+      {/* Co-host work banner */}
       {cohostAssignments.length > 0 && (
         <div className="bg-[#f0faf5] border border-[#9edcbb] rounded-2xl px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
@@ -250,7 +260,8 @@ export default function UserOverviewSection({
             </div>
             <div>
               <p className="text-sm font-bold text-[#1a0e02]">
-                You are co-hosting {cohostAssignments.length} listing{cohostAssignments.length > 1 ? "s" : ""}
+                {t("overview.cohosting_pre")} {cohostAssignments.length}{" "}
+                {cohostAssignments.length === 1 ? t("overview.cohosting_listings_s") : t("overview.cohosting_listings_p")}
               </p>
               <p className="text-xs text-[#64707d]">
                 {cohostAssignments.map((a) => a.listingTitle).join(" · ")}
@@ -262,7 +273,7 @@ export default function UserOverviewSection({
               onClick={onViewAssignments}
               className="text-xs font-semibold text-[#049153] border border-[#9edcbb] px-3 py-1.5 rounded-lg hover:bg-[#d0f0e0] transition-colors shrink-0"
             >
-              View assignments →
+              {t("overview.view_assignments")}
             </button>
           )}
         </div>
@@ -271,20 +282,18 @@ export default function UserOverviewSection({
       {/* Main 2-col: next trip + quick actions */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
 
-        {/* Next trip */}
         <div className="lg:col-span-2 flex flex-col gap-3">
-          <h3 className="font-display font-semibold text-[#1a0e02]">Your next trip</h3>
+          <h3 className="font-display font-semibold text-[#1a0e02]">{t("overview.next_trip")}</h3>
           <NextTripCard trip={kpis.nextTrip} />
         </div>
 
-        {/* Quick actions */}
         <div className="lg:col-span-3 flex flex-col gap-3">
-          <h3 className="font-display font-semibold text-[#1a0e02]">Quick actions</h3>
+          <h3 className="font-display font-semibold text-[#1a0e02]">{t("overview.quick_actions")}</h3>
           <div className="flex flex-col gap-2">
             <QuickAction
               href="/explore"
-              label="Explore experiences"
-              sub="Browse farms, domes, cabins & more"
+              label={t("overview.explore_exp")}
+              sub={t("overview.browse_farms")}
               icon={
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                   <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="1.8" />
@@ -294,8 +303,8 @@ export default function UserOverviewSection({
             />
             <QuickAction
               href="/account/bookings"
-              label="Manage bookings"
-              sub={`${kpis.upcomingCount} upcoming · ${kpis.completedCount} completed`}
+              label={t("overview.manage_bookings")}
+              sub={`${kpis.upcomingCount} ${t("bookings.tab_upcoming").toLowerCase()} · ${kpis.completedCount} ${t("activity.completed").toLowerCase()}`}
               icon={
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                   <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.8" />
@@ -305,8 +314,8 @@ export default function UserOverviewSection({
             />
             <QuickAction
               href="/account/saved"
-              label="My saved places"
-              sub={`${kpis.savedCount} listings in your wishlist`}
+              label={t("overview.saved_action")}
+              sub={`${kpis.savedCount} listings`}
               icon={
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                   <path d="M12 21S3 14 3 8.5C3 5.42 5.42 3 8.5 3 10.24 3 11.91 3.81 13 5.09 14.09 3.81 15.76 3 17.5 3 20.58 3 23 5.42 23 8.5 23 14 12 21 12 21z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
@@ -315,8 +324,8 @@ export default function UserOverviewSection({
             />
             <QuickAction
               href="/host"
-              label="Become a host"
-              sub="List your property and earn with Bedouin"
+              label={t("overview.become_host")}
+              sub={t("overview.become_host_sub")}
               icon={
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                   <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
@@ -332,15 +341,16 @@ export default function UserOverviewSection({
       {recentBookings.length > 0 && (
         <div className="bg-white border border-[#e8dfd4] rounded-2xl overflow-hidden">
           <div className="px-5 py-4 border-b border-[#f0e8de] flex items-center justify-between">
-            <h3 className="font-display font-semibold text-[#1a0e02]">Recent bookings</h3>
+            <h3 className="font-display font-semibold text-[#1a0e02]">{t("overview.recent_bookings")}</h3>
             <a href="/account/bookings" className="text-xs font-semibold text-[#8b5e38] hover:underline">
-              View all →
+              {t("overview.view_all")}
             </a>
           </div>
           <div className="divide-y divide-[#f0e8de]">
             {recentBookings.map((b) => {
+              const overviewLocale = lang === "ar" ? "ar-SA" : "en-GB";
               const fmtD = (iso: string) =>
-                new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+                new Date(iso).toLocaleDateString(overviewLocale, { day: "numeric", month: "short" });
               return (
                 <div key={b.id} className="flex items-center gap-4 px-5 py-3.5">
                   <img
@@ -354,7 +364,7 @@ export default function UserOverviewSection({
                   </div>
                   <div className="flex flex-col items-end gap-1.5 shrink-0">
                     <BookingStatusBadge status={b.status} size="sm" />
-                    <p className="text-xs font-bold text-[#1a0e02]">SAR {b.totalPrice.toLocaleString("en-US")}</p>
+                    <p className="text-xs font-bold text-[#1a0e02]">SAR {b.totalPrice.toLocaleString(overviewLocale)}</p>
                   </div>
                 </div>
               );

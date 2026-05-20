@@ -8,9 +8,11 @@ export interface DashboardListing {
    *  Used to match co-host invitations/assignments (both reference listings.id). */
   listingId?: string;
   title: string;
+  title_ar?: string;
   category: string;
   region: string;
   location: string;
+  location_ar?: string;
   price: number;
   priceUnit: string;
   originalPrice?: number;
@@ -38,6 +40,7 @@ export interface DashboardBooking {
   reference: string;
   listingId: string;
   listingTitle: string;
+  listingTitle_ar?: string;
   listingImage: string;
   guestId?: string;      // auth user id of the guest — used for messaging
   guestName: string;

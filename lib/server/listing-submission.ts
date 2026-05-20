@@ -111,6 +111,23 @@ function checkMeaningfulDifference(
   );
 }
 
+// ─── Bilingual field normalization ────────────────────────────────────────────
+//
+// Because the DB has no _ar columns, we store the best available value into the
+// main English column.  If the host filled only Arabic, that Arabic text goes
+// into title/description/location so the record is never blank.
+
+function normalizeForDb(draft: ListingPayload) {
+  const title       = draft.title?.trim()       || draft.title_ar?.trim()       || "";
+  const description = draft.description?.trim() || draft.description_ar?.trim() || "";
+  const location    = draft.location?.trim()    || draft.location_ar?.trim()    || "";
+  const highlights  =
+    draft.highlights.some((s) => s.trim())
+      ? draft.highlights
+      : ((draft as { highlights_ar?: string[] }).highlights_ar ?? []);
+  return { title, description, location, highlights };
+}
+
 // ─── Payload validation ───────────────────────────────────────────────────────
 //
 // Called server-side before any DB write.  Rejects payloads that contain blob:
@@ -157,17 +174,18 @@ export async function coreSubmitListing(
   const id          = crypto.randomUUID();
   const reference   = `BDN-LST-${id.replace(/-/g, "").slice(0, 8).toUpperCase()}`;
   const submittedAt = new Date().toISOString();
+  const norm        = normalizeForDb(draft);
 
   const { error } = await supabase.from("listing_submissions").insert({
     id,
     reference,
     host_id:        userId,
-    title:          draft.title       || "Untitled Listing",
+    title:          norm.title,
     category:       draft.category,
     region:         draft.region,
-    location:       draft.location,
-    description:    draft.description,
-    highlights:     draft.highlights,
+    location:       norm.location,
+    description:    norm.description,
+    highlights:     norm.highlights,
     amenities:      draft.amenities,
     house_rules:    draft.houseRules,
     max_guests:     draft.maxGuests,
@@ -194,7 +212,8 @@ export async function coreSubmitListing(
     success: true,
     listing: {
       listingRef:  reference,
-      title:       draft.title || "Untitled Listing",
+      title:       norm.title,
+      title_ar:    draft.title_ar,
       category:    draft.category   as DraftCategory,
       region:      draft.region     as DraftRegion,
       price:       draft.price,
@@ -216,8 +235,10 @@ export async function coreUpdateListing(
   const payloadError = validatePayload(draft);
   if (payloadError) return { success: false, error: payloadError };
 
+  const norm = normalizeForDb(draft);
+
   // Required-field guard: location must be set before a submission enters the review queue.
-  if (!draft.location.trim()) {
+  if (!norm.location) {
     return { success: false, error: "Please add a location (Step 3) before submitting for review." };
   }
 
@@ -251,12 +272,12 @@ export async function coreUpdateListing(
   const { error } = await supabase
     .from("listing_submissions")
     .update({
-      title:          draft.title       || "Untitled Listing",
+      title:          norm.title,
       category:       draft.category,
       region:         draft.region,
-      location:       draft.location,
-      description:    draft.description,
-      highlights:     draft.highlights,
+      location:       norm.location,
+      description:    norm.description,
+      highlights:     norm.highlights,
       amenities:      draft.amenities,
       house_rules:    draft.houseRules,
       max_guests:     draft.maxGuests,

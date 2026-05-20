@@ -3,10 +3,11 @@
 import Link from "next/link";
 import type { ActivityEvent } from "@/lib/types/user";
 import UserEmptyState from "../shared/UserEmptyState";
+import { useLanguage } from "@/context/LanguageProvider";
 
 const ACTIVITY_CONFIG: Record<
   ActivityEvent["type"],
-  { icon: React.ReactNode; color: string; bg: string }
+  { icon: React.ReactNode; color: string; bg: string; labelKey: string }
 > = {
   booking_created: {
     icon: (
@@ -17,6 +18,7 @@ const ACTIVITY_CONFIG: Record<
     ),
     color: "text-[#0046cc]",
     bg:    "bg-[#eef3ff]",
+    labelKey: "activity.booking",
   },
   booking_confirmed: {
     icon: (
@@ -27,6 +29,7 @@ const ACTIVITY_CONFIG: Record<
     ),
     color: "text-[#049153]",
     bg:    "bg-[#f0faf5]",
+    labelKey: "activity.booking",
   },
   booking_completed: {
     icon: (
@@ -36,6 +39,7 @@ const ACTIVITY_CONFIG: Record<
     ),
     color: "text-[#c49a4f]",
     bg:    "bg-[#fdf8ee]",
+    labelKey: "activity.completed",
   },
   booking_cancelled: {
     icon: (
@@ -46,6 +50,7 @@ const ACTIVITY_CONFIG: Record<
     ),
     color: "text-red-500",
     bg:    "bg-red-50",
+    labelKey: "activity.cancelled",
   },
   listing_saved: {
     icon: (
@@ -55,6 +60,7 @@ const ACTIVITY_CONFIG: Record<
     ),
     color: "text-[#8b5e38]",
     bg:    "bg-[#fdf5ee]",
+    labelKey: "activity.saved",
   },
   listing_unsaved: {
     icon: (
@@ -64,6 +70,7 @@ const ACTIVITY_CONFIG: Record<
     ),
     color: "text-[#64707d]",
     bg:    "bg-[#f4f6f8]",
+    labelKey: "activity.saved",
   },
   review_submitted: {
     icon: (
@@ -73,6 +80,7 @@ const ACTIVITY_CONFIG: Record<
     ),
     color: "text-[#8b5e38]",
     bg:    "bg-[#fdf5ee]",
+    labelKey: "activity.review",
   },
   profile_updated: {
     icon: (
@@ -83,40 +91,40 @@ const ACTIVITY_CONFIG: Record<
     ),
     color: "text-[#64707d]",
     bg:    "bg-[#f4f6f8]",
+    labelKey: "activity.review",
   },
 };
 
-function timeAgo(isoString: string): string {
+type TFn = (key: string) => string;
+
+function timeAgo(isoString: string, t: TFn, lang: string): string {
   const now  = Date.now();
   const then = new Date(isoString).getTime();
   const diff = Math.floor((now - then) / 1000);
+  const locale = lang === "ar" ? "ar-SA" : "en-GB";
 
-  if (diff < 60)          return "just now";
-  if (diff < 3600)        return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400)       return `${Math.floor(diff / 3600)}h ago`;
-  if (diff < 86400 * 7)   return `${Math.floor(diff / 86400)}d ago`;
-  if (diff < 86400 * 30)  return `${Math.floor(diff / 86400 / 7)}w ago`;
-  return new Date(isoString).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  if (diff < 60)          return t("notif.time.just_now");
+  if (diff < 3600)        return t("notif.time.m_ago").replace("{n}", String(Math.floor(diff / 60)));
+  if (diff < 86400)       return t("notif.time.h_ago").replace("{n}", String(Math.floor(diff / 3600)));
+  if (diff < 86400 * 7)   return t("notif.time.d_ago").replace("{n}", String(Math.floor(diff / 86400)));
+  if (diff < 86400 * 30)  return t("notif.time.w_ago").replace("{n}", String(Math.floor(diff / 86400 / 7)));
+  return new Date(isoString).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" });
 }
 
 function ActivityRow({ event }: { event: ActivityEvent }) {
+  const { t, lang } = useLanguage();
   const cfg = ACTIVITY_CONFIG[event.type];
 
   return (
     <div className="flex items-start gap-4 py-4 border-b last:border-0 border-[#f0e8de]">
-      {/* Icon */}
       <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${cfg.bg} ${cfg.color}`}>
         {cfg.icon}
       </div>
-
-      {/* Text */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-[#1a0e02]">{event.title}</p>
         <p className="text-xs text-[#64707d] mt-0.5 leading-relaxed">{event.description}</p>
-        <p className="text-[10px] text-[#a09080] mt-1.5">{timeAgo(event.timestamp)}</p>
+        <p className="text-[10px] text-[#a09080] mt-1.5">{timeAgo(event.timestamp, t, lang)}</p>
       </div>
-
-      {/* Thumbnail */}
       {event.relatedImage && event.relatedId && (
         <Link href={`/listing/${event.relatedId}`} className="shrink-0">
           <img
@@ -130,47 +138,40 @@ function ActivityRow({ event }: { event: ActivityEvent }) {
   );
 }
 
-// Group activity events by month
-function groupByMonth(events: ActivityEvent[]): { label: string; events: ActivityEvent[] }[] {
+function groupByMonth(events: ActivityEvent[], lang: string): { label: string; events: ActivityEvent[] }[] {
+  const locale = lang === "ar" ? "ar-SA" : "en-GB";
   const groups: Map<string, ActivityEvent[]> = new Map();
-
   for (const event of events) {
-    const key = new Date(event.timestamp).toLocaleDateString("en-GB", {
-      month: "long", year: "numeric",
-    });
+    const key = new Date(event.timestamp).toLocaleDateString(locale, { month: "long", year: "numeric" });
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(event);
   }
-
   return Array.from(groups.entries()).map(([label, evts]) => ({ label, events: evts }));
 }
 
+const LEGEND_TYPES: ActivityEvent["type"][] = [
+  "booking_created",
+  "booking_completed",
+  "listing_saved",
+  "review_submitted",
+  "booking_cancelled",
+];
+
 export default function UserActivitySection() {
-  // Activity log is not yet backed by the database.
-  // Show an honest empty state rather than fabricated events.
+  const { t, lang } = useLanguage();
   const sorted: ActivityEvent[] = [];
-  const groups = groupByMonth(sorted);
+  const groups = groupByMonth(sorted, lang);
 
   return (
     <div className="flex flex-col gap-6">
 
-      {/* Header */}
       <div>
-        <h2 className="font-display font-semibold text-[#1a0e02] text-lg">Activity</h2>
-        <p className="text-xs text-[#64707d] mt-0.5">Your recent actions and booking history</p>
+        <h2 className="font-display font-semibold text-[#1a0e02] text-lg">{t("activity.heading")}</h2>
+        <p className="text-xs text-[#64707d] mt-0.5">{t("activity.subtitle")}</p>
       </div>
 
-      {/* Activity legend */}
       <div className="flex flex-wrap gap-3">
-        {(
-          [
-            { type: "booking_created",   label: "Booking" },
-            { type: "booking_completed", label: "Completed" },
-            { type: "listing_saved",     label: "Saved"  },
-            { type: "review_submitted",  label: "Review"  },
-            { type: "booking_cancelled", label: "Cancelled" },
-          ] as { type: ActivityEvent["type"]; label: string }[]
-        ).map(({ type, label }) => {
+        {LEGEND_TYPES.map((type) => {
           const cfg = ACTIVITY_CONFIG[type];
           return (
             <span
@@ -178,13 +179,12 @@ export default function UserActivitySection() {
               className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${cfg.bg} ${cfg.color}`}
             >
               {cfg.icon}
-              {label}
+              {t(cfg.labelKey)}
             </span>
           );
         })}
       </div>
 
-      {/* Feed */}
       {sorted.length === 0 ? (
         <UserEmptyState
           icon={
@@ -193,8 +193,8 @@ export default function UserActivitySection() {
               <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           }
-          title="No activity yet"
-          description="Your bookings, saved listings, and reviews will appear here."
+          title={t("activity.empty.title")}
+          description={t("activity.empty.desc")}
         />
       ) : (
         <div className="flex flex-col gap-4">

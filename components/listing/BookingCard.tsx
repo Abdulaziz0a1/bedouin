@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import CalendarPopup from "@/components/ui/CalendarPopup";
 import { checkAvailability } from "@/lib/actions/availability";
 import { useAuth } from "@/context/AuthProvider";
+import { useLanguage } from "@/context/LanguageProvider";
 
 const SHORT_MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -56,6 +57,7 @@ export default function BookingCard({
 }: BookingCardProps) {
   const { user } = useAuth();
   const router   = useRouter();
+  const { t }    = useLanguage();
 
   const [checkIn, setCheckIn]   = useState<Date | null>(null);
   const [checkOut, setCheckOut] = useState<Date | null>(null);
@@ -108,8 +110,10 @@ export default function BookingCard({
       } else {
         const message =
           d.remaining <= 0
-            ? "Not available for these dates."
-            : `Only ${d.remaining} spot${d.remaining === 1 ? "" : "s"} left — you requested ${totalGuests}.`;
+            ? t("bcard.not_available")
+            : (d.remaining === 1
+                ? t("bcard.spots_req").replace("{spots}", String(d.remaining)).replace("{total}", String(totalGuests))
+                : t("bcard.spots_req_plural").replace("{spots}", String(d.remaining)).replace("{total}", String(totalGuests)));
         setAvail({ status: "unavailable", remaining: d.remaining, message });
       }
     });
@@ -174,7 +178,7 @@ export default function BookingCard({
             <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
             <path d="M9 22V12h6v10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          <span>You own this listing and cannot book it.</span>
+          <span>{t("bcard.own_listing")}</span>
         </div>
       )}
 
@@ -187,9 +191,9 @@ export default function BookingCard({
             <div className="flex divide-x divide-[#e8dfd4] relative">
               {/* Check In */}
               <div className={`relative ${fieldCls} rounded-tl-2xl`} onClick={() => toggle("checkin")}>
-                <span className={labelCls}>Check In</span>
+                <span className={labelCls}>{t("bcard.checkin")}</span>
                 <span className={valueCls(!!checkIn)}>
-                  {checkIn ? formatDate(checkIn) : "Add date"}
+                  {checkIn ? formatDate(checkIn) : t("bcard.add_date")}
                 </span>
                 {active === "checkin" && (
                   <CalendarPopup
@@ -208,9 +212,9 @@ export default function BookingCard({
 
               {/* Check Out */}
               <div className={`relative ${fieldCls} rounded-tr-2xl`} onClick={() => toggle("checkout")}>
-                <span className={labelCls}>Check Out</span>
+                <span className={labelCls}>{t("bcard.checkout")}</span>
                 <span className={valueCls(!!checkOut)}>
-                  {checkOut ? formatDate(checkOut) : "Add date"}
+                  {checkOut ? formatDate(checkOut) : t("bcard.add_date")}
                 </span>
                 {active === "checkout" && (
                   <CalendarPopup
@@ -232,12 +236,12 @@ export default function BookingCard({
               className={`relative ${fieldCls} rounded-b-2xl`}
               onClick={() => toggle("guests")}
             >
-              <span className={labelCls}>Guests</span>
+              <span className={labelCls}>{t("bcard.guests")}</span>
               <span className={valueCls(true)}>
-                {adults + children} guest{adults + children !== 1 ? "s" : ""}
+                {adults + children === 1 ? t("bcard.guest_one") : t("bcard.guest_many").replace("{n}", String(adults + children))}
                 {" "}·{" "}
-                {adults} adult{adults !== 1 ? "s" : ""}
-                {children > 0 && `, ${children} child${children !== 1 ? "ren" : ""}`}
+                {adults === 1 ? t("bcard.adult_one") : t("bcard.adult_many").replace("{n}", String(adults))}
+                {children > 0 && `, ${children === 1 ? t("bcard.child_one") : t("bcard.child_many").replace("{n}", String(children))}`}
               </span>
 
               {/* Guests popover */}
@@ -247,8 +251,8 @@ export default function BookingCard({
                   onClick={(e) => e.stopPropagation()}
                 >
                   {[
-                    { label: "Adults", sub: "Ages 13+", value: adults, set: setAdults, min: 1, max: maxGuests },
-                    { label: "Children", sub: "Ages 2–12", value: children, set: setChildren, min: 0, max: maxGuests - adults },
+                    { label: t("bcard.adults"), sub: t("bcard.adults_sub"), value: adults, set: setAdults, min: 1, max: maxGuests },
+                    { label: t("bcard.children"), sub: t("bcard.children_sub"), value: children, set: setChildren, min: 0, max: maxGuests - adults },
                   ].map(({ label, sub, value, set, min, max }) => (
                     <div key={label} className="flex items-center justify-between py-3 border-b last:border-0 border-[#f0e8de]">
                       <div>
@@ -281,7 +285,7 @@ export default function BookingCard({
                     onClick={() => setActive(null)}
                     className="w-full mt-3 py-2.5 bg-[#8b5e38] text-white text-sm font-semibold rounded-xl hover:bg-[#7a5030] transition-colors"
                   >
-                    Done
+                    {t("bcard.done")}
                   </button>
                 </div>
               )}
@@ -291,7 +295,9 @@ export default function BookingCard({
           {/* Min nights notice */}
           {minNights > 1 && (
             <p className="text-xs text-[#64707d] -mt-2">
-              Minimum stay: {minNights} night{minNights !== 1 ? "s" : ""}
+              {minNights === 1
+                ? t("bcard.min_stay").replace("{n}", String(minNights))
+                : t("bcard.min_stay_plural").replace("{n}", String(minNights))}
             </p>
           )}
 
@@ -303,7 +309,7 @@ export default function BookingCard({
                   <svg className="animate-spin w-3.5 h-3.5 text-[#8b5e38]" viewBox="0 0 24 24" fill="none">
                     <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4" strokeDashoffset="15" />
                   </svg>
-                  Checking availability…
+                  {t("bcard.checking")}
                 </div>
               )}
               {avail.status === "available" && !avail.unchecked && (
@@ -313,8 +319,10 @@ export default function BookingCard({
                     <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" />
                   </svg>
                   {avail.remaining <= 3
-                    ? `Only ${avail.remaining} spot${avail.remaining === 1 ? "" : "s"} left for these dates`
-                    : "Available for selected dates"}
+                    ? (avail.remaining === 1
+                        ? t("bcard.spots_few").replace("{n}", String(avail.remaining))
+                        : t("bcard.spots_few_plural").replace("{n}", String(avail.remaining)))
+                    : t("bcard.available")}
                 </div>
               )}
               {avail.status === "unavailable" && (
@@ -327,7 +335,7 @@ export default function BookingCard({
                 </div>
               )}
               {avail.status === "error" && (
-                <p className="text-xs text-[#a09080] px-1">Could not check availability — try again.</p>
+                <p className="text-xs text-[#a09080] px-1">{t("bcard.error")}</p>
               )}
             </div>
           )}
@@ -339,7 +347,9 @@ export default function BookingCard({
                 <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
                 <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
-              Minimum stay is {minNights} night{minNights !== 1 ? "s" : ""}
+              {minNights === 1
+                ? t("bcard.min_warn").replace("{n}", String(minNights))
+                : t("bcard.min_warn_plural").replace("{n}", String(minNights))}
             </div>
           )}
 
@@ -347,15 +357,19 @@ export default function BookingCard({
           {nights > 0 && (
             <div className="flex flex-col gap-2 text-sm border-t border-[#f0e8de] pt-4">
               <div className="flex justify-between text-[#1a0e02]">
-                <span>SAR {price} × {nights} night{nights !== 1 ? "s" : ""}</span>
+                <span>
+                  {nights === 1
+                    ? t("bcard.nights_line").replace("{price}", String(price)).replace("{n}", String(nights))
+                    : t("bcard.nights_line_plural").replace("{price}", String(price)).replace("{n}", String(nights))}
+                </span>
                 <span>SAR {subtotal}</span>
               </div>
               <div className="flex justify-between text-[#64707d]">
-                <span>Service fee</span>
+                <span>{t("bcard.service_fee")}</span>
                 <span>SAR {serviceFee}</span>
               </div>
               <div className="flex justify-between font-bold text-[#1a0e02] text-base border-t border-[#f0e8de] pt-3 mt-1">
-                <span>Total</span>
+                <span>{t("bcard.total")}</span>
                 <span>SAR {total}</span>
               </div>
             </div>
@@ -372,7 +386,7 @@ export default function BookingCard({
                 boxShadow: "0 6px 20px rgba(139,94,56,0.38), inset 0 1px 0 rgba(255,255,255,0.10)",
               }}
             >
-              {user ? "Reserve Now" : "Log in to Reserve"}
+              {user ? t("bcard.reserve") : t("bcard.login_reserve")}
             </button>
           ) : (
             <button
@@ -391,12 +405,12 @@ export default function BookingCard({
                     }
               }
             >
-              {isUnavailable ? "Not Available" : "Check Availability"}
+              {isUnavailable ? t("bcard.unavailable") : t("bcard.check_avail")}
             </button>
           )}
 
           <p className="text-xs text-[#64707d] text-center -mt-2">
-            No charge until you confirm your booking
+            {t("bcard.no_charge")}
           </p>
         </>
       )}

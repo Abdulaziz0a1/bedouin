@@ -4,61 +4,61 @@
 export type AmenityCategory = "essentials" | "outdoor" | "food" | "comfort" | "safety" | "activities";
 
 export interface AmenityDef {
-  id: string;
-  label: string;
-  icon: string;
+  id:       string;
+  labelKey: string;
+  icon:     string;
   category: AmenityCategory;
 }
 
 export const ALL_AMENITIES: AmenityDef[] = [
   /* ── Essentials ── */
-  { id: "wifi",       label: "WiFi",               icon: "📶", category: "essentials" },
-  { id: "parking",    label: "Free parking",        icon: "🚗", category: "essentials" },
-  { id: "ac",         label: "Air conditioning",    icon: "❄️", category: "essentials" },
-  { id: "washer",     label: "Washer / dryer",      icon: "🧺", category: "essentials" },
-  { id: "tv",         label: "Smart TV",            icon: "📺", category: "essentials" },
+  { id: "wifi",       labelKey: "amenity.wifi",       icon: "📶", category: "essentials" },
+  { id: "parking",    labelKey: "amenity.parking",    icon: "🚗", category: "essentials" },
+  { id: "ac",         labelKey: "amenity.ac",         icon: "❄️", category: "essentials" },
+  { id: "washer",     labelKey: "amenity.washer",     icon: "🧺", category: "essentials" },
+  { id: "tv",         labelKey: "amenity.tv",         icon: "📺", category: "essentials" },
 
   /* ── Outdoor ── */
-  { id: "pool",       label: "Private pool",        icon: "🏊", category: "outdoor" },
-  { id: "garden",     label: "Garden / yard",       icon: "🌿", category: "outdoor" },
-  { id: "terrace",    label: "Terrace / deck",      icon: "🏔️", category: "outdoor" },
-  { id: "firepit",    label: "Outdoor fire pit",    icon: "🔥", category: "outdoor" },
-  { id: "bbq",        label: "BBQ grill",           icon: "🍖", category: "outdoor" },
+  { id: "pool",       labelKey: "amenity.pool",       icon: "🏊", category: "outdoor" },
+  { id: "garden",     labelKey: "amenity.garden",     icon: "🌿", category: "outdoor" },
+  { id: "terrace",    labelKey: "amenity.terrace",    icon: "🏔️", category: "outdoor" },
+  { id: "firepit",    labelKey: "amenity.firepit",    icon: "🔥", category: "outdoor" },
+  { id: "bbq",        labelKey: "amenity.bbq",        icon: "🍖", category: "outdoor" },
 
   /* ── Food ── */
-  { id: "kitchen",    label: "Full kitchen",        icon: "🍳", category: "food" },
-  { id: "breakfast",  label: "Breakfast included",  icon: "☕", category: "food" },
-  { id: "coffee",     label: "Arabic coffee & dates", icon: "🫖", category: "food" },
-  { id: "dining",     label: "Outdoor dining area", icon: "🍽️", category: "food" },
+  { id: "kitchen",    labelKey: "amenity.kitchen",    icon: "🍳", category: "food" },
+  { id: "breakfast",  labelKey: "amenity.breakfast",  icon: "☕", category: "food" },
+  { id: "coffee",     labelKey: "amenity.coffee",     icon: "🫖", category: "food" },
+  { id: "dining",     labelKey: "amenity.dining",     icon: "🍽️", category: "food" },
 
   /* ── Comfort ── */
-  { id: "heating",    label: "Heating",             icon: "🌡️", category: "comfort" },
-  { id: "bathtub",    label: "Bathtub",             icon: "🛁", category: "comfort" },
-  { id: "toiletries", label: "Luxury toiletries",   icon: "🧴", category: "comfort" },
-  { id: "sound",      label: "Sound system",        icon: "🎶", category: "comfort" },
-  { id: "workspace",  label: "Dedicated workspace", icon: "💻", category: "comfort" },
+  { id: "heating",    labelKey: "amenity.heating",    icon: "🌡️", category: "comfort" },
+  { id: "bathtub",    labelKey: "amenity.bathtub",    icon: "🛁", category: "comfort" },
+  { id: "toiletries", labelKey: "amenity.toiletries", icon: "🧴", category: "comfort" },
+  { id: "sound",      labelKey: "amenity.sound",      icon: "🎶", category: "comfort" },
+  { id: "workspace",  labelKey: "amenity.workspace",  icon: "💻", category: "comfort" },
 
   /* ── Safety ── */
-  { id: "firstaid",   label: "First aid kit",       icon: "🩺", category: "safety" },
-  { id: "smoke",      label: "Smoke detector",      icon: "🔊", category: "safety" },
-  { id: "co",         label: "CO detector",         icon: "🛡️", category: "safety" },
-  { id: "security",   label: "24h security",        icon: "🔒", category: "safety" },
+  { id: "firstaid",   labelKey: "amenity.firstaid",   icon: "🩺", category: "safety" },
+  { id: "smoke",      labelKey: "amenity.smoke",      icon: "🔊", category: "safety" },
+  { id: "co",         labelKey: "amenity.co",         icon: "🛡️", category: "safety" },
+  { id: "security",   labelKey: "amenity.security",   icon: "🔒", category: "safety" },
 
   /* ── Activities ── */
-  { id: "telescope",  label: "Telescope",           icon: "🔭", category: "activities" },
-  { id: "hiking",     label: "Hiking trails",       icon: "🌲", category: "activities" },
-  { id: "camel",      label: "Camel riding",        icon: "🐫", category: "activities" },
-  { id: "stargazing", label: "Stargazing deck",     icon: "⭐", category: "activities" },
-  { id: "horseback",  label: "Horse riding",        icon: "🐎", category: "activities" },
+  { id: "telescope",  labelKey: "amenity.telescope",  icon: "🔭", category: "activities" },
+  { id: "hiking",     labelKey: "amenity.hiking",     icon: "🌲", category: "activities" },
+  { id: "camel",      labelKey: "amenity.camel",      icon: "🐫", category: "activities" },
+  { id: "stargazing", labelKey: "amenity.stargazing", icon: "⭐", category: "activities" },
+  { id: "horseback",  labelKey: "amenity.horseback",  icon: "🐎", category: "activities" },
 ];
 
-export const AMENITY_CATEGORY_LABELS: Record<AmenityCategory, string> = {
-  essentials:  "Essentials",
-  outdoor:     "Outdoor",
-  food:        "Food & Drink",
-  comfort:     "Comfort",
-  safety:      "Safety",
-  activities:  "Activities",
+export const AMENITY_CATEGORY_TKEYS: Record<AmenityCategory, string> = {
+  essentials:  "amenity.cat.essentials",
+  outdoor:     "amenity.cat.outdoor",
+  food:        "amenity.cat.food",
+  comfort:     "amenity.cat.comfort",
+  safety:      "amenity.cat.safety",
+  activities:  "amenity.cat.activities",
 };
 
 export const AMENITY_CATEGORIES: AmenityCategory[] = [

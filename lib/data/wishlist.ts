@@ -176,7 +176,9 @@ export const WISHLIST_ITEMS: SavedListing[] = [
 export interface RecommendedListing {
   id: string;
   title: string;
+  title_ar?: string;
   location: string;
+  location_ar?: string;
   region: string;
   category: string;
   price: number;

@@ -4,12 +4,25 @@ const BUCKET         = "listing-images";
 const UPLOAD_TIMEOUT = 45_000;
 const AUTH_TIMEOUT   = 12_000;
 
+// Thrown (and exported) so callers can distinguish session expiry from upload errors.
+export class SessionExpiredError extends Error {
+  constructor() {
+    super("Your session expired. Please log in again to continue.");
+    this.name = "SessionExpiredError";
+  }
+}
+
 // ─── Auth token ───────────────────────────────────────────────────────────────
 //
 // Races getSession() against a 12 s resolve-null timeout so a hung GoTrueClient
 // refresh (can take 2–8 s normally, hangs indefinitely on network failure) never
 // blocks the upload indefinitely.  clearTimeout() is called after the race so
 // the timer never fires a false warning after a successful token retrieval.
+//
+// If getSession() succeeds but returns no token (session expired), a silent
+// refreshSession() is attempted before giving up — covers the common case where
+// the page has been open long enough for the JWT to expire but the refresh token
+// is still valid.
 
 async function getAccessToken(
   supabase: ReturnType<typeof createClient>,
@@ -28,10 +41,28 @@ async function getAccessToken(
     const result = await Promise.race([supabase.auth.getSession(), timeoutPromise]);
     clearTimeout(timeoutId); // prevent false warning if getSession() won the race
 
-    if (!result) return null;
+    if (!result) return null; // timed out — treat as expired
+
     const token = result.data.session?.access_token ?? null;
-    console.log("[upload] access token:", token ? "OK" : "MISSING (no active session)");
-    return token;
+    if (token) {
+      console.log("[upload] access token: OK");
+      return token;
+    }
+
+    // No active session — attempt a silent token refresh before giving up.
+    console.log("[upload] no active session, attempting token refresh…");
+    try {
+      const { data, error: refreshErr } = await supabase.auth.refreshSession();
+      if (refreshErr || !data.session) {
+        console.warn("[upload] token refresh failed:", refreshErr?.message ?? "no session");
+        return null;
+      }
+      console.log("[upload] token refresh OK");
+      return data.session.access_token;
+    } catch (refreshThrow) {
+      console.error("[upload] token refresh threw:", refreshThrow);
+      return null;
+    }
   } catch (err) {
     clearTimeout(timeoutId);
     console.error("[upload] getAccessToken error:", err);
@@ -42,7 +73,7 @@ async function getAccessToken(
 // ─── Single file upload ───────────────────────────────────────────────────────
 
 type FileUploadOk  = { publicUrl: string; path: string };
-type FileUploadErr = { error: string };
+type FileUploadErr = { error: string; sessionExpired?: true };
 type FileUploadResult = FileUploadOk | FileUploadErr;
 
 async function uploadFile(
@@ -58,7 +89,7 @@ async function uploadFile(
 
   try {
     const token = await getAccessToken(supabase);
-    if (!token) return { error: "Session expired — please log in again." };
+    if (!token) return { error: "Your session expired. Please log in again to continue.", sessionExpired: true };
 
     const endpoint = `${process.env.NEXT_PUBLIC_SUPABASE_URL!}/storage/v1/object/${BUCKET}/${path}`;
 
@@ -160,6 +191,7 @@ export async function uploadImages(
     if ("error" in result) {
       console.error(`[uploadImages] slot ${i}: FAILED —`, result.error);
       // Caller must delete uploadedPaths so far to avoid orphaned files
+      if (result.sessionExpired) throw new SessionExpiredError();
       throw new Error(`Photo ${i + 1} failed to upload: ${result.error}`);
     }
 

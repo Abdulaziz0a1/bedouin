@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Review, RatingBreakdown } from "@/lib/data/listing-details";
 import UserAvatar from "@/components/ui/UserAvatar";
+import { useLanguage } from "@/context/LanguageProvider";
 
 interface ReviewsSectionProps {
   score: number;
@@ -47,6 +48,7 @@ export default function ReviewsSection({
   reviews,
   breakdown,
 }: ReviewsSectionProps) {
+  const { t } = useLanguage();
   const [showAll, setShowAll] = useState(false);
   const visible = showAll ? reviews : reviews.slice(0, 4);
 
@@ -66,17 +68,17 @@ export default function ReviewsSection({
               </svg>
             ))}
           </div>
-          <p className="text-white/60 text-xs mt-1">{reviewCount} reviews</p>
+          <p className="text-white/60 text-xs mt-1">{t("review.count").replace("{n}", String(reviewCount))}</p>
         </div>
 
         {/* Breakdown bars */}
         <div className="flex-1 flex flex-col gap-3 justify-center">
-          <StarRow label="Cleanliness"    value={breakdown?.cleanliness} />
-          <StarRow label="Accuracy"       value={breakdown?.accuracy} />
-          <StarRow label="Check-in"       value={breakdown?.checkin} />
-          <StarRow label="Communication"  value={breakdown?.communication} />
-          <StarRow label="Location"       value={breakdown?.location} />
-          <StarRow label="Value"          value={breakdown?.value} />
+          <StarRow label={t("review.cleanliness")}   value={breakdown?.cleanliness} />
+          <StarRow label={t("review.accuracy")}      value={breakdown?.accuracy} />
+          <StarRow label={t("review.checkin")}       value={breakdown?.checkin} />
+          <StarRow label={t("review.communication")} value={breakdown?.communication} />
+          <StarRow label={t("review.location")}      value={breakdown?.location} />
+          <StarRow label={t("review.value")}         value={breakdown?.value} />
         </div>
       </div>
 
@@ -110,7 +112,7 @@ export default function ReviewsSection({
           onClick={() => setShowAll((v) => !v)}
           className="self-start px-5 py-2.5 border border-[#1a0e02] text-[#1a0e02] text-sm font-semibold rounded-xl hover:bg-[#1a0e02] hover:text-white transition-colors"
         >
-          {showAll ? "Show fewer reviews" : `Show all ${reviewCount} reviews`}
+          {showAll ? t("review.show_fewer") : t("review.show_all").replace("{n}", String(reviewCount))}
         </button>
       )}
     </div>

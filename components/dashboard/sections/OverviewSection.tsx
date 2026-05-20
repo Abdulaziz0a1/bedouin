@@ -16,6 +16,8 @@ import {
 } from "@/lib/data/dashboard";
 import StatusBadge from "../shared/StatusBadge";
 import AlertBanner from "@/components/ui/AlertBanner";
+import { useLanguage } from "@/context/LanguageProvider";
+import { getListingText } from "@/lib/utils/listing-locale";
 
 function KPICard({
   label,
@@ -49,7 +51,6 @@ function KPICard({
         (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)";
       }}
     >
-      {/* Subtle inner glow */}
       <div
         className="absolute top-0 left-0 right-0 h-px pointer-events-none"
         style={{ background: "linear-gradient(90deg, transparent, rgba(196,154,79,0.18), transparent)" }}
@@ -87,8 +88,6 @@ function KPICard({
   );
 }
 
-// Always returns exactly 6 calendar months ending at the current month.
-// Real data is merged in by month name; any missing month gets payout 0.
 function buildSixMonthChart(data: { month: string; payout: number }[]) {
   const now = new Date();
   const byMonth = new Map(data.map((d) => [d.month, d.payout]));
@@ -161,17 +160,24 @@ function MiniBarChart({ data }: {
 }
 
 function UpcomingRow({ booking }: { booking: DashboardBooking }) {
+  const { t, lang } = useLanguage();
+  const displayTitle = getListingText(booking.listingTitle, booking.listingTitle_ar, lang);
   const checkIn  = new Date(booking.checkIn);
   const checkOut = new Date(booking.checkOut);
   const fmtDate  = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
   const daysUntil = Math.ceil((checkIn.getTime() - Date.now()) / 86400000);
+
+  const daysLabel =
+    daysUntil === 0 ? t("dash.today")
+    : daysUntil === 1 ? t("dash.tomorrow")
+    : t("dash.in_days").replace("{count}", String(daysUntil));
 
   return (
     <div className="flex items-center gap-3 py-3 border-b last:border-0 border-[#f0e8de]">
       {booking.listingImage ? (
         <img
           src={booking.listingImage}
-          alt={booking.listingTitle}
+          alt={displayTitle}
           className="w-12 h-10 rounded-lg object-cover shrink-0"
         />
       ) : (
@@ -179,13 +185,13 @@ function UpcomingRow({ booking }: { booking: DashboardBooking }) {
       )}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-[#1a0e02] truncate">{booking.guestName}</p>
-        <p className="text-xs text-[#64707d] truncate">{booking.listingTitle}</p>
+        <p className="text-xs text-[#64707d] truncate">{displayTitle}</p>
         <p className="text-xs text-[#a09080]">{fmtDate(checkIn)} – {fmtDate(checkOut)} · {booking.nights}n</p>
       </div>
       <div className="text-right shrink-0">
         <p className="text-sm font-bold text-[#1a0e02]">SAR {booking.hostPayout.toLocaleString("en-US")}</p>
         <p className={`text-[10px] font-semibold mt-0.5 ${daysUntil <= 3 ? "text-[#c49a4f]" : "text-[#64707d]"}`}>
-          {daysUntil === 0 ? "Today" : daysUntil === 1 ? "Tomorrow" : `in ${daysUntil}d`}
+          {daysLabel}
         </p>
       </div>
     </div>
@@ -250,23 +256,32 @@ export default function OverviewSection({
   bookings: DashboardBooking[];
   kpis:     OverviewKPIs;
 }) {
+  const { t, lang } = useLanguage();
   const upcoming         = bookings.filter((b) => b.status === "upcoming").slice(0, 3);
   const pendingListings  = listings.filter((l) => l.status === "pending_review");
   const rejectedListings = listings.filter((l) => l.status === "rejected");
 
   const chartData = kpis.earningsHistory.map((m) => ({ month: m.month, payout: m.payout }));
 
-  // ── Booking announcement cards ────────────────────────────────────────────────
   const todayStr    = new Date().toISOString().split("T")[0];
   const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split("T")[0];
 
   const checkIns = bookings.filter((b) =>
     b.status === "upcoming" && (b.checkIn === todayStr || b.checkIn === tomorrowStr)
   );
-  // "new" bookings = upcoming created in last 24h. Status "upcoming" implies new requests.
-  const newRequests = bookings.filter(
-    (b) => b.status === "upcoming"
-  ).length;
+  const newRequests = bookings.filter((b) => b.status === "upcoming").length;
+
+  const pendingAlertTitle = pendingListings.length === 1
+    ? t("dash.alert.pending_one")
+    : t("dash.alert.pending_many").replace("{count}", String(pendingListings.length));
+
+  const rejectedAlertTitle = rejectedListings.length === 1
+    ? t("dash.alert.rejected_one")
+    : t("dash.alert.rejected_many").replace("{count}", String(rejectedListings.length));
+
+  const guestsBadge = kpis.upcomingCount === 1
+    ? t("dash.guest_singular").replace("{count}", "1")
+    : t("dash.guest_plural").replace("{count}", String(kpis.upcomingCount));
 
   return (
     <div className="flex flex-col gap-6">
@@ -286,8 +301,8 @@ export default function OverviewSection({
                     <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
                   </svg>
                 }
-                title={`${isToday ? "Guest check-in today" : "Guest check-in tomorrow"}: ${b.guestName}`}
-                subtitle={`${b.listingTitle} · ${b.nights} night${b.nights !== 1 ? "s" : ""}`}
+                title={`${isToday ? t("dash.checkin_today") : t("dash.checkin_tomorrow")}: ${b.guestName}`}
+                subtitle={`${getListingText(b.listingTitle, b.listingTitle_ar, lang)} · ${b.nights} ${b.nights !== 1 ? t("dash.bookings.nights") : t("dash.bookings.nights_one")}`}
                 href="/dashboard?tab=bookings"
               />
             );
@@ -300,8 +315,8 @@ export default function OverviewSection({
                   <path d="M5 12l5 5 9-9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               }
-              title={`${newRequests} upcoming booking${newRequests !== 1 ? "s" : ""}`}
-              subtitle="View all upcoming guest arrivals in Bookings."
+              title={`${newRequests} ${newRequests !== 1 ? t("dash.bookings.tab_upcoming").toLowerCase() : t("dash.bookings.tab_upcoming").toLowerCase()}`}
+              subtitle={t("dash.view_upcoming")}
               href="/dashboard?tab=bookings"
             />
           )}
@@ -311,8 +326,8 @@ export default function OverviewSection({
       {pendingListings.length > 0 && (
         <AlertBanner
           variant="warning"
-          title={`${pendingListings.length} listing${pendingListings.length > 1 ? "s" : ""} under review`}
-          description="Our team usually responds within 48 hours. You'll receive an email once approved."
+          title={pendingAlertTitle}
+          description={t("dash.alert.pending_desc")}
           dismissible
           storageKey={`bdw:alert:pending:${pendingListings.map((l) => l.id).sort().join(",")}`}
         />
@@ -321,8 +336,8 @@ export default function OverviewSection({
       {rejectedListings.length > 0 && (
         <AlertBanner
           variant="error"
-          title={`${rejectedListings.length} listing${rejectedListings.length > 1 ? "s were" : " was"} not approved`}
-          description="Review the feedback in My Listings and resubmit when ready."
+          title={rejectedAlertTitle}
+          description={t("dash.alert.rejected_desc")}
           dismissible
           storageKey={`bdw:alert:rejected:${rejectedListings.map((l) => l.id).sort().join(",")}`}
         />
@@ -331,9 +346,9 @@ export default function OverviewSection({
       {/* KPI grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
-          label="Total Earnings"
+          label={t("dash.kpi.total_earnings")}
           value={`SAR ${kpis.totalEarnings.toLocaleString("en-US")}`}
-          sub="All time payout"
+          sub={t("dash.kpi.all_time_payout")}
           delta={kpis.earningsDelta}
           icon={
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -342,9 +357,9 @@ export default function OverviewSection({
           }
         />
         <KPICard
-          label="Active Listings"
+          label={t("dash.kpi.active_listings")}
           value={String(kpis.activeListings)}
-          sub={`${listings.length} total`}
+          sub={t("dash.kpi.total_listings").replace("{count}", String(listings.length))}
           icon={
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
@@ -353,9 +368,9 @@ export default function OverviewSection({
           }
         />
         <KPICard
-          label="Total Bookings"
+          label={t("dash.kpi.total_bookings")}
           value={String(kpis.totalBookings)}
-          sub={`${kpis.upcomingCount} upcoming`}
+          sub={t("dash.kpi.upcoming").replace("{count}", String(kpis.upcomingCount))}
           icon={
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.8" />
@@ -364,9 +379,9 @@ export default function OverviewSection({
           }
         />
         <KPICard
-          label="Avg. Rating"
+          label={t("dash.kpi.avg_rating")}
           value={kpis.avgRating.toFixed(2)}
-          sub="Across all listings"
+          sub={t("dash.kpi.across_listings")}
           icon={
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
@@ -387,12 +402,12 @@ export default function OverviewSection({
             className="px-5 py-3.5 flex items-center justify-between"
             style={{ borderBottom: "1px solid var(--border-light)" }}
           >
-            <h2 className="font-display font-semibold text-[#1a0e02] text-[0.9375rem]">Upcoming check-ins</h2>
+            <h2 className="font-display font-semibold text-[#1a0e02] text-[0.9375rem]">{t("dash.upcoming_checkins_title")}</h2>
             <span
               className="text-[10px] font-bold text-[#8b5e38] px-2.5 py-1 rounded-full"
               style={{ background: "linear-gradient(135deg,#fdf5ee 0%,#f0e0c8 100%)", border: "1px solid rgba(196,154,79,0.22)" }}
             >
-              {kpis.upcomingCount} guest{kpis.upcomingCount !== 1 ? "s" : ""}
+              {guestsBadge}
             </span>
           </div>
           <div className="px-5 py-2">
@@ -407,8 +422,8 @@ export default function OverviewSection({
                     <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
                   </svg>
                 </div>
-                <p className="text-sm font-medium text-[#64707d]">No upcoming check-ins</p>
-                <p className="text-xs text-[#a09080]">New bookings will appear here.</p>
+                <p className="text-sm font-medium text-[#64707d]">{t("dash.no_upcoming")}</p>
+                <p className="text-xs text-[#a09080]">{t("dash.new_bookings_appear")}</p>
               </div>
             ) : (
               upcoming.map((b) => <UpcomingRow key={b.id} booking={b} />)
@@ -423,8 +438,8 @@ export default function OverviewSection({
         >
           <div className="flex items-start justify-between">
             <div>
-              <h2 className="font-display font-semibold text-[#1a0e02] text-[0.9375rem]">Earnings trend</h2>
-              <p className="text-xs text-[#a09080] mt-0.5">Last 6 months · SAR payout</p>
+              <h2 className="font-display font-semibold text-[#1a0e02] text-[0.9375rem]">{t("dash.earnings_trend")}</h2>
+              <p className="text-xs text-[#a09080] mt-0.5">{t("dash.last_6_months")}</p>
             </div>
             {kpis.earningsDelta !== 0 && (
               <span
@@ -444,13 +459,13 @@ export default function OverviewSection({
             style={{ borderTop: "1px solid var(--border-light)" }}
           >
             <div>
-              <p className="text-eyebrow mb-0.5">This month</p>
+              <p className="text-eyebrow mb-0.5">{t("dash.this_month")}</p>
               <p className="font-display font-extrabold text-[#8b5e38] text-[1.2rem] leading-none">
                 SAR {kpis.thisMonth.toLocaleString("en-US")}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-eyebrow mb-0.5">vs last month</p>
+              <p className="text-eyebrow mb-0.5">{t("dash.vs_last_month")}</p>
               <p
                 className="font-bold text-base leading-none"
                 style={{ color: kpis.earningsDelta >= 0 ? "var(--status-success-text)" : "var(--status-error-text)" }}
@@ -472,7 +487,7 @@ export default function OverviewSection({
           className="px-5 py-3.5"
           style={{ borderBottom: "1px solid var(--border-light)" }}
         >
-          <h2 className="font-display font-semibold text-[#1a0e02] text-[0.9375rem]">Listing status</h2>
+          <h2 className="font-display font-semibold text-[#1a0e02] text-[0.9375rem]">{t("dash.listing_status")}</h2>
         </div>
         <div className="divide-y divide-[#f0e8de]">
           {listings
@@ -495,7 +510,7 @@ export default function OverviewSection({
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-[#1a0e02] truncate">{listing.title}</p>
+                  <p className="text-sm font-semibold text-[#1a0e02] truncate">{getListingText(listing.title, listing.title_ar, lang)}</p>
                   <p className="text-xs text-[#64707d]">{listing.region} · SAR {listing.price}/{listing.priceUnit.replace("per ", "")}</p>
                 </div>
                 <StatusBadge status={listing.status} />

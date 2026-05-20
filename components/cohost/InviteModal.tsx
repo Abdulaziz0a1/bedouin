@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import type { CoHost, InviteModalListing } from "@/lib/types/cohost";
+import { useLanguage } from "@/context/LanguageProvider";
+import { getListingText } from "@/lib/utils/listing-locale";
 
 interface Props {
   cohost:           CoHost;
@@ -20,6 +22,8 @@ export default function InviteModal({
   onCancel,
   isSubmitting,
 }: Props) {
+  const { lang } = useLanguage();
+
   // Pre-select the listing if a specific one was linked from the dashboard
   const [selectedListingId, setSelectedListingId] = useState<string | null>(
     () => defaultListingId && listings.some((l) => l.id === defaultListingId) ? defaultListingId : null
@@ -126,7 +130,7 @@ export default function InviteModal({
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-[#1a0e02] truncate">{listing.title}</p>
+                      <p className="text-sm font-semibold text-[#1a0e02] truncate">{getListingText(listing.title, listing.title_ar, lang)}</p>
                       <p className="text-[11px] text-[#64707d]">📍 {listing.region}</p>
                     </div>
                     {selectedListingId === listing.id && (

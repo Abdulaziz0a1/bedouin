@@ -3,6 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { SavedListing } from "@/lib/types/user";
+import { useLanguage } from "@/context/LanguageProvider";
+import { getListingText } from "@/lib/utils/listing-locale";
 
 interface WishlistCardProps {
   listing: SavedListing;
@@ -60,6 +62,7 @@ function HeartButton({ onClick }: { onClick: () => void }) {
 }
 
 export default function WishlistCard({ listing, onRemove, layout = "grid" }: WishlistCardProps) {
+  const { lang } = useLanguage();
   const discountPct =
     listing.originalPrice && listing.originalPrice > listing.price
       ? Math.round(((listing.originalPrice - listing.price) / listing.originalPrice) * 100)
@@ -109,7 +112,7 @@ export default function WishlistCard({ listing, onRemove, layout = "grid" }: Wis
           {/* Title */}
           <Link href={`/listing/${listing.listingId}`}>
             <h3 className="font-display font-semibold text-[#1a0e02] leading-snug line-clamp-1 hover:text-[#8b5e38] transition-colors">
-              {listing.title}
+              {getListingText(listing.title, listing.title_ar, lang)}
             </h3>
           </Link>
 
@@ -118,7 +121,7 @@ export default function WishlistCard({ listing, onRemove, layout = "grid" }: Wis
             <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
               <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
             </svg>
-            {listing.location}
+            {getListingText(listing.location, listing.location_ar, lang)}
           </p>
 
           {/* Tags */}
@@ -210,7 +213,7 @@ export default function WishlistCard({ listing, onRemove, layout = "grid" }: Wis
         {/* Title */}
         <Link href={`/listing/${listing.listingId}`}>
           <h3 className="font-display font-semibold text-[#1a0e02] text-[0.95rem] leading-snug line-clamp-2 hover:text-[#8b5e38] transition-colors">
-            {listing.title}
+            {getListingText(listing.title, listing.title_ar, lang)}
           </h3>
         </Link>
 
@@ -219,7 +222,7 @@ export default function WishlistCard({ listing, onRemove, layout = "grid" }: Wis
           <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
           </svg>
-          {listing.location}
+          {getListingText(listing.location, listing.location_ar, lang)}
         </p>
 
         {/* Tags */}

@@ -238,9 +238,9 @@ export default function BookingCard({
             >
               <span className={labelCls}>{t("bcard.guests")}</span>
               <span className={valueCls(true)}>
-                {adults + children === 1 ? t("bcard.guest_one") : t("bcard.guest_many").replace("{n}", String(adults + children))}
+                {(adults + children === 1 ? t("bcard.guest_one") : t("bcard.guest_many")).replace("{n}", String(adults + children))}
                 {" "}·{" "}
-                {adults === 1 ? t("bcard.adult_one") : t("bcard.adult_many").replace("{n}", String(adults))}
+                {(adults === 1 ? t("bcard.adult_one") : t("bcard.adult_many")).replace("{n}", String(adults))}
                 {children > 0 && `, ${children === 1 ? t("bcard.child_one") : t("bcard.child_many").replace("{n}", String(children))}`}
               </span>
 

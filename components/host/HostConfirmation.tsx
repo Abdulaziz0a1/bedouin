@@ -158,13 +158,13 @@ export default function HostConfirmation({ listing }: HostConfirmationProps) {
           >
             {t("host.confirm.explore")}
           </Link>
-          <Link
-            href="/host/new"
+          <button
+            onClick={() => { window.location.href = "/host/new"; }}
             className="flex-1 py-3.5 bg-[#8b5e38] font-bold text-sm rounded-2xl text-center hover:bg-[#7a5030] transition-colors"
             style={{ color: "#fff" }}
           >
             {t("host.confirm.add_another")}
-          </Link>
+          </button>
         </div>
       </div>
     </div>

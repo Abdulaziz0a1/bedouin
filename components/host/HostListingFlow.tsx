@@ -65,33 +65,33 @@ export default function HostListingFlow({ userId }: { userId: string }) {
     setSubmitError(null);
     setSessionExpired(false);
 
-    // Verify session freshness before touching Storage — avoids a partial upload
-    // that would fail mid-way with a cryptic auth error.
-    const sessionCheck = await ensureFreshSession();
-    if (!sessionCheck.ok) {
-      setSessionExpired(true);
-      setSubmitting(false);
-      return;
-    }
-
     // Tracks Storage paths uploaded this attempt so we can roll them back if
     // the DB write fails — preventing orphaned files in Supabase Storage.
     let uploadedPaths: string[] = [];
 
     try {
+      // Verify session freshness before touching Storage — avoids a partial upload
+      // that would fail mid-way with a cryptic auth error.
+      const sessionCheck = await ensureFreshSession();
+      const sessionReason = !sessionCheck.ok ? (sessionCheck as { reason: string }).reason : null;
+      if (!sessionCheck.ok) {
+        if (sessionReason === "session_expired") {
+          setSessionExpired(true);
+        } else {
+          // auth_timeout: couldn't confirm state — show retry error, don't redirect
+          setSubmitError("We could not verify your session. Please try again.");
+        }
+        return;
+      }
+
       // Step 1 — upload any new File objects (blob URLs) to Storage.
       // Existing https URLs pass through unchanged.
-      console.log("[submit] step 1/2 — uploading images…", {
-        total: draft.imagePreviewUrls.length,
-        toUpload: imageFiles.filter(Boolean).length,
-      });
       const { urls: finalImageUrls, uploadedPaths: newPaths } =
         await uploadImages(draft.imagePreviewUrls, imageFiles, userId);
       uploadedPaths = newPaths;
 
       // Step 2 — write to DB via stable Route Handler (not a Server Action).
       // fetch() to a path is never affected by Fast Refresh stale action IDs.
-      console.log("[submit] step 2/2 — POST /api/host/listings/submit…");
       const payload: ListingPayload = {
         category:         draft.category,
         title:            draft.title,
@@ -131,7 +131,6 @@ export default function HostListingFlow({ userId }: { userId: string }) {
       }
 
       const result = await response.json() as SubmitListingResult;
-      console.log("[submit] API result:", result);
 
       if (!result.success) {
         await deleteUploadedImages(uploadedPaths);
@@ -142,7 +141,7 @@ export default function HostListingFlow({ userId }: { userId: string }) {
       setSubmitted(result.listing);
       setStep("confirmed");
     } catch (err) {
-      console.error("[submit] caught:", err);
+      console.warn("[submit] error:", err);
       // Roll back any files that were uploaded before the failure
       await deleteUploadedImages(uploadedPaths);
 
@@ -160,7 +159,6 @@ export default function HostListingFlow({ userId }: { userId: string }) {
         : raw;
       setSubmitError(msg);
     } finally {
-      // Always release the button — success, structured error, or thrown exception
       setSubmitting(false);
     }
   }, [draft, imageFiles, userId]);

@@ -13,6 +13,9 @@ export default function LoginForm() {
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState<string | null>(null);
 
+  // Stable singleton — same instance as AuthProvider and every other client component
+  const [supabase] = useState(() => createClient());
+
   const router       = useRouter();
   const searchParams = useSearchParams();
   const returnTo     = searchParams.get("returnTo");
@@ -22,38 +25,54 @@ export default function LoginForm() {
     setError(null);
     setLoading(true);
 
-    const supabase = createClient();
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    // Tracks whether navigation was triggered so finally knows to keep the
+    // spinner (true = page transitioning and will unmount) or reset it.
+    let redirecting = false;
 
-    if (signInError) {
-      setError(signInError.message);
-      setLoading(false);   // only reset on error — keep spinner through redirect on success
-      return;
+    try {
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+
+      if (signInError) {
+        setError(signInError.message);
+        return;
+      }
+
+      // If we came from a protected page (e.g. booking checkout), go back there.
+      if (returnTo) {
+        // router.refresh() clears the Next.js Router Cache so the target page
+        // fetches a fresh RSC with the new session cookies rather than serving
+        // a stale pre-login payload that would redirect back to /login.
+        router.refresh();
+        redirecting = true;
+        router.push(returnTo);
+        return;
+      }
+
+      const user = data.user;
+      let destination = "/account";
+
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role, active_mode")
+          .eq("id", user.id)
+          .single();
+
+        if (profile?.role === "admin") destination = "/admin";
+        else if (profile?.active_mode === "host") destination = "/dashboard";
+      }
+
+      // Clear Router Cache before navigating.
+      router.refresh();
+      // Spinner persists during page transition; component unmounts naturally.
+      redirecting = true;
+      router.push(destination);
+    } catch (err) {
+      console.warn("[login] unexpected error:", err);
+      setError("An unexpected error occurred. Please try again.");
+    } finally {
+      if (!redirecting) setLoading(false);
     }
-
-    // If we came from a protected page (e.g. booking checkout), go back there.
-    if (returnTo) {
-      router.push(returnTo);
-      return;
-    }
-
-    // User is already in the sign-in response — no need for a second getUser() call.
-    const user = data.user;
-    let destination = "/account";
-
-    if (user) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role, active_mode")
-        .eq("id", user.id)
-        .single();
-
-      if (profile?.role === "admin") destination = "/admin";
-      else if (profile?.active_mode === "host") destination = "/dashboard";
-    }
-
-    // Loading stays true — spinner persists during page transition, then unmounts naturally.
-    router.push(destination);
   };
 
   return (

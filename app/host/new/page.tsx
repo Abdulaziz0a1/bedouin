@@ -2,6 +2,11 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
 import HostListingFlow from "@/components/host/HostListingFlow";
 
+// Always render fresh — same pattern as /dashboard.
+// Prevents Next.js from serving a cached RSC payload that contains the
+// pre-login auth redirect, which would kick authenticated users back to /login.
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Add Your Listing – Bedouin",
   description: "List your Saudi property or experience on Bedouin. Guided step-by-step.",

@@ -90,10 +90,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // TOKEN_REFRESH_FAILED fires when the SDK cannot renew the access token
-      // (e.g. refresh token revoked, network error after a long idle period).
-      // Treat it the same as SIGNED_OUT so every tab clears its auth state.
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      // IMPORTANT: this callback MUST be synchronous — no async/await.
+      //
+      // @supabase/auth-js _notifyAllSubscribers() does await Promise.all() over
+      // every registered callback.  An async callback that awaits a DB query
+      // therefore blocks signInWithPassword() from returning until that query
+      // resolves — causing 10–15 s login hangs whenever the DB is slow.
+      //
+      // Fix: fire the profile fetch as a non-blocking .then() chain.
+      // All UI-visible state is set together inside .then() to preserve the
+      // invariant that user != null and hostStatus != null are set atomically,
+      // preventing the "Become a Host" flash on page load.
+
       if ((event as string) === "TOKEN_REFRESH_FAILED" || !session?.user) {
         setSession(null);
         setUser(null);
@@ -105,29 +114,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Fetch the profile BEFORE updating any UI-visible state.
-      // This prevents the flash where user != null but hostStatus is still null
-      // (which caused approved hosts to see "Become a Host" on every page load).
-      const { data: profile, error } = await supabase
+      void supabase
         .from("profiles")
         .select("role, active_mode, host_status, cohost_status")
         .eq("id", session.user.id)
-        .single();
-
-      if (error) {
-        console.warn("[AuthProvider] session profile fetch failed:", error.message);
-      }
-
-      // React 18 automatic batching: all setState calls after an await boundary
-      // inside the same async callback are batched into a single re-render.
-      // The UI jumps directly from "loading" to the correct final state.
-      setSession(session);
-      setUser(session.user);
-      setActiveMode((profile?.active_mode as ActiveMode) ?? "tourist");
-      setIsAdmin(profile?.role === "admin");
-      setHostStatus((profile?.host_status as HostStatus) ?? null);
-      setCohostStatus((profile?.cohost_status as CohostStatus) ?? null);
-      setLoading(false);
+        .single()
+        .then(({ data: profile, error }) => {
+          if (error) console.warn("[AuthProvider] profile fetch failed:", error.message);
+          setSession(session);
+          setUser(session.user);
+          setActiveMode((profile?.active_mode as ActiveMode) ?? "tourist");
+          setIsAdmin(profile?.role === "admin");
+          setHostStatus((profile?.host_status as HostStatus) ?? null);
+          setCohostStatus((profile?.cohost_status as CohostStatus) ?? null);
+          setLoading(false);
+        });
     });
 
     return () => subscription.unsubscribe();

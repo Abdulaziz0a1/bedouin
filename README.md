@@ -93,8 +93,9 @@ A built-in **admin panel** governs the approval pipeline for hosts, co-hosts, an
 | **State management** | React Context API (`AuthProvider`) + `useState` / `useTransition` |
 | **Data fetching** | Next.js Server Components + Server Actions |
 | **Fonts** | Google Fonts — Roboto (body), Poppins (display) |
+| **Testing** | Vitest 4 (unit tests, node environment) |
 | **Deployment** | Vercel (Next.js native, no custom config required) |
-| **Dev tools** | ESLint (eslint-config-next), TypeScript compiler |
+| **Dev tools** | ESLint (eslint-config-next), TypeScript compiler, Vitest |
 
 ---
 
@@ -217,9 +218,15 @@ bedouin/
 │   ├── ...
 │   └── 33_cohost_app_update_rls.sql
 │
+├── tests/                        # Vitest unit tests
+│   ├── explore-filters.test.ts   # filterListings — category, region, price, query, sort
+│   ├── discovery-ranking.test.ts # sortByScore, season helpers, campaigns, promotions
+│   └── listing-locale.test.ts    # getListingText, getListingHighlights (bilingual fallback)
+│
 ├── next.config.ts                # Next.js config (image remote patterns)
 ├── postcss.config.mjs            # Tailwind CSS v4 via @tailwindcss/postcss
 ├── tsconfig.json                 # TypeScript (strict, path alias @/*)
+├── vitest.config.ts              # Vitest config (node env, @/ alias)
 └── package.json
 ```
 
@@ -319,6 +326,40 @@ npx tsc --noEmit   # TypeScript type check
 npm run lint       # ESLint
 npm run build      # Production build
 ```
+
+---
+
+## Testing
+
+The project uses **[Vitest](https://vitest.dev/)** for unit testing. Tests target pure utility functions — modules with no Supabase dependency — to provide reliable quality assurance and regression protection for core business logic.
+
+### Run the test suite
+
+```bash
+npm test
+```
+
+### Run TypeScript type checking
+
+```bash
+npx tsc --noEmit
+```
+
+### Test coverage
+
+| File | Functions covered | Tests |
+|---|---|---|
+| `tests/explore-filters.test.ts` | `filterListings` — category, region, price range, text query, sort orders, combined filters, edge cases | 22 |
+| `tests/discovery-ranking.test.ts` | `sortByScore`, `getDestinationsForSeason`, `getDestinationsBySeason`, `getActiveCampaigns`, `getFeaturedPromotions`, `filterPromotionsBySeason`, `getPromotionsForCampaign`, `getCollection`, `getActivitiesForCategory`, `getCurrentSeason` | 31 |
+| `tests/listing-locale.test.ts` | `getListingText`, `getListingHighlights` — full Arabic/English bilingual fallback matrix | 16 |
+| **Total** | | **69** |
+
+> Supabase-dependent modules (server actions, services, auth) are not unit-tested here — they require an active database connection and are validated against a live Supabase instance during manual QA.
+
+### Project notes
+
+- `vitest.config.ts` configures the test runner with the `node` environment and the `@/` path alias to match the main TypeScript setup.
+- The `bedouin/` directory (a local stale duplicate, not part of the real application) is excluded from TypeScript compilation via `tsconfig.json` and from version control via `.gitignore`.
 
 ---
 
@@ -593,10 +634,14 @@ All imports must use the `@/` path alias (maps to the project root). Check `tsco
    npx tsc --noEmit
    npm run lint
    ```
-3. Write clear, scoped commit messages.
-4. Open a pull request against `main` with a description of what changed and why.
-
-> There is no automated test suite. Manual testing against a local or staging Supabase instance is the expected workflow.
+3. Run the quality checks before committing:
+   ```bash
+   npm test            # unit tests
+   npx tsc --noEmit   # type check
+   npm run lint        # ESLint
+   ```
+4. Write clear, scoped commit messages.
+5. Open a pull request against `main` with a description of what changed and why.
 
 ---
 

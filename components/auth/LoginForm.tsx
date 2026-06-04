@@ -19,6 +19,7 @@ export default function LoginForm() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const returnTo     = searchParams.get("returnTo");
+  const message      = searchParams.get("message");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -77,6 +78,24 @@ export default function LoginForm() {
 
   return (
     <>
+      {/* Post-reset success banner */}
+      {message === "password_updated" && (
+        <div
+          className="flex items-start gap-2.5 rounded-xl px-4 py-3 mb-5"
+          style={{
+            background: "#f0faf5",
+            border:     "1px solid #b7e3cc",
+          }}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="shrink-0 mt-0.5 text-[#049153]">
+            <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <p className="text-sm text-[#1a6641]">
+            Password updated successfully. Log in with your new password.
+          </p>
+        </div>
+      )}
+
       {/* Brand mark */}
       <div className="flex items-center gap-3 mb-7">
         <div className="w-11 h-11 rounded-full overflow-hidden shrink-0" style={{ border: "1.5px solid rgba(196,154,79,0.30)" }}>
@@ -109,9 +128,18 @@ export default function LoginForm() {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-[0.7rem] font-bold text-[#1a0e02] uppercase tracking-[0.10em]">
-            Password
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="text-[0.7rem] font-bold text-[#1a0e02] uppercase tracking-[0.10em]">
+              Password
+            </label>
+            <Link
+              href="/forgot-password"
+              className="text-xs text-[#c49a4f] font-semibold hover:underline"
+              tabIndex={0}
+            >
+              Forgot password?
+            </Link>
+          </div>
           <PasswordInput
             placeholder="Enter your password"
             value={password}

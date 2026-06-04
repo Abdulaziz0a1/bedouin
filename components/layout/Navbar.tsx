@@ -190,6 +190,10 @@ export default function Navbar() {
   const isHome = pathname === "/";
   const transparent = isHome && !scrolled;
 
+  // Recovery mode: hide all authenticated navigation on the reset-password page
+  // so the user cannot navigate away or access account features mid-reset.
+  const isRecovery = pathname === "/reset-password";
+
   return (
     <>
       {dropdownOpen && (
@@ -244,8 +248,8 @@ export default function Navbar() {
             </span>
           </Link>
 
-          {/* Desktop nav links */}
-          <div className="hidden md:flex items-center gap-6 flex-1 pl-2">
+          {/* Desktop nav links — hidden during password recovery */}
+          {!isRecovery && <div className="hidden md:flex items-center gap-6 flex-1 pl-2">
             {PUBLIC_LINK_DEFS.map(({ href, key }) => {
               const isActive = pathname === href;
               return (
@@ -300,9 +304,27 @@ export default function Navbar() {
                 {t("nav.admin_panel")}
               </Link>
             )}
-          </div>
+          </div>}
 
-          {/* Desktop auth area */}
+          {/* Desktop auth area — replaced by a minimal lock indicator during recovery */}
+          {isRecovery ? (
+            <div className="hidden md:flex items-center gap-2 shrink-0">
+              <div
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold"
+                style={{
+                  color:      "#8b5e38",
+                  background: "rgba(177,122,80,0.08)",
+                  border:     "1px solid rgba(177,122,80,0.18)",
+                }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" strokeWidth="1.8" />
+                  <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+                Secure Recovery
+              </div>
+            </div>
+          ) : (
           <div className="hidden md:flex items-center gap-2 shrink-0">
             <LanguageSwitcher transparent={transparent} />
 
@@ -487,9 +509,10 @@ export default function Navbar() {
               </>
             )}
           </div>
+          )}
 
-          {/* Mobile hamburger */}
-          <button className={`md:hidden p-2 rounded-lg transition-colors ${transparent ? "text-white hover:bg-white/10" : "text-[#2b1a0e] hover:bg-[#f4efe6]"}`} onClick={() => setOpen((v) => !v)} aria-label="Toggle menu">
+          {/* Mobile hamburger — hidden during password recovery */}
+          {!isRecovery && <button className={`md:hidden p-2 rounded-lg transition-colors ${transparent ? "text-white hover:bg-white/10" : "text-[#2b1a0e] hover:bg-[#f4efe6]"}`} onClick={() => setOpen((v) => !v)} aria-label="Toggle menu">
             {open ? (
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                 <path d="M6 6l12 12M6 18L18 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -499,11 +522,11 @@ export default function Navbar() {
                 <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
             )}
-          </button>
+          </button>}
         </div>
 
-        {/* Mobile dropdown */}
-        {open && (
+        {/* Mobile dropdown — hidden during password recovery */}
+        {!isRecovery && open && (
           <div className="md:hidden bg-white border-t border-[#e8dfd4] px-6 py-4 flex flex-col gap-3">
             {PUBLIC_LINK_DEFS.map(({ href, key }) => (
               <Link key={key} href={href} onClick={() => setOpen(false)} className="text-sm font-medium text-[#5a4a3a] py-1">

@@ -15,10 +15,17 @@ import { cookies } from "next/headers";
  * must include this route's full URL or the redirect will be blocked.
  */
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   // Default to home; for password reset the caller passes next=/reset-password
   const next = searchParams.get("next") ?? "/";
+
+  // Use NEXT_PUBLIC_SITE_URL (read at runtime on the server) so the redirect
+  // always targets the correct environment. Render's load balancer terminates
+  // SSL internally, so deriving the origin from request.url can yield http://
+  // instead of https://, breaking the destination URL.
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL || "https://bedouin-ao6n.onrender.com";
 
   if (code) {
     const cookieStore = await cookies();
@@ -49,13 +56,13 @@ export async function GET(request: NextRequest) {
 
     if (!error) {
       // Session cookie is now set; forward to the destination page.
-      return NextResponse.redirect(`${origin}${next}`);
+      return NextResponse.redirect(`${siteUrl}${next}`);
     }
   }
 
-  // Code missing or exchange failed — send user back to login with an error
-  // flag so the UI can show a "reset link expired, try again" message.
+  // Code missing or exchange failed — send user back to forgot-password with
+  // an error flag so the UI can show a "reset link expired, try again" message.
   return NextResponse.redirect(
-    `${origin}/forgot-password?error=link_expired`
+    `${siteUrl}/forgot-password?error=link_expired`
   );
 }

@@ -22,12 +22,23 @@ export default function ForgotPasswordForm() {
     setError(null);
     setLoading(true);
 
-    // redirectTo must match an allow-listed URL in Supabase Dashboard →
-    // Authentication → URL Configuration → Redirect URLs.
-    // The auth/callback route exchanges the code for a session then forwards
-    // the user to /reset-password where they can set a new password.
-    const redirectTo =
-      `${window.location.origin}/auth/callback?next=/reset-password`;
+    // Build the redirect URL from NEXT_PUBLIC_SITE_URL so the link in the
+    // password reset email always points to the correct environment.
+    //
+    // NEXT_PUBLIC_SITE_URL must be set per-environment:
+    //   • .env.local  → http://localhost:3000
+    //   • Render      → https://bedouin-ao6n.onrender.com
+    //
+    // window.location.origin is the fallback for local runs where the env
+    // var has not yet been added to .env.local.  It must never be relied
+    // upon in production because it reflects whichever origin the user's
+    // browser tab is on when they submit the form, which may be wrong.
+    //
+    // The full URL must also appear in Supabase Dashboard →
+    // Authentication → URL Configuration → Redirect URLs, otherwise
+    // Supabase will reject it and fall back to the Site URL.
+    const siteUrl   = process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
+    const redirectTo = `${siteUrl}/auth/callback?next=/reset-password`;
 
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(
       email.trim(),
